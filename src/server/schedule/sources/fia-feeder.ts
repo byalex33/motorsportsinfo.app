@@ -33,7 +33,7 @@ export interface FiaMeetingSession {
 
 export interface FiaRace {
   meetingSessions: FiaMeetingSession[];
-  season?: number;
+  season?: number | string;
   meetingName?: string;
   meetingStartDate?: string;
   meetingEndDate?: string;
@@ -132,7 +132,8 @@ export function parseFiaRoundPage(
   const timesConfirmed = sessions.length > 0 && !unreadable && !race.meetingSessions.some(isTbc);
   const location = race.meetingLocation ?? race.circuitShortName ?? info.slug;
   return {
-    season: race.season ?? info.season,
+    // The page JSON carries the season as a string ("2026").
+    season: race.season != null ? Number(race.season) : info.season,
     name: info.roundNumber ? `Round ${info.roundNumber}` : location,
     circuitHints: [info.slug, race.circuitShortName, race.meetingLocation, race.circuitOfficialName].filter(
       (h): h is string => !!h,

@@ -1,3 +1,5 @@
+import { Calendar03Icon, Location01Icon, Route03Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SERIES } from "@/domain/series";
@@ -8,7 +10,7 @@ import { formatRoundDates } from "@/lib/time-format";
 function SeriesLine({ series, season }: { series: SeriesId; season: number }) {
   const info = SERIES[series];
   return (
-    <p className="eyebrow flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
+    <p className="eyebrow flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-muted-foreground">
       <span className="inline-flex items-center gap-2 font-semibold text-series-accent">
         <span aria-hidden className="size-1.5 rounded-full bg-series-accent" />
         {info.shortName}
@@ -21,7 +23,15 @@ function SeriesLine({ series, season }: { series: SeriesId; season: number }) {
   );
 }
 
-const meta = "font-mono text-[0.8125rem] leading-5 tracking-[0.04em] uppercase";
+function MetaItem({ icon, label, children }: { icon: IconSvgElement; label: string; children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <dt className="sr-only">{label}</dt>
+      <HugeiconsIcon icon={icon} size={16} strokeWidth={1.75} className="shrink-0 text-series-accent" aria-hidden />
+      <dd className="min-w-0">{children}</dd>
+    </div>
+  );
+}
 
 export function RoundHero({
   series,
@@ -35,30 +45,26 @@ export function RoundHero({
   countdown: ReactNode;
 }) {
   return (
-    <section className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-12">
-      <div className="min-w-0">
-        <SeriesLine series={series} season={round.season} />
-        <h1 className="mt-4 text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
-          {round.name}
-        </h1>
-        <dl className={`${meta} mt-5 grid gap-1 text-muted-foreground`}>
-          <div className="min-w-0">
-            <dt className="sr-only">Circuit</dt>
-            <dd>
-              <span className="text-foreground">{circuit.name}</span>
-              <span> · {circuit.location}</span>
-            </dd>
-          </div>
-          <div>
-            <dt className="sr-only">Dates</dt>
-            <dd className="flex items-center gap-2 tabular">
-              {formatRoundDates(round.startDate, round.endDate)}
-              {!round.sessionTimesConfirmed && <span className="chip border border-border text-muted-foreground">Times TBC</span>}
-            </dd>
-          </div>
-        </dl>
-      </div>
-      {countdown && <div className="min-w-0">{countdown}</div>}
+    <section className="flex flex-col items-center text-center">
+      <SeriesLine series={series} season={round.season} />
+      <h1 className="mt-4 max-w-4xl text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
+        {round.name}
+      </h1>
+      <dl className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+        <MetaItem icon={Route03Icon} label="Circuit">
+          <span className="font-medium text-foreground">{circuit.name}</span>
+        </MetaItem>
+        <MetaItem icon={Location01Icon} label="Location">
+          {circuit.location}
+        </MetaItem>
+        <MetaItem icon={Calendar03Icon} label="Dates">
+          <span className="flex items-center gap-2 tabular">
+            {formatRoundDates(round.startDate, round.endDate)}
+            {!round.sessionTimesConfirmed && <span className="chip border border-border text-muted-foreground">Times TBC</span>}
+          </span>
+        </MetaItem>
+      </dl>
+      {countdown && <div className="mt-10 w-full min-w-0 border-t border-border pt-10 sm:mt-12 sm:pt-12">{countdown}</div>}
     </section>
   );
 }

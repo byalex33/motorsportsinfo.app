@@ -116,6 +116,8 @@ describe("FIA F2/F3 Round pages", () => {
       url: "https://www.fiaformula2.com/en/racing/2026/baku",
     });
     const { rounds, problems } = normaliseRounds("f2", [raw]);
+    // The page JSON has the season as a string; a string here made every sync rewrite every Round.
+    expect(raw.season).toBe(2026);
     expect(problems).toEqual([]);
     const [baku] = rounds;
     expect(baku.round).toMatchObject({

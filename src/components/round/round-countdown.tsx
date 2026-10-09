@@ -33,7 +33,7 @@ export function RoundCountdown({ sessions, circuitTimeZone }: { sessions: Sessio
   if (now === null) {
     // Server render and hydration: a stable placeholder with the same footprint.
     return (
-      <div className="space-y-3" aria-hidden>
+      <div className="flex flex-col items-center space-y-3" aria-hidden>
         <div className="h-5 w-56 animate-pulse rounded-md bg-muted" />
         <div className="h-[4.75rem] w-72 animate-pulse rounded-md bg-muted sm:h-[5.5rem] sm:w-[22rem]" />
       </div>
@@ -44,7 +44,7 @@ export function RoundCountdown({ sessions, circuitTimeZone }: { sessions: Sessio
 
   if (status.kind === "finished") {
     return (
-      <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-t border-border pt-4 text-sm lg:border-t-0 lg:pt-0">
+      <p className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-sm">
         <FlagIcon className="size-4 text-series-accent" aria-hidden />
         <span className="font-medium">Round complete.</span>
         <span className="text-muted-foreground">The next Round appears here shortly.</span>
@@ -60,8 +60,8 @@ export function RoundCountdown({ sessions, circuitTimeZone }: { sessions: Sessio
   const at = zone ? formatClock(session.startsAt, zone.tz) : null;
 
   return (
-    <div className="space-y-3">
-      <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm">
+    <div className="flex flex-col items-center space-y-4">
+      <p className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-sm">
         {isLive ? (
           <span className="chip bg-series-accent text-series-accent-foreground">
             <LiveDot className="size-1.5" />
@@ -83,7 +83,7 @@ export function RoundCountdown({ sessions, circuitTimeZone }: { sessions: Sessio
         role="timer"
         aria-live="off"
         aria-label={`${isLive ? `${session.name} ends in` : `${session.name} starts in`} ${formatCountdown(parts)}`}
-        className="flex items-start font-mono tabular"
+        className="flex items-start justify-center font-mono tabular"
       >
         {UNITS.map((u, i) => (
           <Fragment key={u.key}>

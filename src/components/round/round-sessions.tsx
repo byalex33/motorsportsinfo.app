@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CalendarClockIcon } from "lucide-react";
 import type { ForecastResult, Session } from "@/domain/types";
 import { DisplayControls } from "./display-controls";
@@ -54,6 +55,21 @@ export function RoundSessions({ sessions, forecasts, timesConfirmed, circuitTime
           </p>
         )
       )}
+
+      {/* Credits required by the data licences (ADR 0001). The radar map credits its own sources. */}
+      <p className="text-center font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground">
+        <a className="hover:text-foreground" href="https://openf1.org" target="_blank" rel="noopener noreferrer">
+          Data: OpenF1
+        </a>
+        {" · "}
+        <a className="hover:text-foreground" href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">
+          Weather data by Open-Meteo.com
+        </a>
+        {" · "}
+        <Link className="hover:text-foreground" href="/about">
+          About
+        </Link>
+      </p>
     </section>
   );
 }

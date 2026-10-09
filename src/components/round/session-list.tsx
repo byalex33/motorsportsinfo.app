@@ -3,7 +3,6 @@
 import { CloudOffIcon } from "lucide-react";
 import { SessionForecastView } from "@/components/weather/session-forecast";
 import { InlineSkeleton } from "@/components/inline-skeleton";
-import { SESSION_TYPE_LABELS } from "@/domain/series";
 import type { ForecastResult, Session } from "@/domain/types";
 import { useNow, useOnline } from "@/lib/client-stores";
 import type { DisplayZone } from "@/lib/display-zone";
@@ -97,7 +96,6 @@ function SessionRow({
           <h3 className={cn("font-medium tracking-tight", (cancelled || finished) && "text-muted-foreground")}>
             {session.name}
           </h3>
-          <span className="text-sm text-muted-foreground sm:hidden">{SESSION_TYPE_LABELS[session.type]}</span>
           {cancelled && <span className="chip border border-destructive/50 text-destructive">Cancelled</span>}
           {live && !cancelled && (
             <span className="chip bg-series-accent text-series-accent-foreground">
@@ -108,7 +106,6 @@ function SessionRow({
           {isNext && !live && <span className="chip border border-series-accent/70 text-series-accent">Next</span>}
           {finished && !cancelled && <span className="chip px-0 text-muted-foreground">Finished</span>}
         </div>
-        <p className="mt-0.5 hidden text-sm text-muted-foreground sm:block">{SESSION_TYPE_LABELS[session.type]}</p>
       </div>
 
       {/* Mobile: time and weather share the second line. From sm up each is its own column. */}

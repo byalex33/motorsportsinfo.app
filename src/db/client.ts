@@ -5,7 +5,9 @@ import * as schema from "./schema";
 export type Db = ReturnType<typeof createDb>;
 
 function createDb(url: string) {
-  return drizzle(neon(url), { schema });
+  // Neon's HTTP driver queries over fetch(); without no-store, Next's fetch cache would keep serving
+  // stale query results across requests and even builds. Caching is done one level up with "use cache".
+  return drizzle(neon(url, { fetchOptions: { cache: "no-store" } }), { schema });
 }
 
 let cached: Db | null | undefined;
