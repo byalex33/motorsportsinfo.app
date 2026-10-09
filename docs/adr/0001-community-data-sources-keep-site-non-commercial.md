@@ -8,6 +8,8 @@ We read schedules from free sources instead:
 - **WEC:** scraped from fiawec.com race pages, or another source if scraping proves unworkable.
 - **Formula E, IndyCar and MotoGP:** the MIT-licensed sportstimes/f1 dataset only (`_db/fe`, `_db/indycar`, `_db/motogp`), with no fallback. It gives UTC start times but no end times, so Session ends are estimated from default Session lengths. Its quirks are handled in the parser: IndyCar has no location or coordinates, so Circuits are matched by Round name; MotoGP's `track` text is often wrong, so Circuits are matched by coordinates and a disagreeing `track` is only logged. If it lags or is wrong, Schedule Overrides correct it.
 
+Session Results (the full classification of a finished Session) come from OpenF1 for F1 only, under the same licence and credit. No free source covers results for the other Series, so their finished Sessions link to the official results pages instead of scraping them.
+
 Weather comes from Open-Meteo's free tier, which is also non-commercial.
 
 Rain radar comes from RainViewer's free API, credited on the map. Its terms say "personal and educational use"; RainViewer confirmed by email to the owner in October 2026 that this donation-funded, ad-free site may use it.

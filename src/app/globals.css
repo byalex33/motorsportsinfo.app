@@ -27,6 +27,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -74,6 +75,8 @@
   --accent-foreground: #0a0a0a;
   --destructive: oklch(0.577 0.215 27.3);
   --destructive-foreground: #fafafa;
+  /* Session Results chip. */
+  --success: oklch(0.56 0.15 152);
   --border: #e5e5e5;
   --input: #d4d4d4;
   --ring: oklch(0.4865 0.2423 291.8661);
@@ -111,6 +114,7 @@
   --accent-foreground: #ededed;
   --destructive: oklch(0.704 0.191 22.2);
   --destructive-foreground: #0a0a0a;
+  --success: oklch(0.79 0.17 154);
   --border: #262626;
   --input: #3a3a3a;
   --ring: oklch(0.6083 0.2172 297.1153);
@@ -429,6 +433,22 @@
     transform: translateX(100%);
   }
 }
+@keyframes results-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+    filter: blur(3px);
+  }
+}
+@keyframes results-sheen {
+  0% {
+    transform: translateX(-100%);
+  }
+  24%,
+  100% {
+    transform: translateX(100%);
+  }
+}
 @keyframes breathe {
   50% {
     opacity: 0.35;
@@ -479,6 +499,21 @@
     background: linear-gradient(100deg, transparent 25%, color-mix(in oklch, var(--series-accent) 30%, transparent) 50%, transparent 75%);
     transform: translateX(-100%);
     animation: chip-sweep 1100ms var(--motion-in-out) 600ms both;
+  }
+}
+/* The green RESULTS chip on a finished Session: springs in, then a soft sheen passes every few seconds. */
+@utility results-chip {
+  position: relative;
+  overflow: hidden;
+  animation: results-in 520ms var(--motion-spring) 250ms backwards;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(100deg, transparent 25%, color-mix(in oklch, var(--success) 40%, transparent) 50%, transparent 75%);
+    transform: translateX(-100%);
+    animation: results-sheen 5s var(--motion-in-out) 900ms infinite;
   }
 }
 @utility live-breathe {
@@ -694,6 +729,8 @@
   .animate-ping,
   .live-breathe,
   .chip-shimmer::after,
+  .results-chip,
+  .results-chip::after,
   .wx,
   .wx > path,
   .digit-in,

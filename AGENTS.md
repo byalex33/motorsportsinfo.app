@@ -14,7 +14,7 @@ Read `CONTEXT.md` for the domain vocabulary (Series, Round, Featured Round, Sess
 
 - Stack: Next.js 16 App Router (`src/`), Tailwind 4, shadcn (base-nova) with the tweakcn Deep Purple theme in `src/app/globals.css`, Drizzle + Neon Postgres, Vercel (Pro) with crons in `vercel.ts`.
 - Domain types: `src/domain/types.ts`; per-Series rules: `src/domain/series.ts`. Database schema: `src/db/schema.ts`.
-- UI imports schedule data only from `src/server/schedule` and weather only from `src/server/weather`.
+- UI imports schedule data only from `src/server/schedule`, weather only from `src/server/weather` and Session Results only from `src/server/results`.
 - `getDb()` returns null without `DATABASE_URL`; local dev must still render real data.
 - Cron routes under `src/app/api/cron/*` require `Authorization: Bearer ${CRON_SECRET}`.
 - Data/credit obligations (ADR 0001): show "Data: OpenF1", "Weather data by Open-Meteo.com", "Radar: RainViewer" credits; site stays non-commercial.

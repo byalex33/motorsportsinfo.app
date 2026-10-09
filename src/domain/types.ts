@@ -77,6 +77,25 @@ export type FeaturedRoundResult =
       season: number;
     };
 
+/** One line of a Session Result. */
+export interface SessionResultEntry {
+  /** null when not classified (retired too early, did not start, disqualified). */
+  position: number | null;
+  /** e.g. "Max Verstappen". */
+  name: string;
+  team: string | null;
+  /**
+   * Ready to show. The leader's time ("1:47:14.808" race, "1:32.274" lap) and the others' gaps ("+2.307",
+   * "+1 LAP"); in qualifying, each driver's own best lap. "DNF", "DNS" or "DSQ" instead when they apply.
+   */
+  time: string | null;
+}
+
+export interface SessionResult {
+  /** The full classification: classified drivers in order, then the unclassified. */
+  entries: SessionResultEntry[];
+}
+
 export interface SessionForecast {
   kind: "forecast";
   /** ISO UTC time the forecast applies to (the Session start). */

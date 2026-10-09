@@ -3,7 +3,7 @@
 import { CloudOffIcon } from "lucide-react";
 import { SessionForecastView } from "@/components/weather/session-forecast";
 import { InlineSkeleton } from "@/components/inline-skeleton";
-import type { ForecastResult, Session } from "@/domain/types";
+import type { ForecastResult, Session, SessionResult } from "@/domain/types";
 import { useNow, useOnline } from "@/lib/client-stores";
 import type { DisplayZone } from "@/lib/display-zone";
 import { staggerDelay } from "@/lib/motion";
@@ -12,10 +12,13 @@ import { getRoundStatus, sessionPhase, type SessionPhase } from "@/lib/round-sta
 import { formatSessionDay, formatTimeRange, zoneOffsetLabel } from "@/lib/time-format";
 import { cn } from "@/lib/utils";
 import { LiveDot } from "./round-countdown";
+import { SessionResultsDialog } from "./session-results-dialog";
 
 interface SessionListProps {
   sessions: Session[];
   forecasts: Record<string, ForecastResult>;
+  results: Record<string, SessionResult>;
+  resultsUrl: string;
   timesConfirmed: boolean;
   zone: DisplayZone | null;
 }
@@ -24,7 +27,7 @@ interface SessionListProps {
 const COLS = "sm:grid sm:grid-cols-[4.5rem_minmax(0,1fr)_auto_auto] sm:gap-x-6";
 const ROW = "sm:col-span-4 sm:grid-cols-subgrid";
 
-export function SessionList({ sessions, forecasts, timesConfirmed, zone }: SessionListProps) {
+export function SessionList({ sessions, forecasts, results, resultsUrl, timesConfirmed, zone }: SessionListProps) {
   // Phases only need minute precision; the hero handles the per-second countdown.
   // With times TBC the start/end values are placeholders, so no live/next/finished states.
   const clock = useNow(60_000);
@@ -47,6 +50,8 @@ export function SessionList({ sessions, forecasts, timesConfirmed, zone }: Sessi
           index={index}
           session={session}
           forecast={forecasts[session.id]}
+          result={results[session.id]}
+          resultsUrl={resultsUrl}
           timesConfirmed={timesConfirmed}
           zone={zone}
           phase={now === null ? (session.status === "cancelled" ? "cancelled" : null) : sessionPhase(session, now)}
@@ -61,6 +66,8 @@ function SessionRow({
   index,
   session,
   forecast,
+  result,
+  resultsUrl,
   timesConfirmed,
   zone,
   phase,
@@ -69,6 +76,8 @@ function SessionRow({
   index: number;
   session: Session;
   forecast: ForecastResult | undefined;
+  result: SessionResult | undefined;
+  resultsUrl: string;
   timesConfirmed: boolean;
   zone: DisplayZone | null;
   phase: SessionPhase | null;
@@ -109,7 +118,12 @@ function SessionRow({
             </span>
           )}
           {isNext && !live && <span className="chip chip-shimmer border border-series-accent/70 text-series-accent">Next</span>}
-          {finished && !cancelled && <span className="chip px-0 text-muted-foreground">Finished</span>}
+          {finished && !cancelled && (
+            <>
+              <span className="chip px-0 text-muted-foreground">Finished</span>
+              <SessionResultsDialog session={session} result={result} resultsUrl={resultsUrl} />
+            </>
+          )}
         </div>
       </div>
 

@@ -101,6 +101,29 @@ export function defaultSessionMinutes(series: SeriesId, type: SessionType, sessi
   return 60;
 }
 
+/**
+ * The Series' official results page, linked from a finished Session when the site has no Session Result
+ * of its own. Season-level pages: per-Round URLs on these sites don't follow our Round slugs.
+ */
+export function officialResultsUrl(series: SeriesId, season: number): string {
+  switch (series) {
+    case "f1":
+      return `https://www.formula1.com/en/results/${season}/races`;
+    case "f2":
+      return `https://www.fiaformula2.com/en/racing/${season}`;
+    case "f3":
+      return `https://www.fiaformula3.com/en/racing/${season}`;
+    case "wec":
+      return "https://www.fiawec.com/en/page/resultats-1";
+    case "fe":
+      return "https://www.fiaformulae.com/en/results-and-standings";
+    case "indycar":
+      return "https://www.indycar.com/results";
+    case "motogp":
+      return "https://www.motogp.com/en/gp-results";
+  }
+}
+
 /** A Round stays the Featured Round until this long after its final Session ends. */
 export const FEATURED_ROUND_GRACE_MINUTES = 120;
 
