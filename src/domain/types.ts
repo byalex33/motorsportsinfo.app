@@ -67,6 +67,8 @@ export type FeaturedRoundResult =
   | {
       kind: "round";
       round: Round;
+      /** The Round's place in its season, e.g. 18 for Round 18. */
+      roundNumber: number;
       circuit: Circuit;
       /** Ordered by startsAt. Cancelled Sessions are included. */
       sessions: Session[];

@@ -77,6 +77,7 @@ export default async function SeriesPage({ params }: PageProps<"/[series]">) {
             <RoundHero
               series={series}
               round={featured.round}
+              roundNumber={featured.roundNumber}
               circuit={featured.circuit}
               countdown={
                 featured.round.sessionTimesConfirmed && featured.sessions.length > 0 ? (
