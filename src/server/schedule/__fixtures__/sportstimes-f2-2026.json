@@ -1,0 +1,65 @@
+{
+ "races": [
+  {
+   "name": "Australian",
+   "location": "Melbourne",
+   "latitude": -37.8373,
+   "longitude": 144.9666,
+   "round": 1,
+   "slug": "melbourne",
+   "localeKey": "melbourne",
+   "sessions": {
+    "practice": "2026-03-05T23:00:00Z",
+    "qualifying": "2026-03-06T03:55:00Z",
+    "sprint": "2026-03-07T03:30:00Z",
+    "feature": "2026-03-08T00:25:00Z"
+   }
+  },
+  {
+   "name": "Azerbaijan",
+   "location": "Baku",
+   "latitude": 40.3699,
+   "longitude": 49.8433,
+   "round": 12,
+   "slug": "azerbaijan",
+   "localeKey": "azerbaijan",
+   "sessions": {
+    "practice": "2026-09-24T06:00:00Z",
+    "sprint": "2026-09-25T04:15:00Z",
+    "qualifying": "2026-09-24T10:00:00Z",
+    "feature": "2026-09-26T07:00:00Z"
+   }
+  },
+  {
+   "name": "Qatar",
+   "location": "Doha",
+   "latitude": 25.490292,
+   "longitude": 51.45303,
+   "round": 13,
+   "slug": "qatar",
+   "localeKey": "qatar",
+   "sessions": {
+    "practice": "2026-11-27T09:00:00Z",
+    "qualifying": "2026-11-27T13:00:00Z",
+    "sprint": "2026-11-28T10:00:00Z",
+    "feature": "2026-11-29T09:00:00Z"
+   }
+  },
+  {
+   "name": "Abu Dhabi (tbc example)",
+   "location": "Yas Marina",
+   "latitude": 25.490292,
+   "longitude": 51.45303,
+   "round": 14,
+   "slug": "abu-dhabi",
+   "localeKey": "qatar",
+   "sessions": {
+    "practice": "2026-11-27T09:00:00Z",
+    "qualifying": "2026-11-27T13:00:00Z",
+    "sprint": "2026-11-28T10:00:00Z",
+    "feature": "2026-11-29T09:00:00Z"
+   },
+   "tbc": true
+  }
+ ]
+}
