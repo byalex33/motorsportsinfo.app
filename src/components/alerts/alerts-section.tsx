@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /** A flat Alerts section: hairline rule, mono index and micro-label heading, then a short description. */
@@ -8,6 +8,7 @@ export function AlertsSection({
   title,
   description,
   className,
+  style,
   children,
 }: {
   id: string;
@@ -15,10 +16,11 @@ export function AlertsSection({
   title: string;
   description: ReactNode;
   className?: string;
+  style?: CSSProperties;
   children: ReactNode;
 }) {
   return (
-    <section aria-labelledby={id} className={cn("min-w-0 border-t border-border pt-4", className)}>
+    <section aria-labelledby={id} className={cn("min-w-0 border-t border-border pt-4", className)} style={style}>
       <h2 id={id} className="eyebrow flex items-center gap-3 text-foreground">
         <span aria-hidden className="text-muted-foreground tabular">
           {index}

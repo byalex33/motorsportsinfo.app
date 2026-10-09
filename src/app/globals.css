@@ -233,9 +233,421 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+   Motion. A visual layer only: transform / opacity (and a little blur on entrances),
+   150–600 ms, expo-out entrances, quick exits, and a lightly damped spring for things
+   that move. Entrances are CSS only, so they play from the server HTML with no JS and
+   never change layout (no CLS). Reduced motion is handled at the end of this file.
+   --------------------------------------------------------------------------- */
+:root {
+  --motion-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-in: cubic-bezier(0.55, 0, 0.75, 0.2);
+  --motion-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  /* Damped spring (ζ ≈ 0.78, ~2% overshoot), sampled. Pair with 400–600 ms. */
+  --motion-spring: linear(0, 0.037, 0.128, 0.245, 0.372, 0.495, 0.608, 0.706, 0.789, 0.855, 0.907, 0.947, 0.975, 0.995, 1.008, 1.015, 1.019, 1.02, 1.019, 1.017, 1.015, 1.013, 1.01, 1.008, 1.006, 1.004, 1.003, 1.002, 1.001, 1, 1);
+}
+
+/* Tailwind utilities: ease-spring, ease-expo. */
+@theme inline {
+  --ease-spring: var(--motion-spring);
+  --ease-expo: var(--motion-out);
+}
+
+@keyframes enter-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes enter-word {
+  from {
+    opacity: 0;
+    transform: translateY(0.32em);
+    filter: blur(8px);
+  }
+}
+@keyframes enter-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes enter-focus {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+  }
+}
+@keyframes enter-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-60deg);
+    filter: blur(2px);
+  }
+}
+@keyframes enter-scale {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+}
+@keyframes dialog-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes dialog-out {
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes nav-indicator-in {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+@keyframes page-out {
+  to {
+    opacity: 0;
+    filter: blur(2px);
+  }
+}
+/* Odometer: a countdown rolls downwards, so the new digit drops in from above. */
+@keyframes digit-in {
+  from {
+    opacity: 0;
+    transform: translateY(-62%);
+    filter: blur(1.5px);
+  }
+}
+@keyframes digit-out {
+  to {
+    opacity: 0;
+    transform: translateY(62%);
+    filter: blur(1.5px);
+  }
+}
+@keyframes draw-stroke {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes chip-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Staggered entrances. The stagger is an inline animation-delay (src/lib/motion.ts), which
+   overrides the shorthand below and, unlike a custom property, never inherits: a nested
+   entrance (a time inside a staggered row) runs on its own clock. Fill mode is backwards
+   only, so nothing keeps a transform (or stacking context) once it lands. */
+@utility enter-rise {
+  animation: enter-rise 560ms var(--motion-out) backwards;
+}
+@utility enter-scale {
+  animation: enter-scale 480ms var(--motion-out) backwards;
+}
+@utility enter-word {
+  display: inline-block;
+  animation: enter-word 720ms var(--motion-out) backwards;
+}
+@utility enter-fade {
+  animation: enter-fade 240ms var(--motion-out) backwards;
+}
+/* Data arriving after hydration (times, forecasts): a soft focus-in, no movement. */
+@utility enter-focus {
+  animation: enter-focus 320ms var(--motion-out) backwards;
+}
+@utility enter-pop {
+  animation: enter-pop 420ms var(--motion-spring) backwards;
+}
+/* Lucide check icons: the tick draws itself in. */
+@utility draw-check {
+  & path {
+    stroke-dasharray: 24;
+    stroke-dashoffset: 24;
+    animation: draw-stroke 280ms var(--motion-out) 40ms forwards;
+  }
+}
+/* One accent sweep across a chip when it first appears. */
+@utility chip-shimmer {
+  position: relative;
+  overflow: hidden;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(100deg, transparent 25%, color-mix(in oklch, var(--series-accent) 30%, transparent) 50%, transparent 75%);
+    transform: translateX(-100%);
+    animation: chip-sweep 1100ms var(--motion-in-out) 600ms both;
+  }
+}
+@utility live-breathe {
+  animation: breathe 2400ms var(--motion-in-out) infinite;
+}
+
+/* Countdown digit slot: clips the rolling digits with soft top/bottom edges. */
+@utility digit-slot {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  padding-block: 0.14em;
+  margin-block: -0.14em;
+  mask-image: linear-gradient(to bottom, transparent, #000 13%, #000 87%, transparent);
+}
+@utility digit-in {
+  display: block;
+  animation: digit-in 460ms var(--motion-out) backwards;
+}
+@utility digit-out {
+  position: absolute;
+  inset: 0.14em 0 auto;
+  animation: digit-out 460ms var(--motion-out) forwards;
+}
+
+/* Ambient weather icons: tiny, transform/opacity only, on the icon alone. */
+@keyframes wx-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes wx-tilt {
+  0%,
+  100% {
+    transform: rotate(-7deg);
+  }
+  50% {
+    transform: rotate(7deg);
+  }
+}
+@keyframes wx-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  30%,
+  65% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+@keyframes wx-drift {
+  from {
+    transform: translateX(-0.8px);
+  }
+  to {
+    transform: translateX(0.8px);
+  }
+}
+@keyframes wx-twinkle {
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes wx-flash {
+  0%,
+  86%,
+  92%,
+  100% {
+    opacity: 1;
+  }
+  89%,
+  95% {
+    opacity: 0.25;
+  }
+}
+
+@layer components {
+  .wx.lucide-sun,
+  .wx.lucide-snowflake {
+    animation: wx-spin 28s linear infinite;
+  }
+  .wx.lucide-moon {
+    animation: wx-tilt 7s var(--motion-in-out) infinite;
+  }
+  .wx:is(.lucide-cloud, .lucide-cloudy, .lucide-cloud-moon) {
+    animation: wx-drift 3.2s var(--motion-in-out) infinite alternate;
+  }
+  .wx:is(.lucide-cloud-sun, .lucide-cloud-sun-rain) > path:nth-child(-n + 4) {
+    animation: wx-twinkle 3s var(--motion-in-out) infinite;
+  }
+  .wx:is(.lucide-cloud-sun, .lucide-cloud-sun-rain) > path:nth-child(2n) {
+    animation-delay: -1.5s;
+  }
+  .wx:is(.lucide-cloud-rain, .lucide-cloud-drizzle, .lucide-cloud-hail, .lucide-cloud-rain-wind) > path:not(:first-child),
+  .wx.lucide-cloud-sun-rain > path:nth-last-child(-n + 2),
+  .wx.lucide-cloud-moon-rain > path:is(:first-child, :last-child) {
+    animation: wx-fall 1.5s var(--motion-in-out) infinite;
+  }
+  .wx.lucide-cloud-snow > path:not(:first-child) {
+    animation: wx-fall 2.6s linear infinite;
+  }
+  .wx > path:nth-child(3n + 1) {
+    animation-delay: -0.5s;
+  }
+  .wx > path:nth-child(3n + 2) {
+    animation-delay: -1s;
+  }
+  .wx.lucide-cloud-lightning > path:last-child {
+    animation: wx-flash 4s linear infinite;
+  }
+  .wx.lucide-cloud-fog > path:not(:first-child) {
+    animation: wx-drift 2.4s var(--motion-in-out) infinite alternate;
+  }
+  .wx.lucide-cloud-fog > path:last-child {
+    animation-direction: alternate-reverse;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   View Transitions (React <ViewTransition> on route changes). The header stays put;
+   the old page fades out fast while the new one's own staggered entrance plays; the
+   active Series marker in the header morphs between nav items, colour included.
+   --------------------------------------------------------------------------- */
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-old(root) {
+  display: none;
+}
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-group(site-header) {
+  z-index: 50;
+  animation: none;
+}
+::view-transition-old(site-header) {
+  display: none;
+}
+::view-transition-new(site-header) {
+  animation: none;
+}
+/* A clean handoff: the old page is gone (120 ms) before the new one is visible. */
+::view-transition-old(.page-exit) {
+  animation: page-out 120ms var(--motion-in) both;
+}
+::view-transition-new(.page-enter) {
+  animation: enter-fade 220ms var(--motion-out) 100ms both;
+}
+::view-transition-group(.nav-indicator) {
+  z-index: 51;
+  animation-duration: 480ms;
+  animation-timing-function: var(--motion-spring);
+}
+::view-transition-old(.nav-indicator),
+::view-transition-new(.nav-indicator) {
+  height: 100%;
+  animation-duration: 300ms;
+}
+::view-transition-group(.nav-indicator-in),
+::view-transition-group(.nav-indicator-out) {
+  z-index: 51;
+}
+::view-transition-new(.nav-indicator-in) {
+  animation: nav-indicator-in 380ms var(--motion-spring) 60ms both;
+}
+::view-transition-old(.nav-indicator-out) {
+  animation: fade-out 150ms var(--motion-in) both;
+}
+/* The Series picker (home) leaves with a quick scale-out over the arriving Series page.
+   Only one dialog is ever open, so the backdrop can carry a fixed name. */
+[data-slot="dialog-overlay"] {
+  view-transition-name: dialog-backdrop;
+}
+::view-transition-group(series-picker),
+::view-transition-group(dialog-backdrop) {
+  animation: none;
+}
+::view-transition-old(series-picker) {
+  animation: dialog-out 150ms var(--motion-in-out) both;
+}
+::view-transition-old(dialog-backdrop) {
+  animation: fade-out 240ms var(--motion-out) both;
+}
+
+/* ---------------------------------------------------------------------------
+   Reduced motion: nothing moves. Everything finishes instantly (safety net for any
+   transition or animation, including library ones), except the explicit opacity-only
+   fades below. Infinite ambient animations stop.
+   --------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  .enter-rise,
+  .enter-scale,
+  .enter-word,
+  .enter-focus,
+  .enter-fade {
+    animation: enter-fade 200ms ease-out backwards !important;
+  }
   .animate-ping,
-  .animate-pulse {
-    animation: none;
+  .live-breathe,
+  .chip-shimmer::after,
+  .wx,
+  .wx > path,
+  .digit-in,
+  .enter-pop {
+    animation: none !important;
+  }
+  .digit-out {
+    display: none;
+  }
+  .draw-check path {
+    animation: none !important;
+    stroke-dashoffset: 0;
+  }
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 150ms !important;
+    animation-delay: 0s !important;
+  }
+  ::view-transition-old(.nav-indicator-out),
+  ::view-transition-old(.page-exit),
+  ::view-transition-old(series-picker),
+  ::view-transition-old(dialog-backdrop) {
+    animation-name: fade-out !important;
+  }
+  ::view-transition-new(.nav-indicator-in),
+  ::view-transition-new(.page-enter) {
+    animation-name: enter-fade !important;
   }
 }

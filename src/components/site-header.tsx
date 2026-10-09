@@ -3,6 +3,7 @@
 import { BellIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ViewTransition, type ReactElement } from "react";
 import { BrandMark } from "@/components/brand-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SERIES } from "@/domain/series";
@@ -10,21 +11,48 @@ import { SERIES_IDS } from "@/domain/types";
 import { cn } from "@/lib/utils";
 
 const navLink =
-  "relative flex h-14 items-center gap-1.5 px-2 text-sm font-medium tracking-tight transition-colors outline-none focus-visible:after:hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:px-2.5";
+  "group/nav relative flex h-14 items-center gap-1.5 px-2 text-sm font-medium tracking-tight transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:px-2.5";
+
+/**
+ * The active Series underline. On a route change between Series the old and new underlines share a
+ * view-transition name, so the browser morphs one into the other: it slides between nav items on a
+ * spring while its colour cross-fades to the new Series accent. With no partner (to or from a
+ * non-Series page) it pops in or fades out.
+ */
+function ActiveUnderline({ children }: { children: ReactElement }) {
+  return (
+    <ViewTransition name="series-nav-underline" share="nav-indicator" enter="nav-indicator-in" exit="nav-indicator-out" default="none">
+      {children}
+    </ViewTransition>
+  );
+}
+
+/**
+ * The active Series dot pops into the new item. It leaves with the old header snapshot (instantly),
+ * so it never slides or fades across the labels as they reflow.
+ */
+function ActiveDot({ children }: { children: ReactElement }) {
+  return (
+    <ViewTransition enter="nav-indicator-in" exit="none" default="none">
+      {children}
+    </ViewTransition>
+  );
+}
 
 export function SiteHeader() {
   const pathname = usePathname() ?? "/";
   const current = pathname.split("/")[1] ?? "";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background">
+    // Named so route-change view transitions keep the header still above the cross-fading page.
+    <header className="sticky top-0 z-40 border-b border-border bg-background [view-transition-name:site-header]">
       <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-2 px-3 sm:gap-4 sm:px-6">
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-2.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="group/brand flex shrink-0 items-center gap-2.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           aria-label="motorsportsinfo.app home — choose a Series"
         >
-          <span className="grid size-7 place-items-center rounded-md bg-primary text-primary-foreground">
+          <span className="grid size-7 place-items-center rounded-md bg-primary text-primary-foreground transition-transform duration-300 ease-spring group-hover/brand:-rotate-6 group-active/brand:scale-95">
             <BrandMark className="size-[18px]" />
           </span>
           <span className="hidden text-[0.95rem] font-semibold tracking-tight text-foreground sm:inline">
@@ -43,18 +71,22 @@ export function SiteHeader() {
                     prefetch
                     aria-current={active ? "page" : undefined}
                     title={SERIES[id].name}
-                    className={cn(
-                      navLink,
-                      active
-                        ? "text-foreground after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:bg-series-accent sm:after:inset-x-2.5"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
+                    className={cn(navLink, active ? "text-foreground" : "text-muted-foreground hover:text-foreground")}
                   >
-                    <span
-                      aria-hidden
-                      className={cn("size-1.5 rounded-full bg-series-accent", active ? "inline-block" : "hidden")}
-                    />
+                    {active && (
+                      <ActiveDot>
+                        <span aria-hidden className="inline-block size-1.5 rounded-full bg-series-accent" />
+                      </ActiveDot>
+                    )}
                     {SERIES[id].shortName}
+                    {active && (
+                      <ActiveUnderline>
+                        <span
+                          aria-hidden
+                          className="absolute inset-x-2 -bottom-px h-0.5 bg-series-accent group-focus-visible/nav:hidden sm:inset-x-2.5"
+                        />
+                      </ActiveUnderline>
+                    )}
                   </Link>
                 </li>
               );
@@ -68,7 +100,7 @@ export function SiteHeader() {
             aria-current={current === "alerts" ? "page" : undefined}
             aria-label="Alerts and calendar"
             className={cn(
-              "flex size-8 items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:w-auto sm:px-2.5",
+              "flex size-8 items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-[color,background-color,scale] duration-200 outline-none hover:bg-muted active:scale-95 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:w-auto sm:px-2.5",
               current === "alerts" ? "text-foreground" : "text-muted-foreground",
             )}
           >

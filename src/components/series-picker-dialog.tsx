@@ -24,7 +24,8 @@ export function SeriesPickerDialog() {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={Boolean(remembered)} className="gap-0 p-0 sm:max-w-lg">
+      {/* Named for the view transition when a Series is picked: the panel scales away over the arriving page. */}
+      <DialogContent showCloseButton={Boolean(remembered)} className="gap-0 p-0 [view-transition-name:series-picker] sm:max-w-lg">
         <div className="flex items-baseline justify-between border-b border-border px-4 py-3 pr-12">
           <DialogTitle className="eyebrow text-muted-foreground">Choose a Series</DialogTitle>
         </div>

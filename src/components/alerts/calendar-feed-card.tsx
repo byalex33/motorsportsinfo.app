@@ -77,8 +77,15 @@ export function CalendarFeedCard({ follows }: { follows: Follows }) {
                   className="h-9 rounded-md border-border bg-subtle font-mono text-xs md:text-xs dark:bg-subtle"
                 />
                 <Button variant="outline" size="lg" onClick={copy} disabled={!links} aria-label="Copy calendar link" className="rounded-md">
-                  {copied ? <CheckIcon aria-hidden /> : <CopyIcon aria-hidden />}
-                  <span className="max-[380px]:sr-only">{copied ? "Copied" : "Copy"}</span>
+                  {/* Keyed so each state mounts fresh: the tick pops in and draws itself; the copy icon returns softly. */}
+                  {copied ? (
+                    <CheckIcon key="icon-copied" aria-hidden className="enter-pop draw-check" />
+                  ) : (
+                    <CopyIcon key="icon-copy" aria-hidden className="enter-fade" />
+                  )}
+                  <span key={copied ? "label-copied" : "label-copy"} className="enter-focus max-[380px]:sr-only">
+                    {copied ? "Copied" : "Copy"}
+                  </span>
                 </Button>
               </div>
               <p role="status" aria-live="polite" className="sr-only">

@@ -2,6 +2,7 @@
 
 import { ArrowRightIcon } from "lucide-react";
 import Link from "next/link";
+import { staggerDelay } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { SERIES, SESSION_TYPE_LABELS } from "@/domain/series";
 import { SERIES_IDS, type SeriesId } from "@/domain/types";
@@ -23,14 +24,15 @@ export function SeriesPicker({ compact = false }: { compact?: boolean }) {
         const info = SERIES[id];
         const isLast = remembered === id;
         return (
-          <li key={id} data-series={id} className="min-w-0">
+          <li key={id} data-series={id} className="enter-rise min-w-0" style={staggerDelay(i, 90, 45)}>
             <Link
               href={`/${id}`}
               prefetch
               onClick={() => choose(id)}
               aria-describedby={isLast ? `last-${id}` : undefined}
               className={cn(
-                "group grid grid-cols-[1.5rem_4.25rem_minmax(0,1fr)_auto] items-center gap-x-3 transition-colors outline-none hover:bg-subtle focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+                "group relative isolate grid grid-cols-[1.5rem_4.25rem_minmax(0,1fr)_auto] items-center gap-x-3 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+                "before:absolute before:inset-0 before:-z-10 before:origin-right before:scale-x-0 before:bg-muted/70 before:transition-transform before:duration-500 before:ease-expo hover:before:origin-left hover:before:scale-x-100",
                 compact
                   ? "px-4 py-4 sm:grid-cols-[1.75rem_5rem_minmax(0,1fr)_auto]"
                   : "px-1 py-5 sm:grid-cols-[2.5rem_7rem_minmax(0,1fr)_auto] sm:gap-x-4 sm:px-3 sm:py-6",
@@ -41,7 +43,10 @@ export function SeriesPicker({ compact = false }: { compact?: boolean }) {
               </span>
               <span className="flex items-center gap-2 self-start sm:self-center">
                 <span className={cn("text-2xl leading-none font-semibold tracking-tight", !compact && "sm:text-4xl")}>{info.shortName}</span>
-                <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-series-accent" />
+                <span
+                  aria-hidden
+                  className="relative size-1.5 shrink-0 rounded-full bg-series-accent transition-transform duration-500 ease-spring group-hover:scale-[1.6] after:absolute after:inset-0 after:rounded-full after:bg-series-accent after:opacity-0 after:transition-[opacity,scale] after:duration-500 after:ease-expo group-hover:after:scale-[2.6] group-hover:after:opacity-20"
+                />
               </span>
               <span className="min-w-0">
                 <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
@@ -59,7 +64,7 @@ export function SeriesPicker({ compact = false }: { compact?: boolean }) {
                 )}
               </span>
               <ArrowRightIcon
-                className="size-4 text-muted-foreground transition-[color,translate] group-hover:translate-x-0.5 group-hover:text-foreground"
+                className="size-4 text-muted-foreground transition-[color,translate] duration-500 ease-spring group-hover:translate-x-1 group-hover:text-foreground group-focus-visible:translate-x-1 group-focus-visible:text-foreground"
                 aria-hidden
               />
             </Link>

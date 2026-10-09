@@ -227,7 +227,7 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
         disabled={frames.length < 2}
         aria-label={isPlaying ? "Pause radar animation" : "Play radar animation"}
       >
-        {isPlaying ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+        {isPlaying ? <Pause key="pause" aria-hidden="true" className="enter-pop" /> : <Play key="play" aria-hidden="true" className="enter-pop" />}
       </Button>
       <p className="min-w-0 flex-1 truncate font-mono text-xs tabular-nums text-muted-foreground">
         {frame ? (
@@ -248,7 +248,7 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
           {frames.map((f, i) => (
             <span
               key={f.id}
-              className={cn("h-0.5 flex-1", i <= activeIndex ? "bg-series-accent" : "bg-border")}
+              className={cn("h-0.5 flex-1 transition-colors duration-300 ease-out", i <= activeIndex ? "bg-series-accent" : "bg-border")}
             />
           ))}
         </div>
@@ -266,7 +266,14 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
           role="region"
           aria-label={`Rain radar map around ${name}`}
         />
-        {mapState === "loading" && <div className="absolute inset-0 animate-pulse bg-muted" aria-hidden="true" />}
+        {/* Stays mounted so it can fade away once the map has drawn. */}
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-0 bg-muted transition-opacity duration-500 ease-out",
+            mapState === "loading" ? "animate-pulse" : "opacity-0",
+          )}
+          aria-hidden="true"
+        />
         {mapState === "error" && (
           <div className="absolute inset-0 grid place-items-center bg-muted p-4 text-center text-sm text-muted-foreground">
             The map couldn’t load on this device.

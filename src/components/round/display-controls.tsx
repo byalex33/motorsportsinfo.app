@@ -2,6 +2,7 @@
 
 import { GlobeIcon } from "lucide-react";
 import { InlineSkeleton } from "@/components/inline-skeleton";
+import { SegmentPill } from "@/components/motion/segment-pill";
 import { track } from "@/lib/analytics";
 import type { DisplayZone } from "@/lib/display-zone";
 import { useTimePref, useUnitsPref, type TimeMode, type UnitsPref } from "@/lib/prefs";
@@ -9,7 +10,11 @@ import { cn } from "@/lib/utils";
 import { TimeZonePicker } from "./time-zone-picker";
 
 const segment =
-  "flex h-7 items-center rounded-full px-3 text-[0.8125rem] font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "relative flex h-7 items-center rounded-full px-3 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-300 ease-expo outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+/** Segmented-control track; the SegmentPill inside slides to the active item. */
+const segmentTrack =
+  "group/seg relative flex items-center rounded-full bg-muted p-0.5";
 
 function SegmentButton({ active, onClick, children, label }: { active: boolean; onClick: () => void; children: React.ReactNode; label?: string }) {
   return (
@@ -18,7 +23,10 @@ function SegmentButton({ active, onClick, children, label }: { active: boolean; 
       aria-pressed={active}
       aria-label={label}
       onClick={onClick}
-      className={cn(segment, active ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}
+      className={cn(
+        segment,
+        active ? "bg-foreground text-background group-data-[pill=ready]/seg:bg-transparent!" : "text-muted-foreground hover:text-foreground",
+      )}
     >
       {children}
     </button>
@@ -59,7 +67,8 @@ export function DisplayControls({ zone }: { zone: DisplayZone | null }) {
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div role="group" aria-label="Show times in" className="flex min-w-0 items-center rounded-full bg-muted p-0.5">
+        <div role="group" aria-label="Show times in" className={cn(segmentTrack, "min-w-0")}>
+          <SegmentPill />
           <SegmentButton active={mode === "viewer"} onClick={() => setMode("viewer")}>
             Your time
           </SegmentButton>
@@ -75,7 +84,8 @@ export function DisplayControls({ zone }: { zone: DisplayZone | null }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <div role="group" aria-label="Temperature unit" className="flex items-center rounded-full bg-muted p-0.5">
+          <div role="group" aria-label="Temperature unit" className={segmentTrack}>
+            <SegmentPill />
             <SegmentButton label="Celsius" active={units.ready && units.value.temp === "c"} onClick={() => setUnits({ ...units.value, temp: "c" })}>
               °C
             </SegmentButton>
@@ -83,7 +93,8 @@ export function DisplayControls({ zone }: { zone: DisplayZone | null }) {
               °F
             </SegmentButton>
           </div>
-          <div role="group" aria-label="Wind speed unit" className="flex items-center rounded-full bg-muted p-0.5">
+          <div role="group" aria-label="Wind speed unit" className={segmentTrack}>
+            <SegmentPill />
             <SegmentButton label="Kilometres per hour" active={units.ready && units.value.wind === "kmh"} onClick={() => setUnits({ ...units.value, wind: "kmh" })}>
               km/h
             </SegmentButton>

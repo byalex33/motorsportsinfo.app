@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { PageTransition } from "@/components/motion/page-transition";
+import { RevealWords } from "@/components/motion/reveal-words";
+import { ENTER, enterDelay, staggerDelay } from "@/lib/motion";
 
 export const metadata: Metadata = {
   title: "About",
@@ -11,9 +14,13 @@ export const metadata: Metadata = {
 
 const a = "text-primary underline decoration-primary/30 underline-offset-4 transition-colors hover:decoration-primary";
 
-function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+function Section({ id, index, title, children }: { id: string; index: number; title: string; children: ReactNode }) {
   return (
-    <section aria-labelledby={id} className="grid gap-4 border-t border-border pt-5 md:grid-cols-[12rem_minmax(0,1fr)] md:gap-10">
+    <section
+      aria-labelledby={id}
+      className="enter-rise grid gap-4 border-t border-border pt-5 md:grid-cols-[12rem_minmax(0,1fr)] md:gap-10"
+      style={staggerDelay(index, ENTER.body, 50, 3)}
+    >
       <h2 id={id} className="eyebrow pt-1 text-muted-foreground">
         {title}
       </h2>
@@ -24,130 +31,132 @@ function Section({ id, title, children }: { id: string; title: string; children:
 
 export default function AboutPage() {
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-10 pb-20 sm:px-6 sm:pt-16">
-      <p className="eyebrow flex items-center gap-2 text-muted-foreground">
-        <span aria-hidden className="size-1.5 rounded-full bg-primary" />
-        About
-      </p>
-      <h1 className="mt-4 max-w-3xl text-[2.25rem] leading-[1.05] font-semibold tracking-[-0.04em] text-balance sm:text-5xl">
-        A fan-made guide to when Sessions run and what the weather will do.
-      </h1>
-      <p className="mt-5 max-w-2xl leading-relaxed text-pretty text-muted-foreground sm:text-lg">
-        motorsportsinfo.app shows the Featured Round for F1, F2, F3 and the WEC — the Round in progress, or the next
-        one — with every Session in your time or Track Time, a live countdown, the forecast at the Circuit for each
-        Session and a rain radar around Session time. It is free, has no ads and no accounts.
-      </p>
+    <PageTransition>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-10 pb-20 sm:px-6 sm:pt-16">
+        <p className="eyebrow enter-rise flex items-center gap-2 text-muted-foreground" style={enterDelay(ENTER.eyebrow)}>
+          <span aria-hidden className="size-1.5 rounded-full bg-primary" />
+          About
+        </p>
+        <h1 className="mt-4 max-w-3xl text-[2.25rem] leading-[1.05] font-semibold tracking-[-0.04em] text-balance sm:text-5xl">
+          <RevealWords text="A fan-made guide to when Sessions run and what the weather will do." />
+        </h1>
+        <p className="enter-rise mt-5 max-w-2xl leading-relaxed text-pretty text-muted-foreground sm:text-lg" style={enterDelay(ENTER.lead)}>
+          motorsportsinfo.app shows the Featured Round for F1, F2, F3 and the WEC — the Round in progress, or the next
+          one — with every Session in your time or Track Time, a live countdown, the forecast at the Circuit for each
+          Session and a rain radar around Session time. It is free, has no ads and no accounts.
+        </p>
 
-      <div className="mt-14 space-y-12 sm:mt-20">
-        <Section id="what" title="What it is">
-          <p>
-            Pick a Series and you get one page: the Round that matters now. Times are shown in your device&apos;s time
-            zone by default; you can switch to Track Time (the Circuit&apos;s time zone) or any other zone, and choose
-            °C or °F and km/h or mph. Cancelled Sessions stay in the list, marked as cancelled.
-          </p>
-          <p>
-            <Link href="/alerts" className={a}>
-              Alerts
-            </Link>{" "}
-            lets you get a Session Reminder before the Sessions you follow, hear about Schedule Changes, or subscribe
-            to a calendar.
-          </p>
-        </Section>
-
-        <Section id="sources" title="Data sources & credits">
-          <ul className="list-disc space-y-2 pl-5">
-            <li>
-              <strong className="font-medium text-foreground">F1 schedule:</strong>{" "}
-              <a className={a} href="https://openf1.org" target="_blank" rel="noopener noreferrer">
-                Data: OpenF1
-              </a>
-              , with{" "}
-              <a className={a} href="https://jolpi.ca" target="_blank" rel="noopener noreferrer">
-                Jolpica
-              </a>{" "}
-              as a fallback. Both are licensed CC BY-NC-SA 4.0.
-            </li>
-            <li>
-              <strong className="font-medium text-foreground">F2 and F3 schedules:</strong> from the official timetables published on the FIA Formula 2 and
-              FIA Formula 3 websites, with the MIT-licensed sportstimes/f1 dataset as a fallback.
-            </li>
-            <li>
-              <strong className="font-medium text-foreground">WEC schedule:</strong> from the official timetables published on the FIA WEC website.
-            </li>
-            <li>
-              <strong className="font-medium text-foreground">Weather:</strong>{" "}
-              <a className={a} href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">
-                Weather data by Open-Meteo.com
-              </a>{" "}
-              (CC BY 4.0), used on its free, non-commercial tier.
-            </li>
-            <li>
-              <strong className="font-medium text-foreground">Rain radar:</strong>{" "}
-              <a className={a} href="https://www.rainviewer.com/" target="_blank" rel="noopener noreferrer">
-                Radar: RainViewer
-              </a>
-              .
-            </li>
-            <li>
-              <strong className="font-medium text-foreground">Maps:</strong>{" "}
-              <a className={a} href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">
-                © OpenFreeMap
-              </a>{" "}
-              <a className={a} href="https://openmaptiles.org/" target="_blank" rel="noopener noreferrer">
-                © OpenMapTiles
-              </a>{" "}
-              <a className={a} href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
-                © OpenStreetMap contributors
-              </a>
-              .
-            </li>
-          </ul>
-          <p>
-            Sources can be wrong or slow to update. When they are, we correct Sessions by hand with a Schedule
-            Override until the source catches up. Because these sources are free for non-commercial use, this site
-            will stay non-commercial: no ads and no paid features.
-          </p>
-        </Section>
-
-        <Section id="privacy" title="Privacy">
-          <ul className="list-disc space-y-2 pl-5">
-            <li>
-              <strong className="font-medium text-foreground">No accounts.</strong> There is nothing to sign up for.
-            </li>
-            <li>
-              <strong className="font-medium text-foreground">Your preferences stay on your device.</strong> Your last Series, time zone choice, units and
-              theme are kept in your browser&apos;s local storage and are never sent to us.
-            </li>
-            <li>
-              <strong className="font-medium text-foreground">Push notifications</strong> are optional. If you turn them on, we store an anonymous browser push
-              endpoint together with the Series, Session Types and reminder lead time you chose — nothing else. You can
-              remove it at any time from{" "}
+        <div className="mt-14 space-y-12 sm:mt-20">
+          <Section id="what" index={0} title="What it is">
+            <p>
+              Pick a Series and you get one page: the Round that matters now. Times are shown in your device&apos;s time
+              zone by default; you can switch to Track Time (the Circuit&apos;s time zone) or any other zone, and choose
+              °C or °F and km/h or mph. Cancelled Sessions stay in the list, marked as cancelled.
+            </p>
+            <p>
               <Link href="/alerts" className={a}>
                 Alerts
-              </Link>
-              .
-            </li>
-            <li>
-              <strong className="font-medium text-foreground">Calendar links</strong> contain only your choices of Series and Session Types.
-            </li>
-            <li>
-              <strong className="font-medium text-foreground">Analytics</strong> are privacy-friendly, provided by Tracwell, and respect Do Not Track: if your
-              browser sends it, nothing is recorded.
-            </li>
-          </ul>
-        </Section>
+              </Link>{" "}
+              lets you get a Session Reminder before the Sessions you follow, hear about Schedule Changes, or subscribe
+              to a calendar.
+            </p>
+          </Section>
 
-        <Section id="disclaimer" title="Disclaimer">
-          <p>
-            Unofficial. Not affiliated with Formula 1, the FIA, the ACO or the WEC. F1, Formula 1 and related marks are
-            trademarks of their respective owners.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Session times and forecasts are provided as-is and can change at short notice. Always check official
-            channels before travelling.
-          </p>
-        </Section>
-      </div>
-    </main>
+          <Section id="sources" index={1} title="Data sources & credits">
+            <ul className="list-disc space-y-2 pl-5">
+              <li>
+                <strong className="font-medium text-foreground">F1 schedule:</strong>{" "}
+                <a className={a} href="https://openf1.org" target="_blank" rel="noopener noreferrer">
+                  Data: OpenF1
+                </a>
+                , with{" "}
+                <a className={a} href="https://jolpi.ca" target="_blank" rel="noopener noreferrer">
+                  Jolpica
+                </a>{" "}
+                as a fallback. Both are licensed CC BY-NC-SA 4.0.
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">F2 and F3 schedules:</strong> from the official timetables published on the FIA Formula 2 and
+                FIA Formula 3 websites, with the MIT-licensed sportstimes/f1 dataset as a fallback.
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">WEC schedule:</strong> from the official timetables published on the FIA WEC website.
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">Weather:</strong>{" "}
+                <a className={a} href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">
+                  Weather data by Open-Meteo.com
+                </a>{" "}
+                (CC BY 4.0), used on its free, non-commercial tier.
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">Rain radar:</strong>{" "}
+                <a className={a} href="https://www.rainviewer.com/" target="_blank" rel="noopener noreferrer">
+                  Radar: RainViewer
+                </a>
+                .
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">Maps:</strong>{" "}
+                <a className={a} href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">
+                  © OpenFreeMap
+                </a>{" "}
+                <a className={a} href="https://openmaptiles.org/" target="_blank" rel="noopener noreferrer">
+                  © OpenMapTiles
+                </a>{" "}
+                <a className={a} href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
+                  © OpenStreetMap contributors
+                </a>
+                .
+              </li>
+            </ul>
+            <p>
+              Sources can be wrong or slow to update. When they are, we correct Sessions by hand with a Schedule
+              Override until the source catches up. Because these sources are free for non-commercial use, this site
+              will stay non-commercial: no ads and no paid features.
+            </p>
+          </Section>
+
+          <Section id="privacy" index={2} title="Privacy">
+            <ul className="list-disc space-y-2 pl-5">
+              <li>
+                <strong className="font-medium text-foreground">No accounts.</strong> There is nothing to sign up for.
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">Your preferences stay on your device.</strong> Your last Series, time zone choice, units and
+                theme are kept in your browser&apos;s local storage and are never sent to us.
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">Push notifications</strong> are optional. If you turn them on, we store an anonymous browser push
+                endpoint together with the Series, Session Types and reminder lead time you chose — nothing else. You can
+                remove it at any time from{" "}
+                <Link href="/alerts" className={a}>
+                  Alerts
+                </Link>
+                .
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">Calendar links</strong> contain only your choices of Series and Session Types.
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">Analytics</strong> are privacy-friendly, provided by Tracwell, and respect Do Not Track: if your
+                browser sends it, nothing is recorded.
+              </li>
+            </ul>
+          </Section>
+
+          <Section id="disclaimer" index={3} title="Disclaimer">
+            <p>
+              Unofficial. Not affiliated with Formula 1, the FIA, the ACO or the WEC. F1, Formula 1 and related marks are
+              trademarks of their respective owners.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Session times and forecasts are provided as-is and can change at short notice. Always check official
+              channels before travelling.
+            </p>
+          </Section>
+        </div>
+      </main>
+    </PageTransition>
   );
 }

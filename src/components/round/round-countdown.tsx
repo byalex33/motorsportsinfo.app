@@ -1,7 +1,7 @@
 "use client";
 
 import { FlagIcon } from "lucide-react";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import type { Session } from "@/domain/types";
 import { useNow } from "@/lib/client-stores";
 import { countdownParts, formatCountdown, getRoundStatus } from "@/lib/round-status";
@@ -25,6 +25,42 @@ export function LiveDot({ className }: { className?: string }) {
   );
 }
 
+/**
+ * One odometer digit. Only a digit that changes animates: the old one rolls out downwards while
+ * the new one drops in, inside a fixed-width monospace slot, so nothing around it moves.
+ */
+function RollingDigit({ digit }: { digit: string }) {
+  const [roll, setRoll] = useState({ current: digit, previous: null as string | null, turn: 0 });
+  if (roll.current !== digit) {
+    // Derived state from the previous render (React's "storing information from previous renders").
+    setRoll({ current: digit, previous: roll.current, turn: roll.turn + 1 });
+  }
+  return (
+    <span className="digit-slot">
+      {roll.previous !== null && (
+        <span key={`out-${roll.turn}`} aria-hidden className="digit-out">
+          {roll.previous}
+        </span>
+      )}
+      <span key={`in-${roll.turn}`} className={roll.turn > 0 ? "digit-in" : "block"}>
+        {roll.current}
+      </span>
+    </span>
+  );
+}
+
+function RollingNumber({ value }: { value: string }) {
+  const digits = value.split("");
+  return (
+    <span className="flex">
+      {digits.map((d, i) => (
+        // Keyed from the right, so units stay units when the day count gains a digit.
+        <RollingDigit key={digits.length - i} digit={d} />
+      ))}
+    </span>
+  );
+}
+
 /** Live countdown to the next Session, or a "Live" badge while a Session is running. */
 export function RoundCountdown({ sessions, circuitTimeZone }: { sessions: Session[]; circuitTimeZone: string }) {
   const now = useNow(1000);
@@ -44,7 +80,7 @@ export function RoundCountdown({ sessions, circuitTimeZone }: { sessions: Sessio
 
   if (status.kind === "finished") {
     return (
-      <p className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-sm">
+      <p className="enter-focus flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-sm">
         <FlagIcon className="size-4 text-series-accent" aria-hidden />
         <span className="font-medium">Round complete.</span>
         <span className="text-muted-foreground">The next Round appears here shortly.</span>
@@ -60,7 +96,7 @@ export function RoundCountdown({ sessions, circuitTimeZone }: { sessions: Sessio
   const at = zone ? formatClock(session.startsAt, zone.tz) : null;
 
   return (
-    <div className="flex flex-col items-center space-y-4">
+    <div className="enter-focus flex flex-col items-center space-y-4">
       <p className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-sm">
         {isLive ? (
           <span className="chip bg-series-accent text-series-accent-foreground">
@@ -68,7 +104,7 @@ export function RoundCountdown({ sessions, circuitTimeZone }: { sessions: Sessio
             Live
           </span>
         ) : (
-          <span className="chip border border-series-accent/70 text-series-accent">Next</span>
+          <span className="chip chip-shimmer border border-series-accent/70 text-series-accent">Next</span>
         )}
         <span className="font-medium">
           {session.name} {isLive ? "ends in" : "starts in"}
@@ -94,7 +130,7 @@ export function RoundCountdown({ sessions, circuitTimeZone }: { sessions: Sessio
             )}
             <span className="flex flex-col">
               <span className="text-[2.75rem] leading-none font-medium tracking-[-0.04em] sm:text-6xl">
-                {String(parts[u.key]).padStart(2, "0")}
+                <RollingNumber value={String(parts[u.key]).padStart(2, "0")} />
               </span>
               <span className="eyebrow mt-2 text-muted-foreground">{u.label}</span>
             </span>

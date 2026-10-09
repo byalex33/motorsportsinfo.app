@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { ReminderLeadMinutes } from "@/domain/series";
 import type { SeriesId, SessionType } from "@/domain/types";
+import { ENTER, staggerDelay } from "@/lib/motion";
 import { defaultFollows, toggleFollow, type Follows } from "@/server/alerts/selection";
 import { AlertsSection } from "./alerts-section";
 import { CalendarFeedCard } from "./calendar-feed-card";
@@ -47,12 +48,18 @@ export function AlertsPanel() {
         index="01"
         title="Choose Sessions"
         description="Tick the Session Types you care about in each Series. Reminders and the calendar feed both use these ticks."
+        className="enter-rise"
+        style={staggerDelay(0, ENTER.body, 60)}
       >
         <SelectionGrid follows={follows} onToggle={toggle} />
       </AlertsSection>
       <div className="grid gap-14 md:grid-cols-2 md:gap-10">
-        <RemindersCard follows={follows} leadMinutes={leadMinutes} onLeadChange={changeLead} />
-        <CalendarFeedCard follows={follows} />
+        <div className="enter-rise min-w-0" style={staggerDelay(1, ENTER.body, 60)}>
+          <RemindersCard follows={follows} leadMinutes={leadMinutes} onLeadChange={changeLead} />
+        </div>
+        <div className="enter-rise min-w-0" style={staggerDelay(2, ENTER.body, 60)}>
+          <CalendarFeedCard follows={follows} />
+        </div>
       </div>
     </div>
   );

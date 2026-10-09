@@ -2,6 +2,7 @@
 
 import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useHydrated } from "@/lib/client-stores";
 
@@ -21,17 +22,22 @@ export function ThemeToggle() {
   const current: ThemeChoice = hydrated && (theme === "light" || theme === "dark") ? theme : "system";
   const next = ORDER[(ORDER.indexOf(current) + 1) % ORDER.length];
   const Icon = current === "light" ? SunIcon : current === "dark" ? MoonIcon : MonitorIcon;
+  // Only animate icon swaps the viewer caused, not the one hydration makes.
+  const [clicked, setClicked] = useState(false);
 
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => setTheme(next)}
+      onClick={() => {
+        setClicked(true);
+        setTheme(next);
+      }}
       aria-label={`${LABEL[current]}. Switch to ${next}.`}
       title={LABEL[current]}
       className="text-muted-foreground hover:text-foreground"
     >
-      <Icon aria-hidden />
+      <Icon key={current} aria-hidden className={clicked ? "enter-pop" : undefined} />
     </Button>
   );
 }

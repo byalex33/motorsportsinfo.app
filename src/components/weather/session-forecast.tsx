@@ -47,7 +47,8 @@ export function SessionForecastView({ forecast, tempUnit, windUnit, timeZone }: 
   return (
     <span className={cn(ROOT, "gap-3 tabular-nums")}>
       <span className="inline-flex items-center gap-1.5" title={label}>
-        <Icon className="size-4 shrink-0" role="img" aria-label={label} />
+        {/* `wx` adds a tiny ambient loop per condition (globals.css); off with reduced motion. */}
+        <Icon className="wx size-4 shrink-0" role="img" aria-label={label} />
         <span className="font-medium">{formatTemperature(forecast.temperatureC, tempUnit)}</span>
       </span>
 

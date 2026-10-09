@@ -4,6 +4,7 @@ import { BellIcon, BellOffIcon } from "lucide-react";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Radio as RadioPrimitive } from "@base-ui/react/radio";
 import { RadioGroup as RadioGroupPrimitive } from "@base-ui/react/radio-group";
+import { SegmentPill } from "@/components/motion/segment-pill";
 import { Button } from "@/components/ui/button";
 import { REMINDER_LEAD_MINUTES, type ReminderLeadMinutes } from "@/domain/series";
 import { track } from "@/lib/analytics";
@@ -166,14 +167,15 @@ export function RemindersCard({ follows, leadMinutes, onLeadChange }: RemindersC
               aria-labelledby={leadLabelId}
               value={leadMinutes}
               onValueChange={(value) => onLeadChange(value as ReminderLeadMinutes)}
-              className="inline-flex w-fit max-w-full items-center rounded-full bg-muted p-0.5"
+              className="group/seg relative inline-flex w-fit max-w-full items-center rounded-full bg-muted p-0.5"
             >
+              <SegmentPill />
               {REMINDER_LEAD_MINUTES.map((minutes) => (
                 <RadioPrimitive.Root
                   key={minutes}
                   value={minutes}
                   aria-label={LEAD_LABELS[minutes]}
-                  className="flex h-7 cursor-pointer items-center rounded-full px-3 text-[0.8125rem] font-medium whitespace-nowrap text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-checked:bg-foreground data-checked:text-background"
+                  className="relative flex h-7 cursor-pointer items-center rounded-full px-3 text-[0.8125rem] font-medium whitespace-nowrap text-muted-foreground transition-colors duration-300 ease-expo outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-checked:bg-foreground data-checked:text-background group-data-[pill=ready]/seg:data-checked:bg-transparent!"
                 >
                   {LEAD_SHORT_LABELS[minutes]}
                 </RadioPrimitive.Root>
@@ -195,7 +197,11 @@ export function RemindersCard({ follows, leadMinutes, onLeadChange }: RemindersC
         />
 
         <p role="status" aria-live="polite" className={message?.tone === "error" ? "text-sm text-destructive" : "text-sm"}>
-          {message?.text}
+          {message && (
+            <span key={message.text} className="enter-focus block">
+              {message.text}
+            </span>
+          )}
         </p>
       </div>
     </AlertsSection>
@@ -260,7 +266,10 @@ function PushControls({ support, subscribed, busy, nothingTicked, onEnable, onDi
     return (
       <div className="grid gap-3">
         <p className="flex items-center gap-2 text-sm font-medium">
-          <span aria-hidden className="size-1.5 rounded-full bg-primary" />
+          <span aria-hidden className="relative flex size-1.5">
+            <span className="absolute inset-0 animate-[ping_1s_cubic-bezier(0,0,0.2,1)_2_forwards] rounded-full bg-primary opacity-60" />
+            <span className="relative size-1.5 rounded-full bg-primary" />
+          </span>
           Reminders are on for this device.
         </p>
         {nothingTicked && (

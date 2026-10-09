@@ -31,18 +31,26 @@ export function RadarPanel({ circuit, sessions }: RadarPanelProps) {
 
   if (now === null || session === null) return null;
 
+  // The wrapper stays mounted while the map's loading placeholder is swapped for the map, so the
+  // card rises in once rather than once per state.
   if (!circuit.hasRadarCoverage) {
     return (
-      <RadarCard circuitName={circuit.name}>
-        <p className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
-          <CloudOff className="size-4 shrink-0" aria-hidden="true" />
-          No radar coverage at this circuit
-        </p>
-      </RadarCard>
+      <div className="enter-scale">
+        <RadarCard circuitName={circuit.name}>
+          <p className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
+            <CloudOff className="size-4 shrink-0" aria-hidden="true" />
+            No radar coverage at this circuit
+          </p>
+        </RadarCard>
+      </div>
     );
   }
 
-  return <RadarMap circuit={circuit} nowMs={now} />;
+  return (
+    <div className="enter-scale">
+      <RadarMap circuit={circuit} nowMs={now} />
+    </div>
+  );
 }
 
 const RadarMap = dynamic(() => import("./radar-map"), {

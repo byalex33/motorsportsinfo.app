@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { PageTransition } from "@/components/motion/page-transition";
 import { RadarSlot } from "@/components/round/radar-slot";
 import { RememberSeries } from "@/components/round/remember-series";
 import { RoundCountdown } from "@/components/round/round-countdown";
@@ -56,33 +57,35 @@ export default async function SeriesPage({ params }: PageProps<"/[series]">) {
   const { featured, forecasts, renderedAt } = await getSeriesPageData(series);
 
   return (
-    <main data-series={series} className="mx-auto w-full max-w-5xl flex-1 space-y-14 px-4 pt-10 pb-20 sm:space-y-16 sm:px-6 sm:pt-16">
-      <RememberSeries series={series} />
-      <PageStamp at={renderedAt} />
+    <PageTransition>
+      <main data-series={series} className="mx-auto w-full max-w-5xl flex-1 space-y-14 px-4 pt-10 pb-20 sm:space-y-16 sm:px-6 sm:pt-16">
+        <RememberSeries series={series} />
+        <PageStamp at={renderedAt} />
 
-      {featured.kind === "season-complete" ? (
-        <SeasonCompleteHero series={series} season={featured.season} />
-      ) : (
-        <>
-          <RoundHero
-            series={series}
-            round={featured.round}
-            circuit={featured.circuit}
-            countdown={
-              featured.round.sessionTimesConfirmed && featured.sessions.length > 0 ? (
-                <RoundCountdown sessions={featured.sessions} circuitTimeZone={featured.circuit.timeZone} />
-              ) : null
-            }
-          />
-          {featured.round.sessionTimesConfirmed && <RadarSlot circuit={featured.circuit} sessions={featured.sessions} />}
-          <RoundSessions
-            sessions={featured.sessions}
-            forecasts={forecasts}
-            timesConfirmed={featured.round.sessionTimesConfirmed}
-            circuitTimeZone={featured.circuit.timeZone}
-          />
-        </>
-      )}
-    </main>
+        {featured.kind === "season-complete" ? (
+          <SeasonCompleteHero series={series} season={featured.season} />
+        ) : (
+          <>
+            <RoundHero
+              series={series}
+              round={featured.round}
+              circuit={featured.circuit}
+              countdown={
+                featured.round.sessionTimesConfirmed && featured.sessions.length > 0 ? (
+                  <RoundCountdown sessions={featured.sessions} circuitTimeZone={featured.circuit.timeZone} />
+                ) : null
+              }
+            />
+            {featured.round.sessionTimesConfirmed && <RadarSlot circuit={featured.circuit} sessions={featured.sessions} />}
+            <RoundSessions
+              sessions={featured.sessions}
+              forecasts={forecasts}
+              timesConfirmed={featured.round.sessionTimesConfirmed}
+              circuitTimeZone={featured.circuit.timeZone}
+            />
+          </>
+        )}
+      </main>
+    </PageTransition>
   );
 }

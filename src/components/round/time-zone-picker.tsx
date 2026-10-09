@@ -34,13 +34,13 @@ export function TimeZonePicker({ value, active, onSelect, className }: TimeZoneP
         aria-pressed={active}
         aria-label={active && value ? `Time zone: ${value}. Choose another time zone` : "Choose another time zone"}
         className={cn(
-          "flex h-7 min-w-0 items-center gap-1 rounded-full px-3 text-[0.8125rem] font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          active ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
+          "relative flex h-7 min-w-0 items-center gap-1 rounded-full px-3 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-300 ease-expo outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          active ? "bg-foreground text-background group-data-[pill=ready]/seg:bg-transparent!" : "text-muted-foreground hover:text-foreground",
           className,
         )}
       >
         <span className="truncate">{active && value ? zoneCity(value) : "Other zone"}</span>
-        <ChevronDownIcon className="size-3.5 shrink-0 opacity-70" aria-hidden />
+        <ChevronDownIcon className="size-3.5 shrink-0 opacity-70 transition-transform duration-300 ease-spring in-data-popup-open:rotate-180" aria-hidden />
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[min(20rem,calc(100vw-2rem))] gap-2 p-2">
         <label className="relative block">

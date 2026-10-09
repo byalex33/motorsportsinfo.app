@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CalendarClockIcon } from "lucide-react";
 import type { ForecastResult, Session } from "@/domain/types";
+import { ENTER, enterDelay } from "@/lib/motion";
 import { DisplayControls } from "./display-controls";
 import { SessionList } from "./session-list";
 import { useDisplayZone } from "./use-display-zone";
@@ -20,7 +21,7 @@ export function RoundSessions({ sessions, forecasts, timesConfirmed, circuitTime
 
   return (
     <section aria-labelledby="sessions-heading" className="space-y-5">
-      <div className="flex items-baseline justify-between gap-4">
+      <div className="enter-rise flex items-baseline justify-between gap-4" style={enterDelay(ENTER.body)}>
         <h2 id="sessions-heading" className="eyebrow text-muted-foreground">
           Sessions
         </h2>
@@ -31,10 +32,14 @@ export function RoundSessions({ sessions, forecasts, timesConfirmed, circuitTime
         )}
       </div>
 
-      {timesConfirmed && <DisplayControls zone={zone} />}
+      {timesConfirmed && (
+        <div className="enter-rise" style={enterDelay(ENTER.body + 15)}>
+          <DisplayControls zone={zone} />
+        </div>
+      )}
 
       {!timesConfirmed && (
-        <p className="flex gap-3 border-l-2 border-series-accent py-0.5 pl-3 text-sm leading-relaxed">
+        <p className="enter-rise flex gap-3 border-l-2 border-series-accent py-0.5 pl-3 text-sm leading-relaxed" style={enterDelay(ENTER.body + 15)}>
           <CalendarClockIcon className="mt-0.5 size-4 shrink-0 text-series-accent" aria-hidden />
           <span>
             <span className="font-medium">Times TBC.</span>{" "}
@@ -50,23 +55,23 @@ export function RoundSessions({ sessions, forecasts, timesConfirmed, circuitTime
         <SessionList sessions={sessions} forecasts={forecasts} timesConfirmed={timesConfirmed} zone={zone} />
       ) : (
         timesConfirmed && (
-          <p className="border-y border-border py-10 text-center text-sm text-muted-foreground">
+          <p className="enter-rise border-y border-border py-10 text-center text-sm text-muted-foreground" style={enterDelay(ENTER.rows)}>
             The Session list for this Round has not been published yet.
           </p>
         )
       )}
 
       {/* Credits required by the data licences (ADR 0001). The radar map credits its own sources. */}
-      <p className="text-center font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground">
-        <a className="hover:text-foreground" href="https://openf1.org" target="_blank" rel="noopener noreferrer">
+      <p className="enter-fade text-center font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground" style={enterDelay(ENTER.rows + 120)}>
+        <a className="transition-colors hover:text-foreground" href="https://openf1.org" target="_blank" rel="noopener noreferrer">
           Data: OpenF1
         </a>
         {" · "}
-        <a className="hover:text-foreground" href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">
+        <a className="transition-colors hover:text-foreground" href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">
           Weather data by Open-Meteo.com
         </a>
         {" · "}
-        <Link className="hover:text-foreground" href="/about">
+        <Link className="transition-colors hover:text-foreground" href="/about">
           About
         </Link>
       </p>

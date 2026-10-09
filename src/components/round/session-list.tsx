@@ -6,6 +6,7 @@ import { InlineSkeleton } from "@/components/inline-skeleton";
 import type { ForecastResult, Session } from "@/domain/types";
 import { useNow, useOnline } from "@/lib/client-stores";
 import type { DisplayZone } from "@/lib/display-zone";
+import { staggerDelay } from "@/lib/motion";
 import { useUnitsPref } from "@/lib/prefs";
 import { getRoundStatus, sessionPhase, type SessionPhase } from "@/lib/round-status";
 import { formatSessionDay, formatTimeRange, zoneOffsetLabel } from "@/lib/time-format";
@@ -34,15 +35,16 @@ export function SessionList({ sessions, forecasts, timesConfirmed, zone }: Sessi
 
   return (
     <ol className={cn("divide-y divide-border border-y border-border", COLS)}>
-      <li aria-hidden className={cn("eyebrow hidden py-2.5 text-muted-foreground sm:grid", ROW)}>
+      <li aria-hidden className={cn("eyebrow enter-rise hidden py-2.5 text-muted-foreground sm:grid", ROW)} style={staggerDelay(0)}>
         <span className="pl-3">Day</span>
         <span>Session</span>
         <span>Time{offset ? ` · ${offset}` : ""}</span>
         <span className="pr-3 text-right">Weather</span>
       </li>
-      {sessions.map((session) => (
+      {sessions.map((session, index) => (
         <SessionRow
           key={session.id}
+          index={index}
           session={session}
           forecast={forecasts[session.id]}
           timesConfirmed={timesConfirmed}
@@ -56,6 +58,7 @@ export function SessionList({ sessions, forecasts, timesConfirmed, zone }: Sessi
 }
 
 function SessionRow({
+  index,
   session,
   forecast,
   timesConfirmed,
@@ -63,6 +66,7 @@ function SessionRow({
   phase,
   isNext,
 }: {
+  index: number;
   session: Session;
   forecast: ForecastResult | undefined;
   timesConfirmed: boolean;
@@ -82,14 +86,15 @@ function SessionRow({
   return (
     <li
       className={cn(
-        "relative grid grid-cols-[2.25rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 py-3.5 pl-2.5 sm:items-center sm:gap-y-0 sm:py-4 sm:pl-0",
+        "enter-rise relative grid grid-cols-[2.25rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 py-3.5 pl-2.5 transition-colors duration-500 sm:items-center sm:gap-y-0 sm:py-4 sm:pl-0",
         ROW,
         finished && "text-muted-foreground",
       )}
+      style={staggerDelay(index + 1)}
     >
-      {live && <span aria-hidden className="absolute inset-y-0 left-0 w-0.5 bg-series-accent" />}
+      {live && <span aria-hidden className="live-breathe absolute inset-y-0 left-0 w-0.5 bg-series-accent" />}
 
-      <DayCell day={day} timesConfirmed={timesConfirmed} muted={cancelled || finished} />
+      <DayCell day={day} tz={zone?.tz} timesConfirmed={timesConfirmed} muted={cancelled || finished} />
 
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
@@ -103,7 +108,7 @@ function SessionRow({
               Live
             </span>
           )}
-          {isNext && !live && <span className="chip border border-series-accent/70 text-series-accent">Next</span>}
+          {isNext && !live && <span className="chip chip-shimmer border border-series-accent/70 text-series-accent">Next</span>}
           {finished && !cancelled && <span className="chip px-0 text-muted-foreground">Finished</span>}
         </div>
       </div>
@@ -116,7 +121,7 @@ function SessionRow({
               <span className="sr-only">Time </span>TBC
             </span>
           ) : range ? (
-            <span className={cn(cancelled ? "text-muted-foreground line-through" : finished ? "" : "text-foreground")}>
+            <span key={zone?.tz} className={cn("enter-focus", cancelled ? "text-muted-foreground line-through" : finished ? "" : "text-foreground")}>
               {cancelled && <span className="sr-only">Was </span>}
               {range}
             </span>
@@ -125,14 +130,24 @@ function SessionRow({
           )}
         </p>
         <div className="min-w-0 sm:justify-self-end sm:pr-3">
-          {timesConfirmed && !cancelled && <ForecastSlot forecast={forecast} timeZone={zone?.tz ?? null} />}
+          {timesConfirmed && !cancelled && <ForecastSlot index={index} forecast={forecast} timeZone={zone?.tz ?? null} />}
         </div>
       </div>
     </li>
   );
 }
 
-function DayCell({ day, timesConfirmed, muted }: { day: ReturnType<typeof formatSessionDay> | null; timesConfirmed: boolean; muted: boolean }) {
+function DayCell({
+  day,
+  tz,
+  timesConfirmed,
+  muted,
+}: {
+  day: ReturnType<typeof formatSessionDay> | null;
+  tz: string | undefined;
+  timesConfirmed: boolean;
+  muted: boolean;
+}) {
   return (
     <div
       className={cn("pt-0.5 font-mono text-xs leading-tight uppercase tabular sm:pt-0 sm:pl-3 sm:text-[0.8125rem]", muted ? "text-muted-foreground" : "text-foreground")}
@@ -142,7 +157,7 @@ function DayCell({ day, timesConfirmed, muted }: { day: ReturnType<typeof format
         <span className="text-muted-foreground">—</span>
       ) : day ? (
         <>
-          <span aria-hidden className="flex flex-col sm:flex-row sm:gap-[1ch]">
+          <span key={tz} aria-hidden className="enter-focus flex flex-col sm:flex-row sm:gap-[1ch]">
             <span className="text-muted-foreground">{day.weekday}</span>
             <span>{day.day.padStart(2, "0")}</span>
           </span>
@@ -155,7 +170,7 @@ function DayCell({ day, timesConfirmed, muted }: { day: ReturnType<typeof format
   );
 }
 
-function ForecastSlot({ forecast, timeZone }: { forecast: ForecastResult | undefined; timeZone: string | null }) {
+function ForecastSlot({ index, forecast, timeZone }: { index: number; forecast: ForecastResult | undefined; timeZone: string | null }) {
   const online = useOnline();
   const units = useUnitsPref();
 
@@ -169,7 +184,12 @@ function ForecastSlot({ forecast, timeZone }: { forecast: ForecastResult | undef
   }
   if (!units.ready || !timeZone) return <InlineSkeleton className="h-5 w-36" />;
   return (
-    <div className="max-sm:[&>span]:text-[0.8125rem] sm:font-mono">
+    // Keyed by units, so switching °C/°F or km/h/mph re-focuses the values instead of snapping.
+    <div
+      key={`${units.value.temp}-${units.value.wind}`}
+      className="enter-focus max-sm:[&>span]:text-[0.8125rem] sm:font-mono"
+      style={staggerDelay(index, 40, 30)}
+    >
       <SessionForecastView
         forecast={forecast ?? { kind: "unavailable" }}
         tempUnit={units.value.temp}
