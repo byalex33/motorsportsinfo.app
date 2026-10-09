@@ -57,11 +57,16 @@ describe("fetchSeriesSchedule", () => {
       "https://www.fiaformula2.com/en/racing/2026/baku": "f2-round-baku-2026.html",
       "https://www.fiaformula2.com/en/racing/2026/lusail": "f2-round-lusail-2026.html",
       "https://www.fiaformula2.com/en/racing/2027": 500,
+      "https://raw.githubusercontent.com/sportstimes/f1/main/_db/f2/2026.json": "sportstimes-f2-2026.json",
     });
     const schedule = await fetchSeriesSchedule("f2", NOW, ctx);
     expect(schedule).toMatchObject({ source: "fiaformula2", isFallback: false, completeSeasons: [] });
     expect(schedule.rounds.map((r) => r.round.id)).toEqual(["f2-2026-baku", "f2-2026-lusail"]);
     expect(schedule.warnings).toHaveLength(12);
+    // Lusail is TBC on the official page; its Session times come from sportstimes.
+    const lusail = schedule.rounds[1];
+    expect(lusail.round.sessionTimesConfirmed).toBe(true);
+    expect(lusail.sessions.map((s) => s.type)).toEqual(["practice", "qualifying", "sprint-race", "feature-race"]);
     expect(requests[0].userAgent).toContain("Mozilla/5.0");
   });
 
