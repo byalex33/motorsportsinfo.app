@@ -3,10 +3,10 @@
 import { CalendarPlusIcon, CheckIcon, CopyIcon } from "lucide-react";
 import { useId, useRef, useState, useSyncExternalStore } from "react";
 import { buttonVariants, Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { track } from "@/lib/analytics";
 import { calendarFeedLinks, followedSeries, followedSessionTypes, type Follows } from "@/server/alerts/selection";
+import { AlertsSection } from "./alerts-section";
 
 const noopSubscribe = () => () => {};
 
@@ -50,25 +50,21 @@ export function CalendarFeedCard({ follows }: { follows: Follows }) {
   }
 
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>
-          <h2 className="text-lg font-semibold">Calendar feed</h2>
-        </CardTitle>
-        <CardDescription>
-          Subscribe to the ticked Sessions in Apple Calendar, Google Calendar, Outlook or any app that takes an iCal link.
-          Times update when the schedule changes — no account needed.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-4">
+    <AlertsSection
+      id="calendar-feed-heading"
+      index="03"
+      title="Calendar feed"
+      description="Subscribe to the ticked Sessions in Apple Calendar, Google Calendar, Outlook or any app that takes an iCal link. Times update when the schedule changes — no account needed."
+    >
+      <div className="grid gap-5">
         {nothingTicked ? (
-          <p className="rounded-lg bg-muted px-3 py-2.5 text-sm text-muted-foreground">
+          <p className="border-l-2 border-border pl-3 text-sm leading-relaxed text-muted-foreground">
             Tick at least one Session Type above to get a calendar link.
           </p>
         ) : (
           <>
-            <div className="grid gap-2">
-              <label htmlFor={inputId} className="text-sm font-medium">
+            <div className="grid gap-2.5">
+              <label htmlFor={inputId} className="eyebrow text-muted-foreground">
                 Calendar link
               </label>
               <div className="flex gap-2">
@@ -78,9 +74,9 @@ export function CalendarFeedCard({ follows }: { follows: Follows }) {
                   readOnly
                   value={links?.httpUrl ?? ""}
                   onFocus={(e) => e.currentTarget.select()}
-                  className="h-9 font-mono text-xs md:text-xs"
+                  className="h-9 rounded-md border-border bg-subtle font-mono text-xs md:text-xs dark:bg-subtle"
                 />
-                <Button variant="outline" size="lg" onClick={copy} disabled={!links} aria-label="Copy calendar link">
+                <Button variant="outline" size="lg" onClick={copy} disabled={!links} aria-label="Copy calendar link" className="rounded-md">
                   {copied ? <CheckIcon aria-hidden /> : <CopyIcon aria-hidden />}
                   <span className="max-[380px]:sr-only">{copied ? "Copied" : "Copy"}</span>
                 </Button>
@@ -89,12 +85,12 @@ export function CalendarFeedCard({ follows }: { follows: Follows }) {
                 {copied ? "Calendar link copied" : ""}
               </p>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
               <a
                 href={links?.webcalUrl}
                 onClick={trackCreated}
                 aria-disabled={!links}
-                className={buttonVariants({ size: "lg", className: "w-full" })}
+                className={buttonVariants({ size: "lg", className: "w-full rounded-md" })}
               >
                 <CalendarPlusIcon aria-hidden />
                 Add to Apple Calendar
@@ -105,7 +101,7 @@ export function CalendarFeedCard({ follows }: { follows: Follows }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-disabled={!links}
-                className={buttonVariants({ variant: "outline", size: "lg", className: "w-full" })}
+                className={buttonVariants({ variant: "outline", size: "lg", className: "w-full rounded-md" })}
               >
                 <CalendarPlusIcon aria-hidden />
                 Add to Google Calendar
@@ -117,7 +113,7 @@ export function CalendarFeedCard({ follows }: { follows: Follows }) {
             </p>
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </AlertsSection>
   );
 }

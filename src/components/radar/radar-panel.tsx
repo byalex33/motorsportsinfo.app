@@ -34,7 +34,7 @@ export function RadarPanel({ circuit, sessions }: RadarPanelProps) {
   if (!circuit.hasRadarCoverage) {
     return (
       <RadarCard circuitName={circuit.name}>
-        <p className="flex items-center gap-2 px-4 pb-3 text-sm text-muted-foreground">
+        <p className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
           <CloudOff className="size-4 shrink-0" aria-hidden="true" />
           No radar coverage at this circuit
         </p>

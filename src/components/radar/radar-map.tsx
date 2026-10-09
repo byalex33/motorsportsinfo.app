@@ -134,7 +134,7 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
       map.addControl(new maplibre.NavigationControl({ showCompass: false }), "top-right");
 
       const marker = document.createElement("div");
-      marker.className = "size-4 rounded-full border-2 border-white shadow-md ring-1 ring-black/30";
+      marker.className = "size-4 rounded-full border-2 border-white ring-1 ring-black/30";
       marker.style.background = "var(--series-accent, var(--primary))";
       marker.setAttribute("role", "img");
       marker.setAttribute("aria-label", name);
@@ -219,7 +219,7 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
   };
 
   const footer = (
-    <div className="flex h-11 items-center gap-3 border-t px-2.5">
+    <div className="flex h-11 items-center gap-3 border-t border-border px-2.5">
       <Button
         variant="ghost"
         size="icon-sm"
@@ -229,7 +229,7 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
       >
         {isPlaying ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
       </Button>
-      <p className="min-w-0 flex-1 truncate text-xs tabular-nums text-muted-foreground">
+      <p className="min-w-0 flex-1 truncate font-mono text-xs tabular-nums text-muted-foreground">
         {frame ? (
           <>
             <time dateTime={new Date(frame.time * 1000).toISOString()} className="font-medium text-foreground">
@@ -248,7 +248,7 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
           {frames.map((f, i) => (
             <span
               key={f.id}
-              className={cn("h-1 flex-1 rounded-full", i <= activeIndex ? "bg-primary" : "bg-muted")}
+              className={cn("h-0.5 flex-1", i <= activeIndex ? "bg-series-accent" : "bg-border")}
             />
           ))}
         </div>

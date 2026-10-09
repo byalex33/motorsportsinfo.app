@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ReminderLeadMinutes } from "@/domain/series";
 import type { SeriesId, SessionType } from "@/domain/types";
 import { defaultFollows, toggleFollow, type Follows } from "@/server/alerts/selection";
+import { AlertsSection } from "./alerts-section";
 import { CalendarFeedCard } from "./calendar-feed-card";
 import { RemindersCard } from "./reminders-card";
 import { SelectionGrid } from "./selection-grid";
@@ -41,21 +41,16 @@ export function AlertsPanel() {
   }
 
   return (
-    <div className="grid gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2 className="text-lg font-semibold">Choose Sessions</h2>
-          </CardTitle>
-          <CardDescription>
-            Tick the Session Types you care about in each Series. Reminders and the calendar feed both use these ticks.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SelectionGrid follows={follows} onToggle={toggle} />
-        </CardContent>
-      </Card>
-      <div className="grid gap-6 md:grid-cols-2">
+    <div className="grid gap-14">
+      <AlertsSection
+        id="choose-sessions-heading"
+        index="01"
+        title="Choose Sessions"
+        description="Tick the Session Types you care about in each Series. Reminders and the calendar feed both use these ticks."
+      >
+        <SelectionGrid follows={follows} onToggle={toggle} />
+      </AlertsSection>
+      <div className="grid gap-14 md:grid-cols-2 md:gap-10">
         <RemindersCard follows={follows} leadMinutes={leadMinutes} onLeadChange={changeLead} />
         <CalendarFeedCard follows={follows} />
       </div>

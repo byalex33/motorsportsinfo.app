@@ -14,8 +14,8 @@ export function RadarSlot({ circuit, sessions }: { circuit: Circuit; sessions: S
   if (!online) {
     if (now === null || !isRadarWindow(sessions, now)) return null;
     return (
-      <div className="flex items-center gap-3 rounded-2xl border border-dashed border-border bg-card p-4 text-sm text-muted-foreground">
-        <RadarIcon className="size-5 shrink-0" aria-hidden />
+      <div className="flex items-center gap-3 rounded-lg border border-border p-4 text-sm text-muted-foreground">
+        <RadarIcon className="size-4 shrink-0" aria-hidden />
         Rain radar unavailable offline
       </div>
     );

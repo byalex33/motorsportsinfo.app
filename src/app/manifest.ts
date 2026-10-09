@@ -8,9 +8,9 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     scope: "/",
     display: "standalone",
-    // Deep Purple theme: primary (light) and background (light).
+    // Deep Purple primary (light) and the neutral light background.
     theme_color: "#6b26d9",
-    background_color: "#f8fafc",
+    background_color: "#ffffff",
     categories: ["sports", "weather"],
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

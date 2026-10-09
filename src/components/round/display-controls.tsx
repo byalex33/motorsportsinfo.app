@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { TimeZonePicker } from "./time-zone-picker";
 
 const segment =
-  "flex h-8 items-center rounded-full px-3 text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
+  "flex h-7 items-center rounded-full px-3 text-[0.8125rem] font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function SegmentButton({ active, onClick, children, label }: { active: boolean; onClick: () => void; children: React.ReactNode; label?: string }) {
   return (
@@ -18,7 +18,7 @@ function SegmentButton({ active, onClick, children, label }: { active: boolean; 
       aria-pressed={active}
       aria-label={label}
       onClick={onClick}
-      className={cn(segment, active ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground")}
+      className={cn(segment, active ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}
     >
       {children}
     </button>
@@ -45,13 +45,13 @@ export function DisplayControls({ zone }: { zone: DisplayZone | null }) {
   const mode = zone?.mode;
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card/80 p-3 shadow-xs backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:p-2 sm:pl-4">
+    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <p className="flex min-w-0 items-center gap-2 text-sm" aria-live="polite">
-        <GlobeIcon className="size-4 shrink-0 text-series-accent" aria-hidden />
+        <GlobeIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
         {zone ? (
           <span className="min-w-0 truncate">
-            <span className="font-semibold">{zone.heading}</span>
-            <span className="text-muted-foreground"> · {zone.tz}</span>
+            <span className="font-medium">{zone.heading}</span>
+            <span className="font-mono text-xs text-muted-foreground"> · {zone.tz}</span>
           </span>
         ) : (
           <InlineSkeleton className="h-4 w-52" />

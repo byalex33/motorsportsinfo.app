@@ -2,14 +2,15 @@ import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
 
 const ext = "underline decoration-border underline-offset-3 transition-colors hover:text-foreground hover:decoration-foreground/40";
+const nav = "transition-colors hover:text-foreground";
 
 /** Credits required by ADR 0001, the disclaimer, and site links. Shown on every page. */
 export function SiteFooter() {
   return (
-    <footer className="mt-auto border-t border-border/70 bg-card/40">
-      <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 text-sm text-muted-foreground sm:px-6 md:grid-cols-[1fr_auto] md:gap-10">
+    <footer className="mt-auto border-t border-border">
+      <div className="mx-auto grid w-full max-w-5xl gap-6 px-4 py-8 font-mono text-xs leading-relaxed text-muted-foreground sm:px-6 md:grid-cols-[minmax(0,1fr)_auto] md:gap-12">
         <div className="space-y-3">
-          <p className="leading-relaxed">
+          <p>
             <a className={ext} href="https://openf1.org" target="_blank" rel="noopener noreferrer">
               Data: OpenF1
             </a>
@@ -32,20 +33,20 @@ export function SiteFooter() {
               © OpenStreetMap contributors
             </a>
           </p>
-          <p className="text-xs leading-relaxed text-muted-foreground/90">
+          <p>
             Unofficial. Not affiliated with Formula 1, the FIA, the ACO or the WEC. F1, Formula 1 and related marks are
             trademarks of their respective owners.
           </p>
         </div>
-        <nav aria-label="Site" className="flex items-start gap-5 md:flex-col md:items-end md:gap-2">
-          <Link href="/about" className="font-medium text-foreground/80 hover:text-foreground">
+        <nav aria-label="Site" className="flex items-start gap-5 uppercase tracking-[0.12em] md:flex-col md:items-end md:gap-2">
+          <Link href="/about" className={nav}>
             About
           </Link>
-          <Link href="/alerts" className="font-medium text-foreground/80 hover:text-foreground">
+          <Link href="/alerts" className={nav}>
             Alerts
           </Link>
-          <span className="ml-auto flex items-center gap-1.5 text-xs md:ml-0 md:mt-2">
-            <BrandMark className="size-4 text-primary" />
+          <span className="ml-auto flex items-center gap-1.5 normal-case tracking-normal md:mt-2 md:ml-0">
+            <BrandMark className="size-3.5 text-primary" />
             motorsportsinfo.app
           </span>
         </nav>

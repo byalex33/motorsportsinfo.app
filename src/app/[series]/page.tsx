@@ -56,7 +56,7 @@ export default async function SeriesPage({ params }: PageProps<"/[series]">) {
   const { featured, forecasts, renderedAt } = await getSeriesPageData(series);
 
   return (
-    <main data-series={series} className="mx-auto w-full max-w-6xl flex-1 space-y-6 px-3 pt-4 pb-16 sm:space-y-8 sm:px-6 sm:pt-8">
+    <main data-series={series} className="mx-auto w-full max-w-5xl flex-1 space-y-14 px-4 pt-10 pb-20 sm:space-y-16 sm:px-6 sm:pt-16">
       <RememberSeries series={series} />
       <PageStamp at={renderedAt} />
 

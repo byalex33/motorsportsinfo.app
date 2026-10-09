@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { AnalyticsProvider } from "@/components/analytics-provider";
 import { OfflineBanner } from "@/components/offline-banner";
 import { ServiceWorkerRegistration } from "@/components/service-worker";
@@ -8,14 +8,14 @@ import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
-const sans = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
+const sans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
   display: "swap",
 });
 
-const mono = JetBrains_Mono({
-  variable: "--font-jetbrains",
+const mono = Geist_Mono({
+  variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
 });
@@ -45,8 +45,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#050406" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
   ],
   colorScheme: "light dark",
 };

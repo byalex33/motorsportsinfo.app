@@ -18,9 +18,9 @@ export function OfflineBanner() {
   const stamp = usePageStamp();
   if (online) return null;
   return (
-    <div role="status" className="border-b border-amber-500/30 bg-amber-100 text-amber-950 dark:bg-amber-950/60 dark:text-amber-100">
-      <p className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2 text-sm font-medium sm:px-6">
-        <WifiOffIcon className="size-4 shrink-0" aria-hidden />
+    <div role="status" className="border-b border-border bg-muted">
+      <p className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2 font-mono text-xs text-foreground sm:px-6">
+        <WifiOffIcon className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
         <span>
           Offline{stamp ? <> · last updated {formatStamp(stamp)}</> : " · showing the last saved copy"}
         </span>

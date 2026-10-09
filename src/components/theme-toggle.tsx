@@ -29,6 +29,7 @@ export function ThemeToggle() {
       onClick={() => setTheme(next)}
       aria-label={`${LABEL[current]}. Switch to ${next}.`}
       title={LABEL[current]}
+      className="text-muted-foreground hover:text-foreground"
     >
       <Icon aria-hidden />
     </Button>

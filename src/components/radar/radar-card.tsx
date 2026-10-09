@@ -16,13 +16,16 @@ export function RadarCard({
   return (
     <section
       aria-labelledby="rain-radar-heading"
-      className="overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs"
+      className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground"
     >
-      <header className="flex items-baseline justify-between gap-3 px-4 pt-3 pb-2">
-        <h2 id="rain-radar-heading" className="text-sm font-semibold">
-          Rain radar
+      <header className="flex items-baseline justify-between gap-3 border-b border-border px-4 py-2.5">
+        <h2 id="rain-radar-heading" className="eyebrow flex shrink-0 items-center gap-2 whitespace-nowrap text-foreground">
+          <span aria-hidden className="size-1.5 rounded-full bg-series-accent" />
+          <span>
+            Rain radar<span className="text-muted-foreground"> · past 2 hours</span>
+          </span>
         </h2>
-        <p className="min-w-0 truncate text-xs text-muted-foreground">{circuitName}</p>
+        <p className="eyebrow min-w-0 truncate text-muted-foreground">{circuitName}</p>
       </header>
       {children}
       {footer}

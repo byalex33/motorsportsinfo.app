@@ -34,8 +34,8 @@ export function TimeZonePicker({ value, active, onSelect, className }: TimeZoneP
         aria-pressed={active}
         aria-label={active && value ? `Time zone: ${value}. Choose another time zone` : "Choose another time zone"}
         className={cn(
-          "flex h-8 min-w-0 items-center gap-1 rounded-full px-3 text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-          active ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground",
+          "flex h-7 min-w-0 items-center gap-1 rounded-full px-3 text-[0.8125rem] font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          active ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
           className,
         )}
       >
@@ -69,12 +69,12 @@ export function TimeZonePicker({ value, active, onSelect, className }: TimeZoneP
                   }}
                   className={cn(
                     "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none hover:bg-muted focus-visible:bg-muted",
-                    selected && "font-semibold text-primary",
+                    selected && "font-medium text-primary",
                   )}
                 >
                   <span className="min-w-0 truncate">
                     {zoneCity(tz)}
-                    <span className="ml-1.5 text-xs text-muted-foreground">{tz}</span>
+                    <span className="ml-1.5 font-mono text-xs text-muted-foreground">{tz}</span>
                   </span>
                   {selected && <CheckIcon className="size-4 shrink-0" aria-hidden />}
                 </button>

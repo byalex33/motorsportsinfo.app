@@ -5,31 +5,35 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandMark } from "@/components/brand-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { buttonVariants } from "@/components/ui/button";
 import { SERIES } from "@/domain/series";
 import { SERIES_IDS } from "@/domain/types";
 import { cn } from "@/lib/utils";
+
+const navLink =
+  "relative flex h-14 items-center gap-1.5 px-2 text-sm font-medium tracking-tight transition-colors outline-none focus-visible:after:hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:px-2.5";
 
 export function SiteHeader() {
   const pathname = usePathname() ?? "/";
   const current = pathname.split("/")[1] ?? "";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/65">
-      <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-2 px-3 sm:gap-4 sm:px-6">
+    <header className="sticky top-0 z-40 border-b border-border bg-background">
+      <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-2 px-3 sm:gap-4 sm:px-6">
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-2 rounded-lg py-1 pr-1 text-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex shrink-0 items-center gap-2.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           aria-label="motorsportsinfo.app home — choose a Series"
         >
-          <BrandMark className="size-7" />
-          <span className="hidden text-[0.95rem] font-semibold tracking-tight text-foreground md:inline">
+          <span className="grid size-7 place-items-center rounded-md bg-primary text-primary-foreground">
+            <BrandMark className="size-[18px]" />
+          </span>
+          <span className="hidden text-[0.95rem] font-semibold tracking-tight text-foreground sm:inline">
             motorsportsinfo<span className="text-muted-foreground">.app</span>
           </span>
         </Link>
 
-        <nav aria-label="Series" className="mx-auto flex min-w-0 items-center sm:mx-0 sm:ml-auto">
-          <ul className="flex items-center gap-0.5 rounded-full border border-border bg-card/70 p-0.5 shadow-xs sm:gap-1 sm:p-1">
+        <nav aria-label="Series" className="min-w-0 sm:ml-2">
+          <ul className="flex items-center">
             {SERIES_IDS.map((id) => {
               const active = current === id;
               return (
@@ -40,18 +44,15 @@ export function SiteHeader() {
                     aria-current={active ? "page" : undefined}
                     title={SERIES[id].name}
                     className={cn(
-                      "flex h-8 min-w-11 items-center justify-center gap-1.5 rounded-full px-2.5 text-[0.8rem] font-semibold tracking-tight transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 sm:px-3.5 sm:text-sm",
+                      navLink,
                       active
-                        ? "bg-series-accent text-series-accent-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                        ? "text-foreground after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:bg-series-accent sm:after:inset-x-2.5"
+                        : "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     <span
                       aria-hidden
-                      className={cn(
-                        "hidden size-1.5 rounded-full sm:inline-block",
-                        active ? "bg-series-accent-foreground/80" : "bg-series-accent",
-                      )}
+                      className={cn("size-1.5 rounded-full bg-series-accent", active ? "inline-block" : "hidden")}
                     />
                     {SERIES[id].shortName}
                   </Link>
@@ -61,14 +62,17 @@ export function SiteHeader() {
           </ul>
         </nav>
 
-        <div className="flex shrink-0 items-center gap-0.5 sm:ml-0">
+        <div className="ml-auto flex shrink-0 items-center gap-1">
           <Link
             href="/alerts"
             aria-current={current === "alerts" ? "page" : undefined}
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "sm:w-auto sm:px-2.5")}
             aria-label="Alerts and calendar"
+            className={cn(
+              "flex size-8 items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:w-auto sm:px-2.5",
+              current === "alerts" ? "text-foreground" : "text-muted-foreground",
+            )}
           >
-            <BellIcon aria-hidden />
+            <BellIcon className="size-4 sm:hidden" aria-hidden />
             <span className="hidden sm:inline">Alerts</span>
           </Link>
           <ThemeToggle />

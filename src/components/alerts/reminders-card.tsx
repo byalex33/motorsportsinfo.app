@@ -2,12 +2,13 @@
 
 import { BellIcon, BellOffIcon } from "lucide-react";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { Radio as RadioPrimitive } from "@base-ui/react/radio";
+import { RadioGroup as RadioGroupPrimitive } from "@base-ui/react/radio-group";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { REMINDER_LEAD_MINUTES, type ReminderLeadMinutes } from "@/domain/series";
 import { track } from "@/lib/analytics";
 import { followedSeries, type Follows } from "@/server/alerts/selection";
+import { AlertsSection } from "./alerts-section";
 import {
   detectPushSupport,
   getExistingSubscription,
@@ -21,6 +22,13 @@ const LEAD_LABELS: Record<ReminderLeadMinutes, string> = {
   15: "15 minutes before",
   60: "1 hour before",
   1440: "1 day before",
+};
+
+/** Visible segment labels; the full LEAD_LABELS are the accessible names. */
+const LEAD_SHORT_LABELS: Record<ReminderLeadMinutes, string> = {
+  15: "15 min",
+  60: "1 hour",
+  1440: "1 day",
 };
 
 const SAVE_DELAY_MS = 600;
@@ -142,37 +150,39 @@ export function RemindersCard({ follows, leadMinutes, onLeadChange }: RemindersC
   }
 
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>
-          <h2 className="text-lg font-semibold">Session Reminders</h2>
-        </CardTitle>
-        <CardDescription>
-          A notification on this device shortly before each ticked Session starts, and a push if one of them is moved
-          or cancelled.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-5">
-        <div className="grid gap-2">
-          <p id={leadLabelId} className="text-sm font-medium">
+    <AlertsSection
+      id="session-reminders-heading"
+      index="02"
+      title="Session Reminders"
+      description="A notification on this device shortly before each ticked Session starts, and a push if one of them is moved or cancelled."
+    >
+      <div className="grid gap-6">
+        <div className="grid gap-2.5">
+          <p id={leadLabelId} className="eyebrow text-muted-foreground">
             Remind me
           </p>
-          <RadioGroup
-            aria-labelledby={leadLabelId}
-            value={leadMinutes}
-            onValueChange={(value) => onLeadChange(value as ReminderLeadMinutes)}
-            className="gap-1"
-          >
-            {REMINDER_LEAD_MINUTES.map((minutes) => (
-              <label
-                key={minutes}
-                className="flex min-h-9 cursor-pointer items-center gap-3 rounded-md px-1 text-sm hover:bg-muted/60"
-              >
-                <RadioGroupItem value={minutes} aria-label={LEAD_LABELS[minutes]} />
-                <span>{LEAD_LABELS[minutes]}</span>
-              </label>
-            ))}
-          </RadioGroup>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <RadioGroupPrimitive
+              aria-labelledby={leadLabelId}
+              value={leadMinutes}
+              onValueChange={(value) => onLeadChange(value as ReminderLeadMinutes)}
+              className="inline-flex w-fit max-w-full items-center rounded-full bg-muted p-0.5"
+            >
+              {REMINDER_LEAD_MINUTES.map((minutes) => (
+                <RadioPrimitive.Root
+                  key={minutes}
+                  value={minutes}
+                  aria-label={LEAD_LABELS[minutes]}
+                  className="flex h-7 cursor-pointer items-center rounded-full px-3 text-[0.8125rem] font-medium whitespace-nowrap text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-checked:bg-foreground data-checked:text-background"
+                >
+                  {LEAD_SHORT_LABELS[minutes]}
+                </RadioPrimitive.Root>
+              ))}
+            </RadioGroupPrimitive>
+            <span aria-hidden className="text-sm text-muted-foreground">
+              before
+            </span>
+          </div>
         </div>
 
         <PushControls
@@ -187,13 +197,13 @@ export function RemindersCard({ follows, leadMinutes, onLeadChange }: RemindersC
         <p role="status" aria-live="polite" className={message?.tone === "error" ? "text-sm text-destructive" : "text-sm"}>
           {message?.text}
         </p>
-      </CardContent>
-    </Card>
+      </div>
+    </AlertsSection>
   );
 }
 
 function Note({ children }: { children: ReactNode }) {
-  return <p className="rounded-lg bg-muted px-3 py-2.5 text-sm leading-relaxed text-muted-foreground">{children}</p>;
+  return <p className="border-l-2 border-border pl-3 text-sm leading-relaxed text-muted-foreground">{children}</p>;
 }
 
 interface PushControlsProps {
@@ -250,7 +260,7 @@ function PushControls({ support, subscribed, busy, nothingTicked, onEnable, onDi
     return (
       <div className="grid gap-3">
         <p className="flex items-center gap-2 text-sm font-medium">
-          <BellIcon className="size-4 text-primary" aria-hidden />
+          <span aria-hidden className="size-1.5 rounded-full bg-primary" />
           Reminders are on for this device.
         </p>
         {nothingTicked && (
