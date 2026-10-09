@@ -147,7 +147,8 @@ export default function AboutPage() {
               </li>
               <li>
                 <strong className="font-medium text-foreground">Push notifications</strong> are optional. If you turn them on, we store an anonymous browser push
-                endpoint together with the Series, Session Types and reminder lead time you chose — nothing else. You can
+                endpoint together with the Series, Session Types, reminder lead time and FIA document alerts you chose —
+                nothing else. You can
                 remove it at any time from{" "}
                 <Link href="/alerts" className={a}>
                   Alerts

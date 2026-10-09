@@ -1,4 +1,4 @@
-// Every minute (vercel.ts): due Session Reminders + unsent Schedule Change pushes. Reads the database only.
+// Every minute (vercel.ts): due Session Reminders, unsent Schedule Change pushes and Document Alerts. Reads the database only.
 import { timingSafeEqual } from "node:crypto";
 import { getDb } from "@/db/client";
 import { getVapidConfig } from "@/server/alerts/push";

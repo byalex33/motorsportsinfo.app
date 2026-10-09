@@ -10,6 +10,7 @@ export async function upsertSubscription(db: Db, input: SubscribeInput): Promise
     p256dh: input.subscription.keys.p256dh,
     auth: input.subscription.keys.auth,
     follows: input.follows,
+    documentAlerts: input.documentAlerts,
     leadMinutes: input.leadMinutes,
     timeZone: input.timeZone,
   };

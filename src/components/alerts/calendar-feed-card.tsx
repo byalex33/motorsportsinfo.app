@@ -52,7 +52,7 @@ export function CalendarFeedCard({ follows }: { follows: Follows }) {
   return (
     <AlertsSection
       id="calendar-feed-heading"
-      index="03"
+      index="04"
       title="Calendar feed"
       description="Subscribe to the ticked Sessions in Apple Calendar, Google Calendar, Outlook or any app that takes an iCal link. Times update when the schedule changes — no account needed."
     >

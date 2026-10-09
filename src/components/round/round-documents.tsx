@@ -46,7 +46,8 @@ export function RoundDocuments({ series, documents, circuitTimeZone }: RoundDocu
   const count = documents.kind === "documents" ? documents.documents.length : 0;
 
   return (
-    <section aria-labelledby="documents-heading" className="space-y-5">
+    // id="documents": a Document Alert summary push opens /<series>#documents.
+    <section id="documents" aria-labelledby="documents-heading" className="scroll-mt-24 space-y-5">
       <div className="enter-rise flex items-baseline justify-between gap-4" style={enterDelay(ENTER.rows + 60)}>
         <h2 id="documents-heading" className="eyebrow text-muted-foreground">
           FIA documents

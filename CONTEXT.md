@@ -64,3 +64,7 @@ _Avoid_: Alert, notification (as the specific term)
 **Schedule Change**:
 A Session's start time moves or the Session is cancelled after it was first published.
 _Avoid_: Update, delay
+
+**Document Alert**:
+A notification sent when the FIA publishes a new FIA Document for a Round of a Series the viewer chose: stewards' documents only, or all of them. Several at once arrive as one summary.
+_Avoid_: Document notification, document reminder

@@ -8,6 +8,7 @@ import { SegmentPill } from "@/components/motion/segment-pill";
 import { Button } from "@/components/ui/button";
 import { REMINDER_LEAD_MINUTES, type ReminderLeadMinutes } from "@/domain/series";
 import { track } from "@/lib/analytics";
+import { hasDocumentAlerts, type DocumentAlerts } from "@/server/alerts/document-alerts";
 import { followedSeries, type Follows } from "@/server/alerts/selection";
 import { AlertsSection } from "./alerts-section";
 import {
@@ -43,10 +44,11 @@ function usePushSupport(): PushSupport {
 export interface RemindersCardProps {
   follows: Follows;
   leadMinutes: ReminderLeadMinutes;
+  documentAlerts: DocumentAlerts;
   onLeadChange: (lead: ReminderLeadMinutes) => void;
 }
 
-export function RemindersCard({ follows, leadMinutes, onLeadChange }: RemindersCardProps) {
+export function RemindersCard({ follows, leadMinutes, documentAlerts, onLeadChange }: RemindersCardProps) {
   const leadLabelId = useId();
   const detected = usePushSupport();
   const [denied, setDenied] = useState(false);
@@ -58,7 +60,9 @@ export function RemindersCard({ follows, leadMinutes, onLeadChange }: RemindersC
   const lastSaved = useRef<string | null>(null);
 
   const seriesCount = followedSeries(follows).length;
-  const selectionKey = JSON.stringify({ follows, leadMinutes });
+  // Notifications cover ticked Sessions and FIA documents, so either one is enough to turn them on.
+  const nothingChosen = seriesCount === 0 && !hasDocumentAlerts(documentAlerts);
+  const selectionKey = JSON.stringify({ follows, leadMinutes, documentAlerts });
 
   // Does this device already have a subscription?
   useEffect(() => {
@@ -85,7 +89,7 @@ export function RemindersCard({ follows, leadMinutes, onLeadChange }: RemindersC
         setSubscribed(false);
         return;
       }
-      const result = await saveSubscription(sub, follows, leadMinutes);
+      const result = await saveSubscription(sub, follows, leadMinutes, documentAlerts);
       if (result.ok) {
         const firstSave = lastSaved.current === null;
         lastSaved.current = selectionKey;
@@ -95,7 +99,7 @@ export function RemindersCard({ follows, leadMinutes, onLeadChange }: RemindersC
       }
     }, SAVE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [subscribed, selectionKey, follows, leadMinutes]);
+  }, [subscribed, selectionKey, follows, leadMinutes, documentAlerts]);
 
   async function enable() {
     setBusy(true);
@@ -111,7 +115,7 @@ export function RemindersCard({ follows, leadMinutes, onLeadChange }: RemindersC
         return;
       }
       const sub = await subscribeDevice();
-      const result = await saveSubscription(sub, follows, leadMinutes);
+      const result = await saveSubscription(sub, follows, leadMinutes, documentAlerts);
       if (!result.ok) {
         await sub.unsubscribe().catch(() => false);
         setMessage({ tone: "error", text: result.message });
@@ -153,9 +157,9 @@ export function RemindersCard({ follows, leadMinutes, onLeadChange }: RemindersC
   return (
     <AlertsSection
       id="session-reminders-heading"
-      index="02"
+      index="03"
       title="Session Reminders"
-      description="A notification on this device shortly before each ticked Session starts, and a push if one of them is moved or cancelled."
+      description="A notification on this device shortly before each ticked Session starts, a push if one of them is moved or cancelled, and the FIA documents you chose."
     >
       <div className="grid gap-6">
         <div className="grid gap-2.5">
@@ -191,7 +195,7 @@ export function RemindersCard({ follows, leadMinutes, onLeadChange }: RemindersC
           support={support}
           subscribed={subscribed}
           busy={busy}
-          nothingTicked={seriesCount === 0}
+          nothingChosen={nothingChosen}
           onEnable={enable}
           onDisable={disable}
         />
@@ -216,12 +220,12 @@ interface PushControlsProps {
   support: PushSupport;
   subscribed: boolean | null;
   busy: boolean;
-  nothingTicked: boolean;
+  nothingChosen: boolean;
   onEnable: () => void;
   onDisable: () => void;
 }
 
-function PushControls({ support, subscribed, busy, nothingTicked, onEnable, onDisable }: PushControlsProps) {
+function PushControls({ support, subscribed, busy, nothingChosen, onEnable, onDisable }: PushControlsProps) {
   switch (support) {
     case "checking":
       return <Note>Checking whether this browser can show reminders…</Note>;
@@ -272,8 +276,11 @@ function PushControls({ support, subscribed, busy, nothingTicked, onEnable, onDi
           </span>
           Reminders are on for this device.
         </p>
-        {nothingTicked && (
-          <Note>Nothing is ticked, so no reminders will arrive. Tick some Session Types above, or turn reminders off.</Note>
+        {nothingChosen && (
+          <Note>
+            Nothing is chosen, so no notifications will arrive. Tick some Session Types or choose FIA documents above, or
+            turn reminders off.
+          </Note>
         )}
         <Button variant="outline" size="lg" onClick={onDisable} disabled={busy} className="w-full sm:w-fit">
           <BellOffIcon aria-hidden />
@@ -285,11 +292,13 @@ function PushControls({ support, subscribed, busy, nothingTicked, onEnable, onDi
 
   return (
     <div className="grid gap-2">
-      <Button size="lg" onClick={onEnable} disabled={busy || nothingTicked} className="w-full sm:w-fit">
+      <Button size="lg" onClick={onEnable} disabled={busy || nothingChosen} className="w-full sm:w-fit">
         <BellIcon aria-hidden />
         {busy ? "Turning on…" : "Enable reminders"}
       </Button>
-      {nothingTicked && <p className="text-sm text-muted-foreground">Tick at least one Session Type above first.</p>}
+      {nothingChosen && (
+        <p className="text-sm text-muted-foreground">Tick at least one Session Type or choose FIA documents above first.</p>
+      )}
     </div>
   );
 }

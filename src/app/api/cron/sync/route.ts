@@ -1,10 +1,12 @@
 // Schedule sync cron (every 5 minutes, see vercel.ts). Requires `Authorization: Bearer ${CRON_SECRET}`.
+// Also records new FIA Documents during an F1/F2/F3 Round, for Document Alerts (see server/documents/sync.ts).
 // Manual runs: /api/cron/sync?series=f1&force=1 (series may be a comma-separated list).
 import { timingSafeEqual } from "node:crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { getDb } from "@/db/client";
 import { SERIES_IDS, type SeriesId } from "@/domain/types";
+import { fiaDocumentsTag, hasFiaDocuments, syncFiaDocuments, type DocumentsSyncResult } from "@/server/documents";
 import { scheduleTag } from "@/server/schedule";
 import { syncSeries, type SyncResult } from "@/server/schedule/sync";
 
@@ -48,6 +50,18 @@ export async function GET(request: NextRequest) {
     revalidatePath(`/${r.series}`);
   }
 
+  // FIA Documents for Document Alerts, after the schedule so a just-published Round is watched. Never fails the sync.
+  const now = new Date();
+  const documents: DocumentsSyncResult[] = await Promise.all(
+    series.filter(hasFiaDocuments).map((id) => syncFiaDocuments(db, id, now)),
+  );
+  for (const d of documents) {
+    if (d.status !== "ok" || d.added === 0) continue;
+    // The document a push opens should already be on the Series page and in the viewer.
+    revalidateTag(fiaDocumentsTag(d.series), { expire: 0 });
+    revalidatePath(`/${d.series}`);
+  }
+
   const failed = results.some((r) => r.status === "failed");
-  return Response.json({ results }, { status: failed ? 500 : 200 });
+  return Response.json({ results, documents }, { status: failed ? 500 : 200 });
 }

@@ -1,12 +1,18 @@
 // CONTRACT — owned by the documents work. UI code imports only from here.
 // FIA documents (stewards' decisions, classifications, notes) for F1, F2 and F3. We list titles and
 // open the FIA's PDFs in the browser through /documents (see viewer.ts); nothing is stored. See ADR 0001.
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import { FIA_DOCUMENT_SERIES, type Circuit, type FiaDocumentSeries, type Round, type RoundDocumentsResult, type SeriesId } from "@/domain/types";
 import { defaultContext, errorMessage } from "@/server/schedule/sources/http";
 import { eventMatchesRound, fetchFiaDocuments, FIA_DOCUMENT_PAGES, type FiaEventDocuments } from "./fia";
 
+export { syncFiaDocuments, type DocumentsSyncResult } from "./sync";
 export { fiaDocumentFileFromSlug, fiaDocumentSource } from "./viewer";
+
+/** Cache tag for a Series' fia.com listing. The sync revalidates it when it records new documents. */
+export function fiaDocumentsTag(series: FiaDocumentSeries): string {
+  return `fia-documents:${series}`;
+}
 
 /** Failures are cached briefly: a retry a minute later, without hammering fia.com while it is down. */
 const FAILURE_LIFE = { stale: 60, revalidate: 60, expire: 300 };
@@ -40,6 +46,7 @@ export async function getRoundDocuments(round: Round, circuit: Circuit): Promise
 // cache around it sets the page's own lifetime (~5 minutes), so new documents show within that.
 async function seriesListing(series: FiaDocumentSeries): Promise<LoadedListing> {
   "use cache";
+  cacheTag(fiaDocumentsTag(series));
   try {
     const listing = await fetchFiaDocuments(defaultContext, series);
     cacheLife({ stale: 60, revalidate: 300, expire: 3600 });

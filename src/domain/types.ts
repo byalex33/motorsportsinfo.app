@@ -97,6 +97,9 @@ export type FiaDocumentSeries = (typeof FIA_DOCUMENT_SERIES)[number];
 /** Stewards: decisions, summons, infringements. Results: classifications, grids, standings. */
 export type FiaDocumentKind = "stewards" | "results" | "other";
 
+/** Which new FIA Documents a device gets a Document Alert for: stewards' documents only, or all of them. */
+export type DocumentAlertLevel = "stewards" | "all";
+
 export interface FiaDocument {
   /** The FIA's running number within the Round ("Doc 33"), or null when the title has none. */
   number: number | null;
