@@ -19,12 +19,12 @@ const mono = Geist_Mono({
   display: "swap",
 });
 
-const description = "Session times and weather for F1, F2, F3 and WEC — in your time zone or Track Time, with live countdowns and rain radar.";
+const description = "Session times and weather for F1, F2, F3, WEC, Formula E, IndyCar and MotoGP — in your time zone or Track Time, with live countdowns and rain radar.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://motorsportsinfo.app"),
   title: {
-    default: "motorsportsinfo.app — session times & weather for F1, F2, F3 and WEC",
+    default: "motorsportsinfo.app — session times & weather for F1, F2, F3, WEC, Formula E, IndyCar and MotoGP",
     template: "%s · motorsportsinfo.app",
   },
   description,

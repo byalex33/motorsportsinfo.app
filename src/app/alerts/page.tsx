@@ -7,7 +7,7 @@ import { ENTER, enterDelay } from "@/lib/motion";
 export const metadata: Metadata = {
   title: "Alerts",
   description:
-    "Session Reminders on your phone or computer, and a calendar feed of F1, F2, F3 and WEC Session times that updates when the schedule changes.",
+    "Session Reminders on your phone or computer, and a calendar feed of F1, F2, F3, WEC, Formula E, IndyCar and MotoGP Session times that updates when the schedule changes.",
 };
 
 export default function AlertsPage() {
@@ -23,7 +23,7 @@ export default function AlertsPage() {
             <RevealWords text="Alerts" />
           </h1>
           <p className="enter-rise mt-5 max-w-2xl leading-relaxed text-pretty text-muted-foreground sm:text-lg" style={enterDelay(ENTER.meta)}>
-            Get a Session Reminder before the Sessions you follow, or put them in your calendar. Covers F1, F2, F3 and WEC.
+            Get a Session Reminder before the Sessions you follow, or put them in your calendar. Covers F1, F2, F3, WEC, Formula E, IndyCar and MotoGP.
           </p>
         </header>
         <AlertsPanel />

@@ -99,11 +99,10 @@ export function SeasonCompleteHero({ series, season }: { series: SeriesId; seaso
     <section className="mx-auto flex max-w-3xl flex-col items-center text-center">
       <SeriesLine series={series} season={season} />
       <h1 className="mt-4 text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
-        <RevealWords text={`Season complete — back in ${season + 1}`} />
+        <RevealWords text="Season complete" />
       </h1>
       <p className="enter-rise mt-5 max-w-xl leading-relaxed text-pretty text-muted-foreground" style={enterDelay(ENTER.lead)}>
-        The {season} {info.shortName} season is over. The first Round of {season + 1} will show here as soon as its dates
-        are published.
+        The {info.shortName} season is over. The next Round will show here as soon as its dates are published.
       </p>
       <ChooseAnotherSeries />
     </section>
