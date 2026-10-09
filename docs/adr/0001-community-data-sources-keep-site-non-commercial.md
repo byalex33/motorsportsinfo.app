@@ -1,0 +1,19 @@
+# Community data sources keep the site non-commercial
+
+No official source (FOM/FODM for F1, F2 and F3; Le Mans Endurance Management and Al Kamel for WEC) licenses schedule data for public reuse. Commercial feeds either cost money or don't cover F2, F3 or WEC.
+
+We read schedules from free sources instead:
+- **F1:** OpenF1, with Jolpica as fallback. Both are CC BY-NC-SA 4.0.
+- **F2 and F3:** the official fiaformula2.com and fiaformula3.com Round pages. Their HTML includes each Session's start and end times, GMT offset and state, so an ordinary page request is enough and no paid scraping service is needed. FODM's terms forbid extracting this data; we accept that risk because these pages show Schedule Changes first. The MIT-licensed sportstimes/f1 dataset is the fallback.
+- **WEC:** scraped from fiawec.com race pages, or another source if scraping proves unworkable.
+
+Weather comes from Open-Meteo's free tier, which is also non-commercial.
+
+The site must stay non-commercial: donations only, no ads, no paid tiers. Credit lines for OpenF1/Jolpica ("Data: OpenF1") and Open-Meteo ("Weather data by Open-Meteo.com") must appear on the page. Scraping the F2, F3 and WEC sites goes against their terms, and we accept that risk knowingly.
+
+## Consequences
+
+- Adding ads or any paid feature means first replacing these sources:
+  - Weather: Open-Meteo's paid tier, or MET Norway.
+  - F1: a commercial licence from OpenF1 or Jolpica.
+- Our hand-written Schedule Overrides correct the sources when they are wrong or slow.
