@@ -204,13 +204,12 @@ describe("FIA F2/F3 Round pages", () => {
 });
 
 describe("sportstimes (F2/F3 fallback)", () => {
-  const { rounds, problems } = normaliseRounds(
-    "f2",
-    parseSportstimes(fixtureJson<{ races: SportstimesRace[] }>("sportstimes-f2-2026.json"), 2026, "f2"),
-  );
+  const parsed = parseSportstimes(fixtureJson<{ races: SportstimesRace[] }>("sportstimes-f2-2026.json"), 2026, "f2");
+  const { rounds, problems } = normaliseRounds("f2", parsed.rounds);
 
   it("matches Circuits by name (Doha → Lusail) and uses the official Session ids", () => {
     expect(problems).toEqual([]);
+    expect(parsed.warnings).toEqual([]);
     expect(rounds.map((r) => r.round.id)).toEqual(["f2-2026-albert-park", "f2-2026-baku", "f2-2026-lusail", "f2-2026-yas-marina"]);
     expect(rounds[1].sessions.map((s) => s.id.split(":")[1])).toEqual(["practice", "qualifying", "sprint-race", "feature-race"]);
     expect(rounds[1].sessions.every((s) => s.endIsEstimated)).toBe(true);

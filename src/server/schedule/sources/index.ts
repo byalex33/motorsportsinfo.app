@@ -6,7 +6,7 @@ import { fetchFiaFeederSeason, type FeederSeries } from "./fia-feeder";
 import { defaultContext, errorMessage, type SourceContext } from "./http";
 import { fetchJolpicaSeason } from "./jolpica";
 import { fetchOpenF1Season } from "./openf1";
-import { fetchSportstimesSeason } from "./sportstimes";
+import { fetchSportstimesSeason, type SportstimesSeries } from "./sportstimes";
 import { fetchWecSeasons } from "./wec";
 
 interface Loaded {
@@ -47,15 +47,17 @@ const wrap = (fn: (ctx: SourceContext, year: number) => Promise<RawRound[]>) => 
   rounds: await fn(ctx, year),
 });
 
+const sportstimes = (series: SportstimesSeries): SourceDef => ({
+  name: "sportstimes",
+  load: perSeason((ctx, year) => fetchSportstimesSeason(ctx, series, year)),
+});
+
 const feeder = (series: FeederSeries): { primary: SourceDef; fallback: SourceDef } => ({
   primary: {
     name: series === "f2" ? "fiaformula2" : "fiaformula3",
     load: perSeason((ctx, year) => fetchFiaFeederSeason(ctx, series, year)),
   },
-  fallback: {
-    name: "sportstimes",
-    load: perSeason(wrap((ctx, year) => fetchSportstimesSeason(ctx, series, year))),
-  },
+  fallback: sportstimes(series),
 });
 
 export const SOURCES: Record<SeriesId, { primary: SourceDef; fallback?: SourceDef }> = {
@@ -67,15 +69,11 @@ export const SOURCES: Record<SeriesId, { primary: SourceDef; fallback?: SourceDe
   f3: feeder("f3"),
   // fiawec.com scraping works, so TheSportsDB is not used. WEC has no fallback.
   wec: { primary: { name: "fiawec", load: fetchWecSeasons } },
-  // TODO(data): sportstimes datasets for these Series.
-  fe: { primary: { name: "sportstimes", load: notImplemented } },
-  indycar: { primary: { name: "sportstimes", load: notImplemented } },
-  motogp: { primary: { name: "sportstimes", load: notImplemented } },
+  // The sportstimes dataset is the only source for these Series (ADR 0001); no fallback.
+  fe: { primary: sportstimes("fe") },
+  indycar: { primary: sportstimes("indycar") },
+  motogp: { primary: sportstimes("motogp") },
 };
-
-async function notImplemented(): Promise<Loaded> {
-  throw new Error("Source not implemented yet");
-}
 
 export class SourceFailure extends Error {
   constructor(

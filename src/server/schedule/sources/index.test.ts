@@ -75,6 +75,25 @@ describe("fetchSeriesSchedule", () => {
     expect(schedule.rounds).toHaveLength(4);
   });
 
+  it.each(["fe", "indycar", "motogp"] as const)("reads %s from sportstimes; an unpublished next season is not an error", async (series) => {
+    const { ctx, requests } = fakeContext({
+      [`https://raw.githubusercontent.com/sportstimes/f1/main/_db/${series}/2026.json`]: `sportstimes-${series}-2026.json`,
+    });
+    const schedule = await fetchSeriesSchedule(series, NOW, ctx);
+    expect(schedule).toMatchObject({ series, source: "sportstimes", isFallback: false, completeSeasons: [2026], problems: [] });
+    expect(schedule.rounds.length).toBeGreaterThan(15);
+    expect(requests.map((r) => r.url)).toEqual([
+      `https://raw.githubusercontent.com/sportstimes/f1/main/_db/${series}/2026.json`,
+      `https://raw.githubusercontent.com/sportstimes/f1/main/_db/${series}/2027.json`,
+    ]);
+    expect(requests.every((r) => r.userAgent === API_USER_AGENT)).toBe(true);
+  });
+
+  it("throws a SourceFailure for MotoGP when sportstimes is down (no fallback)", async () => {
+    const { ctx } = fakeContext({ "https://raw.githubusercontent.com/sportstimes/f1/main/_db/motogp/2026.json": 503 });
+    await expect(fetchSeriesSchedule("motogp", NOW, ctx)).rejects.toBeInstanceOf(SourceFailure);
+  });
+
   it("reads WEC race pages for this season and next season's published Rounds", async () => {
     const { ctx } = fakeContext({
       "https://www.fiawec.com/en/season/2026": "wec-season-2026.html",

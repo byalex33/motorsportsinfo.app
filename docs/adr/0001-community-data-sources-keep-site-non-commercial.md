@@ -6,6 +6,7 @@ We read schedules from free sources instead:
 - **F1:** OpenF1, with Jolpica as fallback. Both are CC BY-NC-SA 4.0.
 - **F2 and F3:** the official fiaformula2.com and fiaformula3.com Round pages. Their HTML includes each Session's start and end times, GMT offset and state, so an ordinary page request is enough and no paid scraping service is needed. FODM's terms forbid extracting this data; we accept that risk because these pages show Schedule Changes first. The MIT-licensed sportstimes/f1 dataset is the fallback.
 - **WEC:** scraped from fiawec.com race pages, or another source if scraping proves unworkable.
+- **Formula E, IndyCar and MotoGP:** the MIT-licensed sportstimes/f1 dataset only (`_db/fe`, `_db/indycar`, `_db/motogp`), with no fallback. It gives UTC start times but no end times, so Session ends are estimated from default Session lengths. Its quirks are handled in the parser: IndyCar has no location or coordinates, so Circuits are matched by Round name; MotoGP's `track` text is often wrong, so Circuits are matched by coordinates and a disagreeing `track` is only logged. If it lags or is wrong, Schedule Overrides correct it.
 
 Weather comes from Open-Meteo's free tier, which is also non-commercial.
 

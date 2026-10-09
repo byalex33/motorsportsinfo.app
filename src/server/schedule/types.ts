@@ -23,6 +23,11 @@ export interface RawRound {
   name: string;
   /** Names that identify the Circuit: circuit short names, localities, page slugs. Never a Grand Prix name. */
   circuitHints: string[];
+  /**
+   * Set when the source resolved the Circuit itself (MotoGP, by coordinates): the Circuit id, or null when
+   * it found none. The hints are then only shown in the problem message and never name-matched.
+   */
+  circuitId?: string | null;
   /** False when the Round is listed but its Session times are not published ("Times TBC"). */
   timesConfirmed: boolean;
   sessions: RawSession[];

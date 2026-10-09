@@ -91,7 +91,11 @@ export function defaultSessionMinutes(series: SeriesId, type: SessionType, sessi
   }
   if (series === "motogp") {
     if (/warm/i.test(sessionName)) return 10;
-    if (/^q[12]$|qualifying [12]/i.test(sessionName)) return 15;
+    // Names may be followed by the Round name ("Q1 British Grand Prix").
+    if (/^q[12]\b|qualifying [12]/i.test(sessionName)) return 15;
+    // FP2 is 30 minutes (Q1 starts 40 minutes after it); the Friday "Practice" that decides Q2 is an hour.
+    if (/^(free practice 2|fp2)\b/i.test(sessionName)) return 30;
+    if (/^practice\b/i.test(sessionName)) return 60;
     return { practice: 45, qualifying: 15, sprint: 25, race: 45 }[type as string] ?? 45;
   }
   return 60;

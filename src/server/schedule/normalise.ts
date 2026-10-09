@@ -1,5 +1,5 @@
 // Turns each source's RawRounds into domain Rounds and Sessions with stable ids.
-import { matchCircuit } from "@/data/circuits";
+import { getCircuit, matchCircuit } from "@/data/circuits";
 import { defaultSessionMinutes } from "@/domain/series";
 import type { Round, SeriesId, Session } from "@/domain/types";
 import { addMinutes, toIso, trackDate } from "./time";
@@ -48,7 +48,8 @@ export function normaliseRounds(
   const ordered = [...raws].sort((a, b) => a.season - b.season || firstStart(a).localeCompare(firstStart(b)));
 
   for (const raw of ordered) {
-    const circuit = matchCircuit(raw.circuitHints);
+    const circuit =
+      raw.circuitId !== undefined ? (raw.circuitId ? (getCircuit(raw.circuitId) ?? null) : null) : matchCircuit(raw.circuitHints);
     if (!circuit) {
       problems.push(
         `Unknown Circuit for ${series.toUpperCase()} ${raw.season} "${raw.name}" (${raw.circuitHints.join(" / ")}) from ${raw.sourceRef}; Round skipped`,

@@ -1,13 +1,13 @@
 # motorsportsinfo.app
 
-A go-to page for motorsport fans to find out when each session runs and what the weather will be, across F1, F2, F3 and WEC.
+A go-to page for motorsport fans to find out when each session runs and what the weather will be, across F1, F2, F3, WEC, Formula E, IndyCar and MotoGP.
 
 ## Language
 
 ### Calendar
 
 **Series**:
-A championship the site covers: F1, F2, F3 or WEC.
+A championship the site covers: F1, F2, F3, WEC, Formula E (FE), IndyCar or MotoGP (the premier class only).
 _Avoid_: Category, championship, sport
 
 **Round**:
@@ -27,6 +27,9 @@ The category a Session belongs to within its Series, used for choosing which Ses
 - F1: Practice, Sprint Qualifying, Sprint, Qualifying, Race
 - F2 and F3: Practice, Qualifying, Sprint Race, Feature Race
 - WEC: Practice, Qualifying, Hyperpole, Race
+- Formula E: Practice, Qualifying, Race. Each race of a double-header is its own Round.
+- IndyCar: Practice (including Final Practice and Warm-up), Qualifying, Race
+- MotoGP: Practice (Free Practice 1 and 2, Practice, Warm Up), Qualifying (Q1, Q2), Sprint, Race
 
 _Avoid_: Session kind, session name
 
