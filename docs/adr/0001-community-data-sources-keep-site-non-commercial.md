@@ -10,6 +10,8 @@ We read schedules from free sources instead:
 
 Weather comes from Open-Meteo's free tier, which is also non-commercial.
 
+Rain radar comes from RainViewer's free API, credited on the map. Its terms say "personal and educational use"; RainViewer confirmed by email to the owner in October 2026 that this donation-funded, ad-free site may use it.
+
 The site must stay non-commercial: donations only, no ads, no paid tiers. Credit lines for OpenF1/Jolpica ("Data: OpenF1") and Open-Meteo ("Weather data by Open-Meteo.com") must appear on the page. Scraping the F2, F3 and WEC sites goes against their terms, and we accept that risk knowingly.
 
 ## Consequences
