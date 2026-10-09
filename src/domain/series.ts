@@ -40,6 +40,27 @@ export const SERIES: Record<SeriesId, SeriesInfo> = {
     sessionTypes: ["practice", "qualifying", "hyperpole", "race"],
     defaultReminderTypes: ["qualifying", "race"],
   },
+  fe: {
+    id: "fe",
+    name: "Formula E",
+    shortName: "FE",
+    sessionTypes: ["practice", "qualifying", "race"],
+    defaultReminderTypes: ["qualifying", "race"],
+  },
+  indycar: {
+    id: "indycar",
+    name: "IndyCar Series",
+    shortName: "IndyCar",
+    sessionTypes: ["practice", "qualifying", "race"],
+    defaultReminderTypes: ["qualifying", "race"],
+  },
+  motogp: {
+    id: "motogp",
+    name: "MotoGP",
+    shortName: "MotoGP",
+    sessionTypes: ["practice", "qualifying", "sprint", "race"],
+    defaultReminderTypes: ["sprint", "race"],
+  },
 };
 
 export const SESSION_TYPE_LABELS: Record<SessionType, string> = {
@@ -53,12 +74,25 @@ export const SESSION_TYPE_LABELS: Record<SessionType, string> = {
   hyperpole: "Hyperpole",
 };
 
-/** Session length used only when the source gives no end time. */
+/**
+ * Session length used only when the source gives no end time. `sessionName` is the Session's name,
+ * or the Round's name where that carries the length ("6 Hours of Spa", "Indianapolis 500").
+ */
 export function defaultSessionMinutes(series: SeriesId, type: SessionType, sessionName: string): number {
   if (series === "f1" && type === "race") return 120;
   if (series === "wec" && type === "race") {
     const hours = /(\d+)\s*hours?/i.exec(sessionName);
     return hours ? Number(hours[1]) * 60 : 360;
+  }
+  if (series === "fe") return { practice: 30, qualifying: 75, race: 60 }[type as string] ?? 60;
+  if (series === "indycar") {
+    if (type === "race") return /indianapolis 500|indy 500/i.test(sessionName) ? 210 : 150;
+    return 60;
+  }
+  if (series === "motogp") {
+    if (/warm/i.test(sessionName)) return 10;
+    if (/^q[12]$|qualifying [12]/i.test(sessionName)) return 15;
+    return { practice: 45, qualifying: 15, sprint: 25, race: 45 }[type as string] ?? 45;
   }
   return 60;
 }

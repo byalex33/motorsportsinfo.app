@@ -8,7 +8,7 @@ describe("parseRememberedSeries", () => {
   });
   it("ignores anything else", () => {
     expect(parseRememberedSeries(null)).toBeNull();
-    expect(parseRememberedSeries("indycar")).toBeNull();
+    expect(parseRememberedSeries("nascar")).toBeNull();
     expect(parseRememberedSeries("{")).toBeNull();
   });
 });

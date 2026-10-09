@@ -1,6 +1,6 @@
 // Core domain types. Vocabulary is defined in CONTEXT.md — keep names in sync.
 
-export const SERIES_IDS = ["f1", "f2", "f3", "wec"] as const;
+export const SERIES_IDS = ["f1", "f2", "f3", "wec", "fe", "indycar", "motogp"] as const;
 export type SeriesId = (typeof SERIES_IDS)[number];
 
 export type SessionType =

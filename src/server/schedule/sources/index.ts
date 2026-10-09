@@ -67,7 +67,15 @@ export const SOURCES: Record<SeriesId, { primary: SourceDef; fallback?: SourceDe
   f3: feeder("f3"),
   // fiawec.com scraping works, so TheSportsDB is not used. WEC has no fallback.
   wec: { primary: { name: "fiawec", load: fetchWecSeasons } },
+  // TODO(data): sportstimes datasets for these Series.
+  fe: { primary: { name: "sportstimes", load: notImplemented } },
+  indycar: { primary: { name: "sportstimes", load: notImplemented } },
+  motogp: { primary: { name: "sportstimes", load: notImplemented } },
 };
+
+async function notImplemented(): Promise<Loaded> {
+  throw new Error("Source not implemented yet");
+}
 
 export class SourceFailure extends Error {
   constructor(
