@@ -98,6 +98,8 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   auth: text("auth").notNull(),
   leadMinutes: integer("lead_minutes").notNull().default(15),
   follows: jsonb("follows").$type<Follows>().notNull(),
+  /** The device's IANA time zone, used to format times in push text. */
+  timeZone: text("time_zone").notNull().default("UTC"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   failureCount: integer("failure_count").notNull().default(0),
