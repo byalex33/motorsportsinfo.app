@@ -90,6 +90,41 @@ export interface SessionForecast {
   windDirectionDeg: number;
 }
 
+/** Series whose official documents the FIA publishes on fia.com/documents. */
+export const FIA_DOCUMENT_SERIES = ["f1", "f2", "f3"] as const;
+export type FiaDocumentSeries = (typeof FIA_DOCUMENT_SERIES)[number];
+
+/** Stewards: decisions, summons, infringements. Results: classifications, grids, standings. */
+export type FiaDocumentKind = "stewards" | "results" | "other";
+
+export interface FiaDocument {
+  /** The FIA's running number within the Round ("Doc 33"), or null when the title has none. */
+  number: number | null;
+  /** Title without the "Doc n - " prefix. */
+  title: string;
+  kind: FiaDocumentKind;
+  /** Absolute link to the PDF on fia.com (which always downloads it). */
+  url: string;
+  /** The PDF's name in the FIA's decision-document folder, which our viewer can open; null for a PDF elsewhere. */
+  file: string | null;
+  /** ISO 8601 UTC, or null when the page gives no readable time. */
+  publishedAt: string | null;
+}
+
+export type RoundDocumentsResult =
+  | {
+      kind: "documents";
+      /** The FIA's name for the Round, e.g. "Singapore Grand Prix" or "Baku". */
+      event: string;
+      /** Newest first. */
+      documents: FiaDocument[];
+      /** The fia.com page they were read from. */
+      sourceUrl: string;
+    }
+  /** The FIA has not published anything for this Round yet. */
+  | { kind: "none"; sourceUrl: string }
+  | { kind: "unavailable"; sourceUrl: string };
+
 export type ForecastResult =
   | SessionForecast
   /** The Session is beyond the forecast horizon. */

@@ -41,6 +41,10 @@ _Avoid_: Manual fix, patch
 The venue where a Round takes place. It has a fixed location and time zone.
 _Avoid_: Track, venue
 
+**FIA Document**:
+An official document the FIA publishes for a Round on fia.com, such as a stewards' decision, a classification, a starting grid or the Race Director's notes. Only F1, F2 and F3 have them. Each is a PDF with a running number within the Round ("Doc 33").
+_Avoid_: Bulletin, decision (as the generic term), report
+
 ### Time
 
 **Viewer Time**:

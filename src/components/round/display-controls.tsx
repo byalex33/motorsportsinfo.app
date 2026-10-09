@@ -13,10 +13,10 @@ const segment =
   "relative flex h-7 items-center rounded-full px-3 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-300 ease-expo outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 /** Segmented-control track; the SegmentPill inside slides to the active item. */
-const segmentTrack =
+export const segmentTrack =
   "group/seg relative flex items-center rounded-full bg-muted p-0.5";
 
-function SegmentButton({ active, onClick, children, label }: { active: boolean; onClick: () => void; children: React.ReactNode; label?: string }) {
+export function SegmentButton({ active, onClick, children, label }: { active: boolean; onClick: () => void; children: React.ReactNode; label?: string }) {
   return (
     <button
       type="button"

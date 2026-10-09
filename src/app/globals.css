@@ -673,6 +673,60 @@
    transition or animation, including library ones), except the explicit opacity-only
    fades below. Infinite ambient animations stop.
    --------------------------------------------------------------------------- */
+/* PDF.js text layer (src/components/documents/pdf-viewer.tsx): invisible text laid over each rendered
+   page, so a document can be selected, copied and searched with the browser's find. Adapted from
+   pdfjs-dist/web/pdf_viewer.css; PDF.js sets --min-font-size and the sizes, the page sets
+   --total-scale-factor. */
+.pdf-text-layer {
+  --scale-round-x: 1px;
+  --scale-round-y: 1px;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  opacity: 1;
+  line-height: 1;
+  text-align: initial;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: CanvasText;
+  z-index: 0;
+}
+.pdf-text-layer :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+.pdf-text-layer > :not(.markedContent),
+.pdf-text-layer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+.pdf-text-layer .markedContent {
+  display: contents;
+}
+.pdf-text-layer span[role="img"] {
+  user-select: none;
+  cursor: default;
+}
+.pdf-text-layer ::selection {
+  background: rgb(0 0 255 / 0.25);
+  background: color-mix(in srgb, AccentColor, transparent 75%);
+}
+.pdf-text-layer br::selection {
+  background: transparent;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
