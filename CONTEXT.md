@@ -33,6 +33,10 @@ The category a Session belongs to within its Series, used for choosing which Ses
 
 _Avoid_: Session kind, session name
 
+**Session Result**:
+The finishing order of a finished Session. It is a spoiler, so it never shows in the Session list: a finished Session's RESULTS chip opens a modal that warns first and shows the full classification on request (F1 only, from OpenF1). For other Series, or before OpenF1 has published it, the modal links to the Series' official results page instead.
+_Avoid_: Classification, standings, podium (as the general term)
+
 **Schedule Override**:
 A hand-made correction to a Session's time or status. It takes precedence over what the source says, until it is removed.
 _Avoid_: Manual fix, patch

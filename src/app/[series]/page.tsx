@@ -8,7 +8,7 @@ import { RoundDocuments } from "@/components/round/round-documents";
 import { RoundHero, ScheduleUnavailableHero, SeasonCompleteHero } from "@/components/round/round-hero";
 import { RoundSessions } from "@/components/round/round-sessions";
 import { PageStamp } from "@/components/service-worker";
-import { SERIES } from "@/domain/series";
+import { officialResultsUrl, SERIES } from "@/domain/series";
 import { SERIES_IDS } from "@/domain/types";
 import { isSeriesId } from "@/lib/series-id";
 import { formatRoundDates } from "@/lib/time-format";
@@ -61,7 +61,7 @@ export default async function SeriesPage({ params }: PageProps<"/[series]">) {
   const { series } = await params;
   if (!isSeriesId(series)) notFound();
 
-  const { featured, forecasts, documents, renderedAt } = await getSeriesPageData(series);
+  const { featured, forecasts, results, documents, renderedAt } = await getSeriesPageData(series);
 
   return (
     <PageTransition>
@@ -78,6 +78,7 @@ export default async function SeriesPage({ params }: PageProps<"/[series]">) {
             <RoundHero
               series={series}
               round={featured.round}
+              roundNumber={featured.roundNumber}
               circuit={featured.circuit}
               countdown={
                 featured.round.sessionTimesConfirmed && featured.sessions.length > 0 ? (
@@ -90,6 +91,8 @@ export default async function SeriesPage({ params }: PageProps<"/[series]">) {
               series={series}
               sessions={featured.sessions}
               forecasts={forecasts}
+              results={results}
+              resultsUrl={officialResultsUrl(series, featured.round.season)}
               timesConfirmed={featured.round.sessionTimesConfirmed}
               circuitTimeZone={featured.circuit.timeZone}
             />

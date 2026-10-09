@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { featuredUntil, roundOpensAt, selectCalendarSessions, selectFeaturedRound, selectUpcomingSessions } from "./select";
-import { makeRound, makeSession, withContext } from "./test-utils";
+import { featuredUntil, roundOpensAt, selectCalendarSessions, selectFeaturedRound, selectUpcomingSessions } from "./select";import { makeRound, makeSession, withContext } from "./test-utils";
 
 // Singapore (UTC+8): Fri 9 – Sun 11 Oct 2026, Race 12:00–14:00 UTC on Sunday.
 const sgRound = makeRound("f1-2026-marina-bay", "marina-bay", "2026-10-09", "2026-10-11");
@@ -75,6 +74,30 @@ describe("selectFeaturedRound", () => {
     const cancelled = withContext(round, [makeSession(round.id, "race", "2026-10-18T17:00:00Z", { status: "cancelled" })]);
     const r = selectFeaturedRound([cancelled, us], new Date("2026-10-17T00:00:00Z"));
     expect(r.kind === "round" && r.round.id).toBe(usRound.id);
+  });
+});
+
+describe("roundNumber", () => {
+  it("counts the Series' Rounds that season in calendar order", () => {
+    const all = [us, next2027, sg];
+    expect(selectFeaturedRound(all, new Date("2026-10-05T00:00:00Z"))).toMatchObject({ round: { id: sgRound.id }, roundNumber: 1 });
+    expect(selectFeaturedRound(all, new Date("2026-10-20T00:00:00Z"))).toMatchObject({ round: { id: usRound.id }, roundNumber: 2 });
+    // Next season starts again at 1, even with no Session times yet.
+    expect(selectFeaturedRound(all, new Date("2026-12-20T00:00:00Z"))).toMatchObject({ round: { id: next2027Round.id }, roundNumber: 1 });
+  });
+
+  it("skips Rounds whose every Session is cancelled, and other Series", () => {
+    const jeddahRound = makeRound("f1-2026-jeddah", "jeddah", "2026-10-16", "2026-10-18");
+    const jeddah = withContext(jeddahRound, [makeSession(jeddahRound.id, "race", "2026-10-18T17:00:00Z", { status: "cancelled" })]);
+    const wecRound = makeRound("wec-2026-fuji", "fuji", "2026-09-25", "2026-09-27");
+    const wec = withContext(wecRound, [makeSession(wecRound.id, "race", "2026-09-27T02:00:00Z")]);
+    expect(selectFeaturedRound([sg, jeddah, us, wec], new Date("2026-10-20T00:00:00Z"))).toMatchObject({ roundNumber: 2 });
+  });
+
+  it("uses the official number an F2 or F3 Round is named by", () => {
+    const round = makeRound("f2-2026-baku", "baku", "2026-09-24", "2026-09-26", { name: "Round 11" });
+    const baku = withContext(round, [makeSession(round.id, "feature-race", "2026-09-26T07:00:00Z")]);
+    expect(selectFeaturedRound([baku], new Date("2026-09-20T00:00:00Z"))).toMatchObject({ roundNumber: 11 });
   });
 });
 

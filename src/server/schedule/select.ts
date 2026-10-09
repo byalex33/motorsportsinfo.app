@@ -51,13 +51,35 @@ export function unfinishedRounds(rounds: RoundWithContext[], now: Date): RoundWi
 }
 
 /**
+ * The Round's place in its season: its Series' Rounds that season in calendar order, not counting Rounds
+ * whose every Session is cancelled (the Series renumber around those). F2 and F3 Rounds are named by their
+ * official number ("Round 13"), which wins over the count.
+ */
+function roundNumber(target: RoundWithContext, rounds: RoundWithContext[]): number {
+  const official = /^Round (\d+)$/.exec(target.round.name);
+  if (official) return Number(official[1]);
+  const season = rounds
+    .filter((r) => r.round.series === target.round.series && r.round.season === target.round.season && !allCancelled(r))
+    .sort((a, b) => firstInstant(a) - firstInstant(b));
+  return season.findIndex((r) => r.round.id === target.round.id) + 1;
+}
+
+/**
  * The Featured Round: the Round in progress, else the next upcoming one (which may be next season's
  * first Round). A Round whose every Session is cancelled is skipped. When nothing remains, the
  * season is complete.
  */
 export function selectFeaturedRound(rounds: RoundWithContext[], now: Date): FeaturedRoundResult {
   const next = unfinishedRounds(rounds, now).find((r) => !allCancelled(r));
-  if (next) return { kind: "round", round: next.round, circuit: next.circuit, sessions: [...next.sessions].sort(byStart) };
+  if (next) {
+    return {
+      kind: "round",
+      round: next.round,
+      roundNumber: roundNumber(next, rounds),
+      circuit: next.circuit,
+      sessions: [...next.sessions].sort(byStart),
+    };
+  }
   const seasons = rounds.map((r) => r.round.season);
   return { kind: "season-complete", season: seasons.length > 0 ? Math.max(...seasons) : now.getUTCFullYear() };
 }

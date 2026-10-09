@@ -1,8 +1,9 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { getDb } from "@/db/client";
-import type { FeaturedRoundResult, ForecastResult, RoundDocumentsResult, SeriesId } from "@/domain/types";
+import type { FeaturedRoundResult, ForecastResult, RoundDocumentsResult, SeriesId, SessionResult } from "@/domain/types";
 import { getRoundDocuments } from "@/server/documents";
+import { getSessionResults } from "@/server/results";
 import { getFeaturedRound } from "@/server/schedule";
 import { getSessionForecast } from "@/server/weather";
 
@@ -13,6 +14,8 @@ export interface SeriesPageData {
   featured: SeriesFeatured;
   /** Keyed by Session id. Missing for cancelled Sessions and when times are TBC. */
   forecasts: Record<string, ForecastResult>;
+  /** Keyed by Session id. Only finished Sessions the site has a Session Result for (F1). */
+  results: Record<string, SessionResult>;
   /** The Featured Round's FIA documents. Null for Series the FIA publishes none for, or with no Round. */
   documents: RoundDocumentsResult | null;
   /** ISO time this data was rendered — shown as "last updated" when offline. */
@@ -42,21 +45,28 @@ export async function getSeriesPageData(series: SeriesId): Promise<SeriesPageDat
   }
   const forecasts: Record<string, ForecastResult> = {};
   const documents = featured.kind === "round" ? getRoundDocuments(featured.round, featured.circuit) : null;
+  let results: Record<string, SessionResult> = {};
 
   if (featured.kind === "round" && featured.round.sessionTimesConfirmed) {
-    const { circuit } = featured;
-    const results = await Promise.all(
-      featured.sessions.map(async (session) => {
-        if (session.status === "cancelled") return null;
-        try {
-          return [session.id, await getSessionForecast(circuit, session.startsAt)] as const;
-        } catch {
-          return [session.id, { kind: "unavailable" } as ForecastResult] as const;
-        }
-      }),
-    );
-    for (const entry of results) if (entry) forecasts[entry[0]] = entry[1];
+    const { circuit, round } = featured;
+    const now = Date.now();
+    const finished = featured.sessions.filter((s) => s.status !== "cancelled" && Date.parse(s.endsAt) <= now);
+    const [entries, sessionResults] = await Promise.all([
+      Promise.all(
+        featured.sessions.map(async (session) => {
+          if (session.status === "cancelled") return null;
+          try {
+            return [session.id, await getSessionForecast(circuit, session.startsAt)] as const;
+          } catch {
+            return [session.id, { kind: "unavailable" } as ForecastResult] as const;
+          }
+        }),
+      ),
+      getSessionResults(series, round.season, finished),
+    ]);
+    for (const entry of entries) if (entry) forecasts[entry[0]] = entry[1];
+    results = sessionResults;
   }
 
-  return { featured, forecasts, documents: await documents, renderedAt: new Date().toISOString() };
+  return { featured, forecasts, results, documents: await documents, renderedAt: new Date().toISOString() };
 }
