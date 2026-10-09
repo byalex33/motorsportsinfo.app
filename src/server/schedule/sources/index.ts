@@ -3,6 +3,7 @@ import type { SeriesId } from "@/domain/types";
 import { normaliseRounds } from "../normalise";
 import type { RawRound, SourceSchedule } from "../types";
 import { fetchFiaFeederSeason, type FeederSeries } from "./fia-feeder";
+import { fillTbcRounds } from "./fill-tbc";
 import { defaultContext, errorMessage, type SourceContext } from "./http";
 import { fetchJolpicaSeason } from "./jolpica";
 import { fetchOpenF1Season } from "./openf1";
@@ -55,7 +56,17 @@ const sportstimes = (series: SportstimesSeries): SourceDef => ({
 const feeder = (series: FeederSeries): { primary: SourceDef; fallback: SourceDef } => ({
   primary: {
     name: series === "f2" ? "fiaformula2" : "fiaformula3",
-    load: perSeason((ctx, year) => fetchFiaFeederSeason(ctx, series, year)),
+    load: perSeason(async (ctx, year) => {
+      const official = await fetchFiaFeederSeason(ctx, series, year);
+      if (official.rounds.every((r) => r.timesConfirmed)) return official;
+      // Fill Rounds the official page still marks TBC from sportstimes (see fill-tbc.ts).
+      try {
+        const { rounds } = fillTbcRounds(official.rounds, (await fetchSportstimesSeason(ctx, series, year)).rounds);
+        return { ...official, rounds };
+      } catch (error) {
+        return { ...official, warnings: [...official.warnings, `sportstimes fill-in failed: ${errorMessage(error)}`] };
+      }
+    }),
   },
   fallback: sportstimes(series),
 });
