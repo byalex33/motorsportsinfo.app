@@ -7,8 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: Plus Jakarta Sans, Inter, system-ui, sans-serif;
-  --font-mono: JetBrains Mono, monospace;
+  --font-sans: var(--font-jakarta), Plus Jakarta Sans, Inter, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), JetBrains Mono, ui-monospace, monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -71,6 +71,8 @@
   --shadow-opacity: var(--shadow-opacity);
   --color-shadow-color: var(--shadow-color);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-series-accent: var(--series-accent);
+  --color-series-accent-foreground: var(--series-accent-foreground);
 }
 
 :root {
@@ -107,9 +109,9 @@
   --sidebar-border: oklch(0.9278 0.0058 264.5314);
   --sidebar-ring: oklch(0.4865 0.2423 291.8661);
   --destructive-foreground: oklch(0.9838 0.0035 247.8583);
-  --font-sans: Plus Jakarta Sans, Inter, system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), Plus Jakarta Sans, Inter, system-ui, sans-serif;
   --font-serif: Georgia, serif;
-  --font-mono: JetBrains Mono, monospace;
+  --font-mono: var(--font-jetbrains), JetBrains Mono, ui-monospace, monospace;
   --shadow-color: hsl(263, 70%, 50%);
   --shadow-opacity: 0.08;
   --shadow-blur: 30px;
@@ -163,9 +165,9 @@
   --sidebar-ring: oklch(0.6083 0.2172 297.1153);
   --destructive-foreground: oklch(0.9838 0.0035 247.8583);
   --radius: 1rem;
-  --font-sans: Plus Jakarta Sans, Inter, system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), Plus Jakarta Sans, Inter, system-ui, sans-serif;
   --font-serif: Georgia, serif;
-  --font-mono: JetBrains Mono, monospace;
+  --font-mono: var(--font-jetbrains), JetBrains Mono, ui-monospace, monospace;
   --shadow-color: hsl(0, 0%, 0%);
   --shadow-opacity: 0.6;
   --shadow-blur: 40px;
@@ -194,5 +196,79 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Per-Series accent. Set data-series on a wrapper; everything outside keeps the
+   base purple. Deliberately not the official brand shades.
+   WCAG AA (4.5:1) checked for: accent-foreground on accent, accent text on
+   background and card, and accent text on a 12% accent tint over the card.
+     light  f1 5.71 / 5.62 / 5.89 / 4.79   f2 5.64 / 5.55 / 5.81 / 4.87
+            f3 5.36 / 5.27 / 5.52 / 4.66   wec 5.28 / 5.17 / 5.42 / 4.57
+     dark   f1 7.28 / 7.65 / 7.46 / 6.52   f2 8.38 / 8.84 / 8.63 / 7.40
+            f3 10.55 / 11.45 / 11.17 / 9.30  wec 10.14 / 10.77 / 10.51 / 8.84
+   --------------------------------------------------------------------------- */
+:root {
+  --series-accent: var(--primary);
+  --series-accent-foreground: var(--primary-foreground);
+}
+
+[data-series="f1"] {
+  --series-accent: oklch(0.53 0.205 22);
+  --series-accent-foreground: oklch(0.99 0.005 20);
+}
+[data-series="f2"] {
+  --series-accent: oklch(0.52 0.215 264);
+  --series-accent-foreground: oklch(0.99 0.005 260);
+}
+[data-series="f3"] {
+  --series-accent: oklch(0.53 0.13 56);
+  --series-accent-foreground: oklch(0.99 0.005 60);
+}
+[data-series="wec"] {
+  --series-accent: oklch(0.51 0.095 188);
+  --series-accent-foreground: oklch(0.99 0.005 190);
+}
+
+.dark [data-series="f1"],
+.dark[data-series="f1"] {
+  --series-accent: oklch(0.72 0.17 20);
+  --series-accent-foreground: oklch(0.16 0.03 20);
+}
+.dark [data-series="f2"],
+.dark[data-series="f2"] {
+  --series-accent: oklch(0.74 0.15 250);
+  --series-accent-foreground: oklch(0.16 0.03 255);
+}
+.dark [data-series="f3"],
+.dark[data-series="f3"] {
+  --series-accent: oklch(0.82 0.16 75);
+  --series-accent-foreground: oklch(0.18 0.03 60);
+}
+.dark [data-series="wec"],
+.dark[data-series="wec"] {
+  --series-accent: oklch(0.78 0.12 185);
+  --series-accent-foreground: oklch(0.16 0.03 190);
+}
+
+@layer utilities {
+  /* Chequered texture used in the hero and empty states. Colour comes from currentColor. */
+  .bg-chequer {
+    background-image:
+      linear-gradient(45deg, currentColor 25%, transparent 25%, transparent 75%, currentColor 75%),
+      linear-gradient(45deg, currentColor 25%, transparent 25%, transparent 75%, currentColor 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 8px 8px;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ping,
+  .animate-pulse {
+    animation: none;
   }
 }
