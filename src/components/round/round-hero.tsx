@@ -9,18 +9,22 @@ import { ENTER, enterDelay } from "@/lib/motion";
 import { formatRoundDates } from "@/lib/time-format";
 
 /** "● F1 · Formula 1 · 2026 season" — the micro-label above the Round name. */
-function SeriesLine({ series, season }: { series: SeriesId; season: number }) {
+function SeriesLine({ series, season }: { series: SeriesId; season?: number }) {
   const info = SERIES[series];
   return (
     <p className="eyebrow enter-rise flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-muted-foreground" style={enterDelay(ENTER.eyebrow)}>
       <span className="inline-flex items-center gap-2 font-semibold text-series-accent">
-        <span aria-hidden className="size-1.5 rounded-full bg-series-accent" />
+        <span aria-hidden className="size-1.5 rounded-full bg-series-gradient" />
         {info.shortName}
       </span>
       <span aria-hidden>·</span>
       <span>{info.name}</span>
-      <span aria-hidden>·</span>
-      <span>{season} season</span>
+      {season !== undefined && (
+        <>
+          <span aria-hidden>·</span>
+          <span>{season} season</span>
+        </>
+      )}
     </p>
   );
 }
@@ -75,26 +79,52 @@ export function RoundHero({
   );
 }
 
+function ChooseAnotherSeries() {
+  return (
+    <p className="enter-rise mt-8 w-full max-w-xl border-t border-border pt-5" style={enterDelay(ENTER.body)}>
+      <Link
+        href="/"
+        className="eyebrow inline-flex items-center gap-2 text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        Choose another Series <span aria-hidden>→</span>
+      </Link>
+    </p>
+  );
+}
+
 export function SeasonCompleteHero({ series, season }: { series: SeriesId; season: number }) {
   const info = SERIES[series];
   return (
-    <section className="max-w-3xl">
+    // Centred like RoundHero, so the Series line sits over the headline.
+    <section className="mx-auto flex max-w-3xl flex-col items-center text-center">
       <SeriesLine series={series} season={season} />
       <h1 className="mt-4 text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
         <RevealWords text={`Season complete — back in ${season + 1}`} />
       </h1>
-      <p className="enter-rise mt-5 max-w-xl leading-relaxed text-muted-foreground" style={enterDelay(ENTER.lead)}>
+      <p className="enter-rise mt-5 max-w-xl leading-relaxed text-pretty text-muted-foreground" style={enterDelay(ENTER.lead)}>
         The {season} {info.shortName} season is over. The first Round of {season + 1} will show here as soon as its dates
         are published.
       </p>
-      <p className="enter-rise mt-8 border-t border-border pt-5" style={enterDelay(ENTER.body)}>
-        <Link
-          href="/"
-          className="eyebrow inline-flex items-center gap-2 text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          Choose another Series <span aria-hidden>→</span>
-        </Link>
+      <ChooseAnotherSeries />
+    </section>
+  );
+}
+
+/** No schedule to read yet (a Series whose source is not connected, or every source failed without a database). */
+export function ScheduleUnavailableHero({ series }: { series: SeriesId }) {
+  const info = SERIES[series];
+  return (
+    // Centred like RoundHero, so the Series line sits over the headline.
+    <section className="mx-auto flex max-w-3xl flex-col items-center text-center">
+      <SeriesLine series={series} />
+      <h1 className="mt-4 text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
+        <RevealWords text="Schedule coming soon" />
+      </h1>
+      <p className="enter-rise mt-5 max-w-xl leading-relaxed text-pretty text-muted-foreground" style={enterDelay(ENTER.lead)}>
+        We can&apos;t show the {info.name} schedule right now. The next Round, with every Session in your time and the
+        forecast at the Circuit, will appear here as soon as it is available.
       </p>
+      <ChooseAnotherSeries />
     </section>
   );
 }

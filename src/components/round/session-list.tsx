@@ -92,7 +92,7 @@ function SessionRow({
       )}
       style={staggerDelay(index + 1)}
     >
-      {live && <span aria-hidden className="live-breathe absolute inset-y-0 left-0 w-0.5 bg-series-accent" />}
+      {live && <span aria-hidden className="live-breathe absolute inset-y-0 left-0 w-0.5 bg-series-gradient-y" />}
 
       <DayCell day={day} tz={zone?.tz} timesConfirmed={timesConfirmed} muted={cancelled || finished} />
 

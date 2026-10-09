@@ -148,56 +148,131 @@
 
 /* ---------------------------------------------------------------------------
    Per-Series accent. Set data-series on a wrapper; everything outside keeps the
-   base purple. Deliberately not the official brand shades. Used sparingly: the
-   active nav item, LIVE / NEXT chips, small markers and the countdown label.
-   WCAG AA (4.5:1) checked for: accent-foreground on accent, and accent text on
-   background (#fff / #0a0a0a), subtle (#fafafa / #111) and muted (#f5f5f5 / #171717).
-     light  f1 5.71 / 5.89 / 5.64 / 5.40   f2 5.64 / 5.81 / 5.56 / 5.33
-            f3 5.36 / 5.52 / 5.29 / 5.06   wec 5.28 / 5.42 / 5.19 / 4.97
-     dark   f1 7.28 / 7.39 / 7.05 / 6.69   f2 8.38 / 8.55 / 8.15 / 7.74
-            f3 10.55 / 11.07 / 10.56 / 10.02  wec 10.14 / 10.41 / 9.93 / 9.43
+   base purple. Used sparingly: the active nav item, LIVE / NEXT chips, small
+   markers and the countdown label. Colours only — no logos or wordmarks.
+
+   Official brand colours, read from each Series' own CSS (fetched Oct 2026):
+     F1       #e10600  formula1.com stylesheets; FIA design tokens
+                       --uds-colour-brand-f1-red-500-brand / --uds-colour-static-additional-f1
+     F2       #0084c0  fiaformula2.com --uds-colour-brand-f2-bright-blue-600-brand (the site's
+                       --uds-colour-brand-primary-600); #009cde = bright-blue-500, the token
+                       --uds-colour-static-additional-f2
+     F3       #e35205  fiaformula3.com --uds-colour-brand-f3-orange-500-brand
+                       (= --uds-colour-static-additional-f3)
+     WEC      #0a0032  fiawec.com wec.css --bs-dark / --bs-body-color / --bs-link-color (navy)
+              #00b9ff  fiawec.com wec.css --bs-primary (cyan, buttons and accents on navy)
+     FE       #6234e0  fiaformulae.com :root[data-theme=formula-e-web-tokens] --p-color-primary-1
+     IndyCar  gradient indycar.com /styles/indycar/design-system.css .gradient-line:
+                       linear-gradient(96deg, #eb5629, #ee8231, #f2a83b, #459aa1, #388083)
+     MotoGP   #c80502  motogp.com screen.css --g-color-brand-primary; --g-color-gradient-1 runs
+                       from it to --g-color-brand-accent #faec25
+
+   Tokens keep the official hue and only move lightness where a mode needs it:
+     F2 light, F3 light, IndyCar light are darkened; F1 dark, FE dark, MotoGP dark are lightened.
+     WEC uses its own pairing: navy on light backgrounds (as fiawec.com does), cyan on dark —
+     which also keeps it apart from the F2 blue. IndyCar's solid accent is the teal end of its
+     gradient (its red / orange would collide with F1, MotoGP and F3).
+
+   WCAG AA (4.5:1) checked for accent text on background (#fff / #0a0a0a), subtle (#fafafa / #111)
+   and muted (#f5f5f5 / #171717), and for accent-foreground on accent (chips):
+                 light: bg / subtle / muted · chip       dark: bg / subtle / muted · chip
+     f1       #e10600  4.97 / 4.76 / 4.56 · 4.97     #f73123  5.11 / 4.87 / 4.63 · 5.03
+     f2       #0676ab  5.02 / 4.81 / 4.60 · 5.02     #009cde  6.42 / 6.12 / 5.81 · 6.28
+     f3       #c34501  5.03 / 4.82 / 4.62 · 5.03     #e35205  5.16 / 4.92 / 4.67 · 5.08
+     wec      #0a0032 19.83 / 19.00 / 18.19 · 19.83  #00b9ff  8.85 / 8.44 / 8.01 · 8.66
+     fe       #6234e0  6.80 / 6.52 / 6.24 · 6.80     #8269ff  5.10 / 4.87 / 4.62 · 5.02
+     indycar  #31797c  5.05 / 4.84 / 4.63 · 5.05     #459aa1  6.02 / 5.75 / 5.46 · 5.88
+     motogp   #c80502  6.04 / 5.78 / 5.54 · 6.04     #ef4031  5.14 / 4.90 / 4.65 · 5.06
+
+   --series-gradient-stops / bg-series-gradient(-y): decorative only (active nav underline and
+   dot, Series dots, the LIVE bar, the picker's hover line). It falls back to the solid accent;
+   IndyCar and MotoGP use their official gradients. Never put text on it — the light stops
+   (#f2a83b, #faec25) fail contrast.
    --------------------------------------------------------------------------- */
 :root {
   --series-accent: var(--primary);
   --series-accent-foreground: var(--primary-foreground);
 }
+/* Re-declared on every [data-series] element so var(--series-accent) resolves to that Series. */
+:root,
+[data-series] {
+  --series-gradient-stops: var(--series-accent), var(--series-accent);
+  --series-gradient: linear-gradient(90deg, var(--series-gradient-stops));
+}
 
 [data-series="f1"] {
-  --series-accent: oklch(0.53 0.205 22);
-  --series-accent-foreground: oklch(0.99 0.005 20);
+  --series-accent: #e10600;
+  --series-accent-foreground: #ffffff;
 }
 [data-series="f2"] {
-  --series-accent: oklch(0.52 0.215 264);
-  --series-accent-foreground: oklch(0.99 0.005 260);
+  --series-accent: #0676ab;
+  --series-accent-foreground: #ffffff;
 }
 [data-series="f3"] {
-  --series-accent: oklch(0.53 0.13 56);
-  --series-accent-foreground: oklch(0.99 0.005 60);
+  --series-accent: #c34501;
+  --series-accent-foreground: #ffffff;
 }
 [data-series="wec"] {
-  --series-accent: oklch(0.51 0.095 188);
-  --series-accent-foreground: oklch(0.99 0.005 190);
+  --series-accent: #0a0032;
+  --series-accent-foreground: #ffffff;
+}
+[data-series="fe"] {
+  --series-accent: #6234e0;
+  --series-accent-foreground: #ffffff;
+}
+[data-series="indycar"] {
+  --series-accent: #31797c;
+  --series-accent-foreground: #ffffff;
+  --series-gradient-stops: #eb5629 0%, #ee8231 25%, #f2a83b 50%, #459aa1 75%, #388083 100%;
+}
+[data-series="motogp"] {
+  --series-accent: #c80502;
+  --series-accent-foreground: #ffffff;
+  --series-gradient-stops: #c80502 0%, #c80502 35%, #faec25 100%;
 }
 
 .dark [data-series="f1"],
 .dark[data-series="f1"] {
-  --series-accent: oklch(0.72 0.17 20);
-  --series-accent-foreground: oklch(0.16 0.03 20);
+  --series-accent: #f73123;
+  --series-accent-foreground: #180806;
 }
 .dark [data-series="f2"],
 .dark[data-series="f2"] {
-  --series-accent: oklch(0.74 0.15 250);
-  --series-accent-foreground: oklch(0.16 0.03 255);
+  --series-accent: #009cde;
+  --series-accent-foreground: #020f18;
 }
 .dark [data-series="f3"],
 .dark[data-series="f3"] {
-  --series-accent: oklch(0.82 0.16 75);
-  --series-accent-foreground: oklch(0.18 0.03 60);
+  --series-accent: #e35205;
+  --series-accent-foreground: #180904;
 }
 .dark [data-series="wec"],
 .dark[data-series="wec"] {
-  --series-accent: oklch(0.78 0.12 185);
-  --series-accent-foreground: oklch(0.16 0.03 190);
+  --series-accent: #00b9ff;
+  --series-accent-foreground: #010f18;
+}
+.dark [data-series="fe"],
+.dark[data-series="fe"] {
+  --series-accent: #8269ff;
+  --series-accent-foreground: #0c0b19;
+}
+.dark [data-series="indycar"],
+.dark[data-series="indycar"] {
+  --series-accent: #459aa1;
+  --series-accent-foreground: #011012;
+}
+.dark [data-series="motogp"],
+.dark[data-series="motogp"] {
+  --series-accent: #ef4031;
+  --series-accent-foreground: #180806;
+}
+
+/* Decorative Series gradient (solid accent unless the Series has one). Horizontal and vertical. */
+@utility bg-series-gradient {
+  background-image: var(--series-gradient);
+}
+@utility bg-series-gradient-y {
+  background-image: linear-gradient(180deg, var(--series-gradient-stops));
 }
 
 /* Mono uppercase micro-label for section headers and metadata. */
