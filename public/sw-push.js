@@ -1,8 +1,8 @@
 // Web Push handlers for Session Reminders and Schedule Change pushes.
 // Loaded by /sw.js via importScripts("/sw-push.js"). Payload: { title, body, url, tag } (see src/server/alerts/types.ts).
 
-const PUSH_ICON = "/icon-192.png";
-const PUSH_BADGE = "/badge-72.png";
+const PUSH_ICON = "/icons/icon-192.png";
+const PUSH_BADGE = "/icons/badge-72.png";
 
 self.addEventListener("push", (event) => {
   let data = {};
