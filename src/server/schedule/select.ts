@@ -64,7 +64,20 @@ export function selectFeaturedRound(rounds: RoundWithContext[], now: Date): Feat
 
 /** All Sessions (including cancelled) of unfinished Rounds, ordered by startsAt. */
 export function selectUpcomingSessions(rounds: RoundWithContext[], now: Date): SessionWithContext[] {
-  return unfinishedRounds(rounds, now)
+  return sessionsOf(unfinishedRounds(rounds, now));
+}
+
+/** How long a finished Round stays in calendar feeds, so subscribers' calendars keep its events. */
+export const CALENDAR_HISTORY_DAYS = 60;
+
+/** Sessions of Rounds that finished within CALENDAR_HISTORY_DAYS or haven't finished, ordered by startsAt. */
+export function selectCalendarSessions(rounds: RoundWithContext[], now: Date): SessionWithContext[] {
+  const since = new Date(now.getTime() - CALENDAR_HISTORY_DAYS * 86_400_000);
+  return sessionsOf(unfinishedRounds(rounds, since));
+}
+
+function sessionsOf(rounds: RoundWithContext[]): SessionWithContext[] {
+  return rounds
     .flatMap((r) => r.sessions.map((session) => ({ session, round: r.round, circuit: r.circuit })))
     .sort((a, b) => byStart(a.session, b.session));
 }

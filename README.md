@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# motorsportsinfo.app
 
-## Getting Started
+When each Session runs and what the weather will do, for F1, F2, F3 and WEC.
 
-First, run the development server:
+- Domain vocabulary: [CONTEXT.md](CONTEXT.md)
+- Decisions: [docs/adr](docs/adr)
+
+## Develop
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Without `DATABASE_URL` the site fetches the schedule sources live (memoised for 15 minutes), so it renders real data locally. Push reminders need a database and VAPID keys. See [.env.example](.env.example).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Checks: `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How it fits together
 
-## Learn More
+| Area | Where |
+|---|---|
+| Domain types and per-Series rules | `src/domain/` |
+| Schedule sources, sync, Featured Round | `src/server/schedule/`, `src/app/api/cron/sync/` |
+| Circuits and Schedule Overrides (edit by hand) | `src/data/circuits.ts`, `src/data/overrides.ts` |
+| Weather (Open-Meteo) | `src/server/weather/`, `src/components/weather/` |
+| Rain radar (RainViewer on OpenFreeMap) | `src/components/radar/` |
+| Session Reminders, Schedule Change pushes, calendar feeds | `src/server/alerts/`, `src/app/alerts/`, `src/app/calendar/`, `src/app/api/cron/alerts/` |
+| Analytics (Tracwell) | `src/lib/analytics.ts` |
+| Database schema (Drizzle + Neon) | `src/db/schema.ts` |
 
-To learn more about Next.js, take a look at the following resources:
+Crons are in `vercel.ts`:
+- `/api/cron/sync` runs every 5 minutes and decides per Series whether a source check is due.
+- `/api/cron/alerts` runs every minute and sends due pushes.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Both require `Authorization: Bearer $CRON_SECRET`. To force a check by hand, call `/api/cron/sync?series=f1&force=1` with that header.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Correcting a Session by hand
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Add an entry to `src/data/overrides.ts` (Session id, new time or status, reason), then commit and deploy. It takes precedence over the source until you remove it.

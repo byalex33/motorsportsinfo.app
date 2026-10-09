@@ -11,7 +11,7 @@ import { getDb } from "@/db/client";
 import type { Circuit, FeaturedRoundResult, Round, SeriesId, Session } from "@/domain/types";
 import { loadPublishedSchedule } from "./db-read";
 import { getLiveSchedule } from "./live";
-import { selectFeaturedRound, selectUpcomingSessions, withCircuits } from "./select";
+import { selectCalendarSessions, selectFeaturedRound, selectUpcomingSessions, withCircuits } from "./select";
 import type { RoundWithContext } from "./types";
 
 export { scheduleTag } from "./tags";
@@ -44,4 +44,10 @@ export interface SessionWithContext {
 export async function listUpcomingSessions(series: SeriesId[], now?: Date): Promise<SessionWithContext[]> {
   const perSeries = await Promise.all(series.map((id) => loadRounds(id)));
   return selectUpcomingSessions(perSeries.flat(), await resolveNow(now));
+}
+
+/** Like listUpcomingSessions, but also keeps Rounds that finished in the last 60 days. Calendar apps delete events that drop out of a feed. */
+export async function listCalendarSessions(series: SeriesId[], now?: Date): Promise<SessionWithContext[]> {
+  const perSeries = await Promise.all(series.map((id) => loadRounds(id)));
+  return selectCalendarSessions(perSeries.flat(), await resolveNow(now));
 }

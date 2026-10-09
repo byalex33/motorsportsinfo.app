@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { featuredUntil, roundOpensAt, selectFeaturedRound, selectUpcomingSessions } from "./select";
+import { featuredUntil, roundOpensAt, selectCalendarSessions, selectFeaturedRound, selectUpcomingSessions } from "./select";
 import { makeRound, makeSession, withContext } from "./test-utils";
 
 // Singapore (UTC+8): Fri 9 – Sun 11 Oct 2026, Race 12:00–14:00 UTC on Sunday.
@@ -92,5 +92,17 @@ describe("selectUpcomingSessions", () => {
     ]);
     expect(list[2].circuit.id).toBe("catalunya");
     expect(list[2].round.id).toBe("wec-2026-catalunya");
+  });
+});
+
+describe("selectCalendarSessions", () => {
+  it("keeps Rounds that finished within 60 days so calendar apps don't delete their events", () => {
+    // Singapore's Race ends 2026-10-11T14:00Z.
+    const ids = (now: string) => selectCalendarSessions([sg, us], new Date(now)).map((x) => x.round.id);
+    expect(ids("2026-11-20T00:00:00Z")).toContain("f1-2026-marina-bay");
+    expect(selectUpcomingSessions([sg, us], new Date("2026-11-20T00:00:00Z")).map((x) => x.round.id)).not.toContain(
+      "f1-2026-marina-bay",
+    );
+    expect(ids("2026-12-20T00:00:00Z")).not.toContain("f1-2026-marina-bay");
   });
 });

@@ -3,7 +3,7 @@ import { count, inArray, max } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { scheduleChanges } from "@/db/schema";
 import { SERIES, SESSION_TYPE_LABELS } from "@/domain/series";
-import { listUpcomingSessions } from "@/server/schedule";
+import { listCalendarSessions } from "@/server/schedule";
 import { buildCalendar, type SessionRevision } from "./ics";
 import { followedSeries, isFollowing, type Follows } from "./selection";
 
@@ -45,7 +45,7 @@ async function loadRevisions(sessionIds: string[]): Promise<Map<string, SessionR
 }
 
 export async function buildCalendarFeed(follows: Follows, now: Date = new Date()): Promise<string> {
-  const entries = (await listUpcomingSessions(followedSeries(follows), now)).filter(({ session }) =>
+  const entries = (await listCalendarSessions(followedSeries(follows), now)).filter(({ session }) =>
     isFollowing(follows, session.series, session.type),
   );
   const revisions = await loadRevisions(entries.map((e) => e.session.id));
