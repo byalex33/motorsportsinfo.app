@@ -4,7 +4,7 @@ import { PageTransition } from "@/components/motion/page-transition";
 import { RadarSlot } from "@/components/round/radar-slot";
 import { RememberSeries } from "@/components/round/remember-series";
 import { RoundCountdown } from "@/components/round/round-countdown";
-import { RoundHero, SeasonCompleteHero } from "@/components/round/round-hero";
+import { RoundHero, ScheduleUnavailableHero, SeasonCompleteHero } from "@/components/round/round-hero";
 import { RoundSessions } from "@/components/round/round-sessions";
 import { PageStamp } from "@/components/service-worker";
 import { SERIES } from "@/domain/series";
@@ -13,7 +13,7 @@ import { isSeriesId } from "@/lib/series-id";
 import { formatRoundDates } from "@/lib/time-format";
 import { getSeriesPageData } from "./data";
 
-// The four Series pages are fully static: prerendered from generateStaticParams with cached data (~5 min
+// The Series pages are fully static: prerendered from generateStaticParams with cached data (~5 min
 // revalidation, refreshed on demand by the schedule sync). `params` is read outside <Suspense> on purpose.
 // ensureStatic = "navigation" makes an unknown slug wait for its (static) render instead of getting the
 // App Shell, so notFound() runs before anything streams and the response is a real 404, not a 200 shell.
@@ -31,6 +31,12 @@ export async function generateMetadata({ params }: PageProps<"/[series]">): Prom
   if (!isSeriesId(series)) return {};
   const info = SERIES[series];
   const { featured } = await getSeriesPageData(series);
+
+  if (featured.kind === "unavailable") {
+    const title = `${info.shortName} session times & weather`;
+    const description = `${info.name} Session times in your time zone or Track Time, with the forecast for each Session.`;
+    return { title, description, alternates: { canonical: `/${series}` }, openGraph: { title, description, url: `/${series}` } };
+  }
 
   if (featured.kind === "season-complete") {
     const title = `${info.shortName} session times & weather`;
@@ -62,7 +68,9 @@ export default async function SeriesPage({ params }: PageProps<"/[series]">) {
         <RememberSeries series={series} />
         <PageStamp at={renderedAt} />
 
-        {featured.kind === "season-complete" ? (
+        {featured.kind === "unavailable" ? (
+          <ScheduleUnavailableHero series={series} />
+        ) : featured.kind === "season-complete" ? (
           <SeasonCompleteHero series={series} season={featured.season} />
         ) : (
           <>

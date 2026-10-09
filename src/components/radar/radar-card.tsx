@@ -20,7 +20,7 @@ export function RadarCard({
     >
       <header className="flex items-baseline justify-between gap-3 border-b border-border px-4 py-2.5">
         <h2 id="rain-radar-heading" className="eyebrow flex shrink-0 items-center gap-2 whitespace-nowrap text-foreground">
-          <span aria-hidden className="size-1.5 rounded-full bg-series-accent" />
+          <span aria-hidden className="size-1.5 rounded-full bg-series-gradient" />
           <span>
             Rain radar<span className="text-muted-foreground"> · past 2 hours</span>
           </span>

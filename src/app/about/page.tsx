@@ -41,9 +41,10 @@ export default function AboutPage() {
           <RevealWords text="A fan-made guide to when Sessions run and what the weather will do." />
         </h1>
         <p className="enter-rise mt-5 max-w-2xl leading-relaxed text-pretty text-muted-foreground sm:text-lg" style={enterDelay(ENTER.lead)}>
-          motorsportsinfo.app shows the Featured Round for F1, F2, F3 and the WEC — the Round in progress, or the next
-          one — with every Session in your time or Track Time, a live countdown, the forecast at the Circuit for each
-          Session and a rain radar around Session time. It is free, has no ads and no accounts.
+          motorsportsinfo.app shows the Featured Round for F1, F2, F3, the WEC, Formula E, IndyCar and MotoGP — the
+          Round in progress, or the next one — with every Session in your time or Track Time, a live countdown, the
+          forecast at the Circuit for each Session and a rain radar around Session time. It is free, has no ads and no
+          accounts.
         </p>
 
         <div className="mt-14 space-y-12 sm:mt-20">
@@ -77,10 +78,17 @@ export default function AboutPage() {
               </li>
               <li>
                 <strong className="font-medium text-foreground">F2 and F3 schedules:</strong> from the official timetables published on the FIA Formula 2 and
-                FIA Formula 3 websites, with the MIT-licensed sportstimes/f1 dataset as a fallback.
+                FIA Formula 3 websites, with the sportstimes/f1 dataset as a fallback.
               </li>
               <li>
                 <strong className="font-medium text-foreground">WEC schedule:</strong> from the official timetables published on the FIA WEC website.
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">Formula E, IndyCar and MotoGP schedules:</strong> from the{" "}
+                <a className={a} href="https://github.com/sportstimes/f1" target="_blank" rel="noopener noreferrer">
+                  sportstimes/f1
+                </a>{" "}
+                dataset, licensed MIT.
               </li>
               <li>
                 <strong className="font-medium text-foreground">Weather:</strong>{" "}
@@ -147,8 +155,10 @@ export default function AboutPage() {
 
           <Section id="disclaimer" index={3} title="Disclaimer">
             <p>
-              Unofficial. Not affiliated with Formula 1, the FIA, the ACO or the WEC. F1, Formula 1 and related marks are
-              trademarks of their respective owners.
+              Unofficial. Not affiliated with Formula 1, the FIA, the ACO, the WEC, Formula E, INDYCAR, MotoGP or Dorna
+              Sports. F1, Formula 1, Formula E, IndyCar, MotoGP and related marks are trademarks of their respective
+              owners. Each Series&apos; colour is used only to tell the Series apart; there are no official logos on this
+              site.
             </p>
             <p className="text-sm text-muted-foreground">
               Session times and forecasts are provided as-is and can change at short notice. Always check official
