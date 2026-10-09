@@ -6,7 +6,7 @@
 // captured by the SDK itself; never add router-driven page() calls here.
 // The site has no accounts, so identify() is intentionally never called.
 import { createTracwell, type EventProperties, type TracwellClient } from "tracwell";
-import type { SeriesId, SessionType } from "@/domain/types";
+import type { FiaDocumentKind, SeriesId, SessionType } from "@/domain/types";
 
 export type AnalyticsEvent =
   | { name: "series_selected"; props: { series: SeriesId } }
@@ -15,7 +15,8 @@ export type AnalyticsEvent =
   | { name: "push_enabled"; props: { series_count: number } }
   | { name: "push_disabled"; props: { series_count: number } }
   | { name: "calendar_feed_created"; props: { series: SeriesId[]; session_types: SessionType[] } }
-  | { name: "radar_opened"; props: { series: SeriesId } };
+  | { name: "radar_opened"; props: { series: SeriesId } }
+  | { name: "fia_document_opened"; props: { series: SeriesId; kind: FiaDocumentKind } };
 
 // Public, browser-safe project key (not a server key).
 const TRACWELL_PROJECT_KEY = "tw_live_c30cab1cc96e4c349fe89d7a22be92ab";

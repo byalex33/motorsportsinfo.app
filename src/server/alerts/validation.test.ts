@@ -24,6 +24,19 @@ describe("subscribeSchema", () => {
     expect(parsed.leadMinutes).toBe(15);
   });
 
+  it("defaults Document Alerts to none, for pages saved before they existed", () => {
+    expect(subscribeSchema.parse(valid).documentAlerts).toEqual({});
+  });
+
+  it("accepts Document Alerts for FIA Series and rejects anything else", () => {
+    expect(subscribeSchema.parse({ ...valid, documentAlerts: { f1: "stewards", f3: "all" } }).documentAlerts).toEqual({
+      f1: "stewards",
+      f3: "all",
+    });
+    expect(subscribeSchema.safeParse({ ...valid, documentAlerts: { wec: "all" } }).success).toBe(false);
+    expect(subscribeSchema.safeParse({ ...valid, documentAlerts: { f1: "loud" } }).success).toBe(false);
+  });
+
   it("accepts every allowed lead time and empty follows", () => {
     for (const leadMinutes of [15, 60, 1440]) {
       expect(subscribeSchema.safeParse({ ...valid, leadMinutes, follows: {} }).success).toBe(true);

@@ -2,16 +2,18 @@
 import { useSyncExternalStore } from "react";
 import { REMINDER_LEAD_MINUTES, type ReminderLeadMinutes } from "@/domain/series";
 import type { SeriesId } from "@/domain/types";
+import { normalizeDocumentAlerts, type DocumentAlerts } from "@/server/alerts/document-alerts";
 import { isSeriesId, normalizeFollows, type Follows } from "@/server/alerts/selection";
 
 /** The Series the viewer last browsed (written by the Series pages). */
 export const SERIES_STORAGE_KEY = "msi.series";
-/** This page's own choices: ticked Session Types and lead time. */
+/** This page's own choices: ticked Session Types, lead time and Document Alerts. */
 export const ALERTS_STORAGE_KEY = "msi.alerts";
 
 export interface SavedAlerts {
   follows: Follows;
   leadMinutes: ReminderLeadMinutes;
+  documentAlerts: DocumentAlerts;
 }
 
 function read(key: string): string | null {
@@ -45,13 +47,14 @@ export function parseRememberedSeries(raw: string | null): SeriesId | null {
 export function parseSavedAlerts(raw: string | null): SavedAlerts | null {
   if (!raw) return null;
   try {
-    const value = JSON.parse(raw) as { follows?: unknown; leadMinutes?: unknown };
+    const value = JSON.parse(raw) as { follows?: unknown; leadMinutes?: unknown; documentAlerts?: unknown };
     if (!value || typeof value !== "object" || !value.follows || typeof value.follows !== "object") return null;
     const follows = normalizeFollows(value.follows as Record<string, string[]>);
     const leadMinutes = (REMINDER_LEAD_MINUTES as readonly unknown[]).includes(value.leadMinutes)
       ? (value.leadMinutes as ReminderLeadMinutes)
       : REMINDER_LEAD_MINUTES[0];
-    return { follows, leadMinutes };
+    // Saved before Document Alerts existed: none chosen.
+    return { follows, leadMinutes, documentAlerts: normalizeDocumentAlerts(value.documentAlerts) };
   } catch {
     return null;
   }

@@ -1,10 +1,11 @@
-// The alerts cron: sends due Session Reminders and unsent Schedule Change pushes.
-// Reads the database only — never the schedule sources.
+// The alerts cron: sends due Session Reminders, unsent Schedule Change pushes and Document Alerts.
+// Reads the database only — never the schedule sources or fia.com.
 import { and, eq, gt, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { pushSubscriptions, remindersSent, rounds, scheduleChanges, sessions } from "@/db/schema";
+import { fiaDocuments, pushSubscriptions, remindersSent, rounds, scheduleChanges, sessions } from "@/db/schema";
 import { REMINDER_LEAD_MINUTES } from "@/domain/series";
 import { planChangePushes, type ScheduleChangeRow } from "./changes";
+import { planDocumentPushes, type DocumentAlertRow } from "./document-alerts";
 import { MAX_PUSH_FAILURES, PUSH_CONCURRENCY, mapWithConcurrency, sendPush, type PushOutcome, type VapidConfig } from "./push";
 import { reminderKey, selectDueReminders } from "./reminders";
 import type { AlertSession, AlertSubscription, OutgoingPush } from "./types";
@@ -13,12 +14,16 @@ const MINUTE = 60_000;
 const MAX_LEAD_MINUTES = Math.max(...REMINDER_LEAD_MINUTES);
 /** reminders_sent rows are kept this long after their Session started, then pruned. */
 const REMINDER_RETENTION_DAYS = 7;
+/** fia_documents rows are kept this long after first being seen, then pruned. */
+const DOCUMENT_RETENTION_DAYS = 30;
 const CHANGES_PER_RUN = 200;
+const DOCUMENTS_PER_RUN = 200;
 const INSERT_CHUNK = 500;
 
 export interface AlertsRunResult {
   reminders: { due: number; sent: number };
   changes: { processed: number; pushes: number; sent: number };
+  documents: { processed: number; pushes: number; sent: number };
   subscriptionsRemoved: number;
 }
 
@@ -39,6 +44,7 @@ async function loadSubscriptions(db: Db): Promise<AlertSubscription[]> {
       auth: pushSubscriptions.auth,
       leadMinutes: pushSubscriptions.leadMinutes,
       follows: pushSubscriptions.follows,
+      documentAlerts: pushSubscriptions.documentAlerts,
       timeZone: pushSubscriptions.timeZone,
       failureCount: pushSubscriptions.failureCount,
     })
@@ -140,6 +146,35 @@ async function runChanges(db: Db, subs: AlertSubscription[], now: Date, send: Se
   return { processed: claimed.size, results: await sendAll(plan.pushes, send) };
 }
 
+async function runDocuments(db: Db, subs: AlertSubscription[], now: Date, send: SendFn) {
+  const rows: DocumentAlertRow[] = await db
+    .select({
+      url: fiaDocuments.url,
+      series: fiaDocuments.series,
+      event: fiaDocuments.event,
+      number: fiaDocuments.number,
+      title: fiaDocuments.title,
+      kind: fiaDocuments.kind,
+      file: fiaDocuments.file,
+      publishedAt: fiaDocuments.publishedAt,
+    })
+    .from(fiaDocuments)
+    .where(isNull(fiaDocuments.notifiedAt))
+    .orderBy(fiaDocuments.firstSeenAt)
+    .limit(DOCUMENTS_PER_RUN);
+  if (rows.length === 0) return { processed: 0, results: [] };
+
+  // Claimed by setting notifiedAt, so overlapping runs never push a document twice.
+  const claimed = await db
+    .update(fiaDocuments)
+    .set({ notifiedAt: now })
+    .where(and(inArray(fiaDocuments.url, rows.map((r) => r.url)), isNull(fiaDocuments.notifiedAt)))
+    .returning({ url: fiaDocuments.url });
+  const claimedUrls = new Set(claimed.map((r) => r.url));
+  const pushes = planDocumentPushes(rows.filter((r) => claimedUrls.has(r.url)), subs);
+  return { processed: claimedUrls.size, results: await sendAll(pushes, send) };
+}
+
 /** Deletes gone subscriptions, counts failures (deleting after MAX_PUSH_FAILURES), resets the count on success. */
 async function recordOutcomes(db: Db, results: { push: OutgoingPush; outcome: PushOutcome }[]): Promise<number> {
   const gone = new Set<string>();
@@ -188,19 +223,24 @@ export async function runAlerts(db: Db, vapid: VapidConfig, now: Date = new Date
 
   const reminders = await runReminders(db, subs, now, send);
   const changes = await runChanges(db, subs, now, send);
-  const removed = await recordOutcomes(db, [...reminders.results, ...changes.results]);
+  const documents = await runDocuments(db, subs, now, send);
+  const removed = await recordOutcomes(db, [...reminders.results, ...changes.results, ...documents.results]);
 
-  // Hourly housekeeping: old reminder keys are never needed again.
+  // Hourly housekeeping: old reminder keys and documents are never needed again.
   if (now.getUTCMinutes() === 0) {
     await db
       .delete(remindersSent)
       .where(lt(remindersSent.startsAt, new Date(now.getTime() - REMINDER_RETENTION_DAYS * 24 * 60 * MINUTE)));
+    await db
+      .delete(fiaDocuments)
+      .where(lt(fiaDocuments.firstSeenAt, new Date(now.getTime() - DOCUMENT_RETENTION_DAYS * 24 * 60 * MINUTE)));
   }
 
   const sentCount = (rs: { outcome: PushOutcome }[]) => rs.filter((r) => r.outcome === "sent").length;
   return {
     reminders: { due: reminders.due, sent: sentCount(reminders.results) },
     changes: { processed: changes.processed, pushes: changes.results.length, sent: sentCount(changes.results) },
+    documents: { processed: documents.processed, pushes: documents.results.length, sent: sentCount(documents.results) },
     subscriptionsRemoved: removed,
   };
 }

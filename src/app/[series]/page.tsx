@@ -4,6 +4,7 @@ import { PageTransition } from "@/components/motion/page-transition";
 import { RadarSlot } from "@/components/round/radar-slot";
 import { RememberSeries } from "@/components/round/remember-series";
 import { RoundCountdown } from "@/components/round/round-countdown";
+import { RoundDocuments } from "@/components/round/round-documents";
 import { RoundHero, ScheduleUnavailableHero, SeasonCompleteHero } from "@/components/round/round-hero";
 import { RoundSessions } from "@/components/round/round-sessions";
 import { PageStamp } from "@/components/service-worker";
@@ -60,7 +61,7 @@ export default async function SeriesPage({ params }: PageProps<"/[series]">) {
   const { series } = await params;
   if (!isSeriesId(series)) notFound();
 
-  const { featured, forecasts, results, renderedAt } = await getSeriesPageData(series);
+  const { featured, forecasts, results, documents, renderedAt } = await getSeriesPageData(series);
 
   return (
     <PageTransition>
@@ -95,6 +96,7 @@ export default async function SeriesPage({ params }: PageProps<"/[series]">) {
               timesConfirmed={featured.round.sessionTimesConfirmed}
               circuitTimeZone={featured.circuit.timeZone}
             />
+            {documents && <RoundDocuments series={series} documents={documents} circuitTimeZone={featured.circuit.timeZone} />}
           </>
         )}
       </main>

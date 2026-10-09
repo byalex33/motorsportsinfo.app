@@ -1,4 +1,5 @@
 import type { SeriesId, SessionStatus, SessionType } from "@/domain/types";
+import type { DocumentAlerts } from "@/db/schema";
 import type { Follows } from "./selection";
 
 /** A saved push subscription, as the cron sees it. */
@@ -9,6 +10,7 @@ export interface AlertSubscription {
   auth: string;
   leadMinutes: number;
   follows: Follows;
+  documentAlerts: DocumentAlerts;
   timeZone: string;
   failureCount: number;
 }

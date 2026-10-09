@@ -1,7 +1,15 @@
 // Input validation for the push subscription endpoints.
 import { z } from "zod";
 import { SERIES, REMINDER_LEAD_MINUTES } from "@/domain/series";
-import { SERIES_IDS, type SeriesId, type SessionType } from "@/domain/types";
+import {
+  FIA_DOCUMENT_SERIES,
+  SERIES_IDS,
+  type DocumentAlertLevel,
+  type FiaDocumentSeries,
+  type SeriesId,
+  type SessionType,
+} from "@/domain/types";
+import { DOCUMENT_ALERT_LEVELS, normalizeDocumentAlerts, type DocumentAlerts } from "./document-alerts";
 import { normalizeFollows, type Follows } from "./selection";
 
 /** True for IANA zone names this runtime knows, e.g. "Europe/London", "UTC". */
@@ -51,9 +59,22 @@ export const followsSchema = z.strictObject(followsShape).transform((value): Fol
 
 export const leadMinutesSchema = z.literal(REMINDER_LEAD_MINUTES);
 
+const documentAlertLevel = z.enum(DOCUMENT_ALERT_LEVELS as [DocumentAlertLevel, ...DocumentAlertLevel[]]);
+
+export const documentAlertsSchema = z
+  .strictObject(
+    Object.fromEntries(FIA_DOCUMENT_SERIES.map((id) => [id, documentAlertLevel.optional()])) as Record<
+      FiaDocumentSeries,
+      z.ZodOptional<typeof documentAlertLevel>
+    >,
+  )
+  .transform((value): DocumentAlerts => normalizeDocumentAlerts(value));
+
 export const subscribeSchema = z.object({
   subscription: browserSubscriptionSchema,
   follows: followsSchema,
+  /** Optional, so a page loaded before Document Alerts existed can still save its reminders. */
+  documentAlerts: documentAlertsSchema.default({}),
   leadMinutes: leadMinutesSchema,
   timeZone: z.string().refine(isValidTimeZone, "Unknown time zone"),
 });

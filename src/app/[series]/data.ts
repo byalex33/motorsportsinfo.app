@@ -1,7 +1,8 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { getDb } from "@/db/client";
-import type { FeaturedRoundResult, ForecastResult, SeriesId, SessionResult } from "@/domain/types";
+import type { FeaturedRoundResult, ForecastResult, RoundDocumentsResult, SeriesId, SessionResult } from "@/domain/types";
+import { getRoundDocuments } from "@/server/documents";
 import { getSessionResults } from "@/server/results";
 import { getFeaturedRound } from "@/server/schedule";
 import { getSessionForecast } from "@/server/weather";
@@ -15,6 +16,8 @@ export interface SeriesPageData {
   forecasts: Record<string, ForecastResult>;
   /** Keyed by Session id. Only finished Sessions the site has a Session Result for (F1). */
   results: Record<string, SessionResult>;
+  /** The Featured Round's FIA documents. Null for Series the FIA publishes none for, or with no Round. */
+  documents: RoundDocumentsResult | null;
   /** ISO time this data was rendered — shown as "last updated" when offline. */
   renderedAt: string;
 }
@@ -41,6 +44,7 @@ export async function getSeriesPageData(series: SeriesId): Promise<SeriesPageDat
     featured = { kind: "unavailable" };
   }
   const forecasts: Record<string, ForecastResult> = {};
+  const documents = featured.kind === "round" ? getRoundDocuments(featured.round, featured.circuit) : null;
   let results: Record<string, SessionResult> = {};
 
   if (featured.kind === "round" && featured.round.sessionTimesConfirmed) {
@@ -64,5 +68,5 @@ export async function getSeriesPageData(series: SeriesId): Promise<SeriesPageDat
     results = sessionResults;
   }
 
-  return { featured, forecasts, results, renderedAt: new Date().toISOString() };
+  return { featured, forecasts, results, documents: await documents, renderedAt: new Date().toISOString() };
 }

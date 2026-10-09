@@ -1,5 +1,6 @@
 // Browser-side Web Push helpers for the Alerts page.
 import type { ReminderLeadMinutes } from "@/domain/series";
+import type { DocumentAlerts } from "@/server/alerts/document-alerts";
 import type { Follows } from "@/server/alerts/selection";
 
 export const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
@@ -102,12 +103,13 @@ export async function saveSubscription(
   subscription: PushSubscription,
   follows: Follows,
   leadMinutes: ReminderLeadMinutes,
+  documentAlerts: DocumentAlerts,
 ): Promise<SaveResult> {
   try {
     const res = await fetch(SUBSCRIPTION_API, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subscription: subscription.toJSON(), follows, leadMinutes, timeZone: browserTimeZone() }),
+      body: JSON.stringify({ subscription: subscription.toJSON(), follows, documentAlerts, leadMinutes, timeZone: browserTimeZone() }),
     });
     return res.ok ? { ok: true } : { ok: false, message: await errorMessage(res) };
   } catch {
