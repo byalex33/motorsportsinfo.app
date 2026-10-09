@@ -50,3 +50,17 @@ export async function getFeaturedRound(series: SeriesId, now: Date = new Date())
     ],
   };
 }
+
+export interface SessionWithContext {
+  session: import("@/domain/types").Session;
+  round: import("@/domain/types").Round;
+  circuit: Circuit;
+}
+
+/** Sessions (including cancelled) for the given Series whose Round has not finished, ordered by startsAt. Used by calendar feeds and alerts. */
+export async function listUpcomingSessions(series: SeriesId[], now: Date = new Date()): Promise<SessionWithContext[]> {
+  const results = await Promise.all(series.map((id) => getFeaturedRound(id, now)));
+  return results.flatMap((r) =>
+    r.kind === "round" ? r.sessions.map((session) => ({ session, round: r.round, circuit: r.circuit })) : [],
+  );
+}
