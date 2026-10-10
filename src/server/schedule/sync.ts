@@ -131,7 +131,12 @@ export async function syncSeries(db: Db, series: SeriesId, options: SyncOptions 
 
   const decision: CheckDecision | { due: true; reason: "forced" } = options.force
     ? { due: true, reason: "forced" }
-    : decideCheckDue({ now, lastCheckedAt: state.check?.lastCheckedAt ?? null, rounds: withCircuits(state.published) });
+    : decideCheckDue({
+        now,
+        lastCheckedAt: state.check?.lastCheckedAt ?? null,
+        rounds: withCircuits(state.published),
+        hasPendingChanges: state.pending.length > 0,
+      });
   if (!decision.due) return { series, status: "skipped", published: false };
 
   await db
