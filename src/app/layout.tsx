@@ -5,6 +5,7 @@ import { OfflineBanner } from "@/components/offline-banner";
 import { ServiceWorkerRegistration } from "@/components/service-worker";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SITE_DESCRIPTION, SITE_LOCALE, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const sans = Geist({
@@ -19,27 +20,24 @@ const mono = Geist_Mono({
   display: "swap",
 });
 
-const description = "Session times and weather for F1, F2, F3, WEC, Formula E, IndyCar and MotoGP — in your time zone or Track Time, with live countdowns and rain radar.";
-
 export const metadata: Metadata = {
-  metadataBase: new URL("https://motorsportsinfo.app"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "motorsportsinfo.app — session times & weather for F1, F2, F3, WEC, Formula E, IndyCar and MotoGP",
-    template: "%s · motorsportsinfo.app",
+    template: `%s · ${SITE_NAME}`,
   },
-  description,
-  applicationName: "motorsportsinfo.app",
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
   appleWebApp: { capable: true, title: "MSI", statusBarStyle: "default" },
   formatDetection: { telephone: false },
   openGraph: {
     type: "website",
-    siteName: "motorsportsinfo.app",
-    title: "motorsportsinfo.app",
-    description,
-    url: "/",
-    locale: "en_GB",
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    locale: SITE_LOCALE,
   },
-  twitter: { card: "summary", title: "motorsportsinfo.app", description },
+  twitter: { card: "summary_large_image", title: SITE_NAME, description: SITE_DESCRIPTION },
 };
 
 export const viewport: Viewport = {

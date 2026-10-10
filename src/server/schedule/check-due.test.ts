@@ -64,4 +64,16 @@ describe("decideCheckDue", () => {
       decideCheckDue({ now: at("2026-09-25T11:45:00Z"), lastCheckedAt: at("2026-09-25T10:30:00Z"), rounds: [baku] }).due,
     ).toBe(false);
   });
+
+  it("confirms a pending change 10 minutes later instead of at the next 2-hourly check", () => {
+    // Singapore 2026: Qualifying moved 13:00 → 13:30 UTC. The pre-session check at 12:30 sees it once;
+    // without this rule the next check would be ~14:30, after the old and new start times.
+    const r = makeRound("f1-2026-marina-bay", "marina-bay", "2026-10-09", "2026-10-11");
+    const sg = withContext(r, [makeSession(r.id, "qualifying", "2026-10-10T13:00:00Z")]);
+    const lastCheckedAt = at("2026-10-10T12:30:00Z");
+    const input = { lastCheckedAt, rounds: [sg], hasPendingChanges: true };
+    expect(decideCheckDue({ ...input, now: at("2026-10-10T12:35:00Z") }).due).toBe(false);
+    expect(decideCheckDue({ ...input, now: at("2026-10-10T12:40:00Z") })).toEqual({ due: true, reason: "confirm-change" });
+    expect(decideCheckDue({ ...input, hasPendingChanges: false, now: at("2026-10-10T12:40:00Z") }).due).toBe(false);
+  });
 });

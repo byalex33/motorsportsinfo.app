@@ -1,7 +1,6 @@
 "use client";
 
 import { GlobeIcon } from "lucide-react";
-import { InlineSkeleton } from "@/components/inline-skeleton";
 import { SegmentPill } from "@/components/motion/segment-pill";
 import { track } from "@/lib/analytics";
 import type { DisplayZone } from "@/lib/display-zone";
@@ -34,7 +33,7 @@ export function SegmentButton({ active, onClick, children, label }: { active: bo
 }
 
 /** Time zone pill (Viewer Time / Track Time / chosen zone) and unit toggles. */
-export function DisplayControls({ zone }: { zone: DisplayZone | null }) {
+export function DisplayControls({ zone, circuitTimeZone }: { zone: DisplayZone | null; circuitTimeZone: string }) {
   const time = useTimePref();
   const units = useUnitsPref();
 
@@ -56,14 +55,11 @@ export function DisplayControls({ zone }: { zone: DisplayZone | null }) {
     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <p className="flex min-w-0 items-center gap-2 text-sm" aria-live="polite">
         <GlobeIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-        {zone ? (
-          <span className="min-w-0 truncate">
-            <span className="font-medium">{zone.heading}</span>
-            <span className="font-mono text-xs text-muted-foreground"> · {zone.tz}</span>
-          </span>
-        ) : (
-          <InlineSkeleton className="h-4 w-52" />
-        )}
+        {/* Until the viewer's zone is known (server HTML, hydration) the Sessions show Track Time, and so does this label. */}
+        <span className="min-w-0 truncate">
+          <span className="font-medium">{zone ? zone.heading : "Track time"}</span>
+          <span className="font-mono text-xs text-muted-foreground"> · {zone ? zone.tz : circuitTimeZone}</span>
+        </span>
       </p>
 
       <div className="flex flex-wrap items-center gap-2">

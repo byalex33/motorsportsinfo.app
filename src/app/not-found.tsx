@@ -1,10 +1,16 @@
 import { ArrowRightIcon } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { SERIES } from "@/domain/series";
 import { SERIES_IDS } from "@/domain/types";
 import { PageTransition } from "@/components/motion/page-transition";
 import { RevealWords } from "@/components/motion/reveal-words";
 import { ENTER, enterDelay, staggerDelay } from "@/lib/motion";
+
+export const metadata: Metadata = {
+  title: "Page not found",
+  robots: { index: false, follow: true },
+};
 
 export default function NotFound() {
   return (

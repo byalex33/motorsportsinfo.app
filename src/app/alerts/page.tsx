@@ -1,14 +1,15 @@
-import type { Metadata } from "next";
 import { AlertsPanel } from "@/components/alerts/alerts-panel";
 import { PageTransition } from "@/components/motion/page-transition";
 import { RevealWords } from "@/components/motion/reveal-words";
 import { ENTER, enterDelay } from "@/lib/motion";
+import { pageMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
-  title: "Alerts",
+export const metadata = pageMetadata({
+  title: "Session Reminders, FIA document alerts & calendar feeds",
   description:
-    "Session Reminders on your phone or computer, alerts for new FIA documents, and a calendar feed of F1, F2, F3, WEC, Formula E, IndyCar and MotoGP Session times that updates when the schedule changes.",
-};
+    "Session Reminders on your phone or computer, alerts for new FIA documents, and a calendar feed of F1, F2, F3, WEC, Formula E, IndyCar and MotoGP Session times.",
+  path: "/alerts",
+});
 
 export default function AlertsPage() {
   return (

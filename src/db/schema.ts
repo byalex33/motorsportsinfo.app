@@ -146,3 +146,11 @@ export const fiaDocuments = pgTable("fia_documents", {
   firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
   notifiedAt: timestamp("notified_at", { withTimezone: true }),
 });
+
+// ── Rain radar (owned by the radar work) ───────────────────────────────────
+
+/** Rainbow.ai forecast tiles fetched per UTC month ("2026-10"), for the monthly tile cap. */
+export const radarTileUsage = pgTable("radar_tile_usage", {
+  month: text("month").primaryKey(),
+  tiles: integer("tiles").notNull().default(0),
+});

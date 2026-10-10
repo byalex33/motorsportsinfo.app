@@ -68,12 +68,13 @@ export function formatFrameClock(time: number, timeZone?: string): string {
   );
 }
 
-/** "just now", "1 min ago", "40 min ago", "2 h 5 min ago". */
+/** "just now", "1 min ago", "40 min ago", "2 h 5 min ago"; for a forecast frame "in 40 min". */
 export function formatFrameAge(time: number, nowMs: number): string {
-  const minutes = Math.max(0, Math.round((nowMs - time * 1000) / 60_000));
+  const delta = Math.round((time * 1000 - nowMs) / 60_000);
+  const minutes = Math.abs(delta);
   if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes} min ago`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return m ? `${h} h ${m} min ago` : `${h} h ago`;
+  const span = minutes < 60 ? `${minutes} min` : m ? `${h} h ${m} min` : `${h} h`;
+  return delta > 0 ? `in ${span}` : `${span} ago`;
 }

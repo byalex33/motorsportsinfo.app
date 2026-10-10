@@ -16,9 +16,9 @@ FIA Documents for F1, F2 and F3 come from the championship pages on fia.com/docu
 
 Weather comes from Open-Meteo's free tier, which is also non-commercial.
 
-Rain radar comes from RainViewer's free API, credited on the map. Its terms say "personal and educational use"; RainViewer confirmed by email to the owner in October 2026 that this donation-funded, ad-free site may use it.
+The rain radar shows on F1 pages only. It plays the next two hours from Rainbow.ai's Tiles API (precipitation nowcast), credited on the map and on the About page. Rainbow needs a key and bills per tile, so tiles go through our own relay (`/api/radar/tiles/…`): it only fetches tiles near a Circuit, at the map's zooms and in the forecast window, caches each one so it is fetched once, and counts fetches per month. Past the monthly cap (`RAINBOW_MONTHLY_TILE_CAP`, default 30,000, Rainbow's free tier) the map falls back to RainViewer's free API, which only has the past two hours since RainViewer dropped its forecast frames in January 2026. RainViewer's terms say "personal and educational use"; RainViewer confirmed by email to the owner in October 2026 that this donation-funded, ad-free site may use it.
 
-The site must stay non-commercial: donations only, no ads, no paid tiers. Credit lines for OpenF1/Jolpica ("Data: OpenF1") and Open-Meteo ("Weather data by Open-Meteo.com") must appear on the page, and FIA Documents are credited "Documents: FIA". Scraping the F2, F3 and WEC sites goes against their terms, and we accept that risk knowingly.
+The site must stay non-commercial: donations only, no ads, no paid tiers. Credit lines for OpenF1/Jolpica ("Data: OpenF1"), Open-Meteo ("Weather data by Open-Meteo.com"), Rainbow.ai ("Forecast radar: Rainbow.ai") and RainViewer ("Radar: RainViewer") must appear on the page, and FIA Documents are credited "Documents: FIA". Scraping the F2, F3 and WEC sites goes against their terms, and we accept that risk knowingly.
 
 ## Consequences
 

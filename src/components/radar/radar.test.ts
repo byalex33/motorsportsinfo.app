@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Session } from "@/domain/types";
 import sample from "./fixtures/weather-maps.sample.json";
+import { buildForecastFrames } from "./feed";
 import { radarWindowSession } from "./radar-window";
 import { buildRadarFrames, formatFrameAge, formatFrameClock } from "./rainviewer";
 
@@ -105,5 +106,21 @@ describe("RainViewer frames", () => {
     expect(formatFrameAge(t / 1000, t + 20_000)).toBe("just now");
     expect(formatFrameAge(t / 1000, t + 40 * MIN)).toBe("40 min ago");
     expect(formatFrameAge(t / 1000, t + 125 * MIN)).toBe("2 h 5 min ago");
+    expect(formatFrameAge(t / 1000, t - 40 * MIN)).toBe("in 40 min");
+    expect(formatFrameAge(t / 1000, t - 120 * MIN)).toBe("in 2 h");
+  });
+});
+
+describe("forecast frames", () => {
+  it("runs from the snapshot to 2 hours ahead in 10-minute steps, through our relay", () => {
+    const frames = buildForecastFrames(1791636000, "https://motorsportsinfo.app");
+    expect(frames).toHaveLength(13);
+    expect(frames[0]).toEqual({
+      time: 1791636000,
+      id: "rainbow-1791636000-0",
+      tileUrl: "https://motorsportsinfo.app/api/radar/tiles/1791636000/0/{z}/{x}/{y}",
+    });
+    expect(frames.at(-1)?.time).toBe(1791636000 + 7200);
+    expect(new Set(frames.map((f) => f.id)).size).toBe(13);
   });
 });

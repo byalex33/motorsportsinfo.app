@@ -12,7 +12,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/calendar/[spec]
   if (!follows) {
     return new Response("Unknown calendar feed. Build a new link at https://motorsportsinfo.app/alerts\n", {
       status: 404,
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
+      headers: { "Content-Type": "text/plain; charset=utf-8", "X-Robots-Tag": "noindex" },
     });
   }
 
@@ -22,6 +22,8 @@ export async function GET(_request: Request, ctx: RouteContext<"/calendar/[spec]
       "Content-Type": "text/calendar; charset=utf-8",
       "Content-Disposition": 'inline; filename="motorsportsinfo.ics"',
       "Cache-Control": CACHE_CONTROL,
+      // Personal feeds for calendar apps, not pages for search results.
+      "X-Robots-Tag": "noindex",
     },
   });
 }

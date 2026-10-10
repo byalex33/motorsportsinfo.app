@@ -9,6 +9,8 @@ export interface SeriesInfo {
   sessionTypes: SessionType[];
   /** Session Types ticked by default for Session Reminders and calendar feeds. */
   defaultReminderTypes: SessionType[];
+  /** Whether the Series page shows the rain radar around Session time. F1 only: radar tiles cost money. */
+  hasRainRadar: boolean;
 }
 
 export const SERIES: Record<SeriesId, SeriesInfo> = {
@@ -18,6 +20,7 @@ export const SERIES: Record<SeriesId, SeriesInfo> = {
     shortName: "F1",
     sessionTypes: ["practice", "sprint-qualifying", "sprint", "qualifying", "race"],
     defaultReminderTypes: ["sprint", "qualifying", "race"],
+    hasRainRadar: true,
   },
   f2: {
     id: "f2",
@@ -25,6 +28,7 @@ export const SERIES: Record<SeriesId, SeriesInfo> = {
     shortName: "F2",
     sessionTypes: ["practice", "qualifying", "sprint-race", "feature-race"],
     defaultReminderTypes: ["qualifying", "sprint-race", "feature-race"],
+    hasRainRadar: false,
   },
   f3: {
     id: "f3",
@@ -32,6 +36,7 @@ export const SERIES: Record<SeriesId, SeriesInfo> = {
     shortName: "F3",
     sessionTypes: ["practice", "qualifying", "sprint-race", "feature-race"],
     defaultReminderTypes: ["qualifying", "sprint-race", "feature-race"],
+    hasRainRadar: false,
   },
   wec: {
     id: "wec",
@@ -39,6 +44,7 @@ export const SERIES: Record<SeriesId, SeriesInfo> = {
     shortName: "WEC",
     sessionTypes: ["practice", "qualifying", "hyperpole", "race"],
     defaultReminderTypes: ["qualifying", "race"],
+    hasRainRadar: false,
   },
   fe: {
     id: "fe",
@@ -46,6 +52,7 @@ export const SERIES: Record<SeriesId, SeriesInfo> = {
     shortName: "FE",
     sessionTypes: ["practice", "qualifying", "race"],
     defaultReminderTypes: ["qualifying", "race"],
+    hasRainRadar: false,
   },
   indycar: {
     id: "indycar",
@@ -53,6 +60,7 @@ export const SERIES: Record<SeriesId, SeriesInfo> = {
     shortName: "IndyCar",
     sessionTypes: ["practice", "qualifying", "race"],
     defaultReminderTypes: ["qualifying", "race"],
+    hasRainRadar: false,
   },
   motogp: {
     id: "motogp",
@@ -60,6 +68,7 @@ export const SERIES: Record<SeriesId, SeriesInfo> = {
     shortName: "MotoGP",
     sessionTypes: ["practice", "qualifying", "sprint", "race"],
     defaultReminderTypes: ["sprint", "race"],
+    hasRainRadar: false,
   },
 };
 
