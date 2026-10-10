@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRightIcon, ArrowUpRightIcon, FileClockIcon, FileWarningIcon } from "lucide-react";
+import { SpoilerTitle } from "@/components/documents/spoiler";
 import { InlineSkeleton } from "@/components/inline-skeleton";
 import { SegmentPill } from "@/components/motion/segment-pill";
 import type { FiaDocument, FiaDocumentKind, RoundDocumentsResult, SeriesId } from "@/domain/types";
@@ -186,7 +187,9 @@ function DocumentRow({
 
       <span className="min-w-0">
         <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-          <span className="font-medium tracking-tight text-pretty">{doc.title}</span>
+          <span className="font-medium tracking-tight text-pretty">
+            <SpoilerTitle title={doc.title} />
+          </span>
           <span className="hidden sm:contents">{chips}</span>
         </span>
         {/* Mobile: the published time and chips share a line under the title. From sm up the time has its own column. */}
