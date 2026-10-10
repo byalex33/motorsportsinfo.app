@@ -15,6 +15,13 @@
       "when": 1791584048725,
       "tag": "0001_fia_document_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791636979794,
+      "tag": "0002_radar_tile_usage",
+      "breakpoints": true
     }
   ]
 }

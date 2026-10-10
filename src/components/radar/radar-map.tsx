@@ -8,15 +8,9 @@ import type { Circuit } from "@/domain/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MAP_HEIGHT, RadarCard } from "./radar-card";
-import {
-  RADAR_TILE_SIZE,
-  RAINVIEWER_ATTRIBUTION,
-  RAINVIEWER_MAX_ZOOM,
-  fetchRadarFrames,
-  formatFrameAge,
-  formatFrameClock,
-  type RadarFrame,
-} from "./rainviewer";
+import { RADAR_PAN_DEGREES } from "@/lib/radar-forecast";
+import { fetchRadarFeed, type RadarFeed } from "./feed";
+import { RADAR_TILE_SIZE, formatFrameAge, formatFrameClock } from "./rainviewer";
 import { useIsDarkMode, usePrefersReducedMotion } from "./use-client-state";
 
 // The bundler emits the worker as a static asset; maplibre's own lookup is relative to its module URL,
@@ -31,11 +25,12 @@ const FRAME_MS = 500;
 const LAST_FRAME_HOLD_MS = 1500;
 const FRAMES_REFRESH_MS = 5 * 60_000;
 const RADAR_OPACITY = 0.75;
-const RADAR_LAYER_PREFIX = "rainviewer-";
+const RADAR_LAYER_PREFIX = "radar-frame-";
 
 /** Adds/removes one raster layer per frame (all preloaded) and shows only the active one. Idempotent. */
-function syncRadarLayers(map: MapLibreMap, frames: RadarFrame[], activeIndex: number) {
+function syncRadarLayers(map: MapLibreMap, feed: RadarFeed | null, activeIndex: number) {
   if (!map.isStyleLoaded()) return;
+  const frames = feed?.frames ?? [];
   const wanted = new Set(frames.map((f) => RADAR_LAYER_PREFIX + f.id));
   const layers = map.getStyle().layers;
   for (const layer of layers) {
@@ -48,13 +43,13 @@ function syncRadarLayers(map: MapLibreMap, frames: RadarFrame[], activeIndex: nu
   const beforeId = layers.find((l) => l.type === "symbol")?.id;
   frames.forEach((frame, i) => {
     const id = RADAR_LAYER_PREFIX + frame.id;
-    if (!map.getSource(id)) {
+    if (feed && !map.getSource(id)) {
       map.addSource(id, {
         type: "raster",
         tiles: [frame.tileUrl],
         tileSize: RADAR_TILE_SIZE,
-        maxzoom: RAINVIEWER_MAX_ZOOM,
-        attribution: RAINVIEWER_ATTRIBUTION,
+        maxzoom: feed.maxZoom,
+        attribution: feed.attribution,
       });
     }
     if (!map.getLayer(id)) {
@@ -86,12 +81,13 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const styleRef = useRef<string | null>(null);
-  const radarRef = useRef<{ frames: RadarFrame[]; index: number }>({ frames: [], index: 0 });
+  const radarRef = useRef<{ feed: RadarFeed | null; index: number }>({ feed: null, index: 0 });
+  const feedKeyRef = useRef("");
 
   const dark = useIsDarkMode();
   const reducedMotion = usePrefersReducedMotion();
   const [mapState, setMapState] = useState<"loading" | "ready" | "error">("loading");
-  const [frames, setFrames] = useState<RadarFrame[]>([]);
+  const [feed, setFeed] = useState<RadarFeed | null>(null);
   const [framesError, setFramesError] = useState(false);
   const [index, setIndex] = useState(0);
   // Rendered client-only (ssr: false), so this is the real preference on first render.
@@ -120,8 +116,8 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
         maxZoom: 10,
         // Keep panning near the Circuit: bounds the number of radar tiles we can request.
         maxBounds: [
-          [lon - 8, Math.max(lat - 5, -85)],
-          [lon + 8, Math.min(lat + 5, 85)],
+          [lon - RADAR_PAN_DEGREES.lon, Math.max(lat - RADAR_PAN_DEGREES.lat, -85)],
+          [lon + RADAR_PAN_DEGREES.lon, Math.min(lat + RADAR_PAN_DEGREES.lat, 85)],
         ],
         cooperativeGestures: true,
         dragRotate: false,
@@ -142,7 +138,7 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
 
       // Fires on first load and after every theme switch (setStyle drops our layers).
       map.on("style.load", () => {
-        if (map) syncRadarLayers(map, radarRef.current.frames, radarRef.current.index);
+        if (map) syncRadarLayers(map, radarRef.current.feed, radarRef.current.index);
       });
       map.once("load", () => {
         if (!cancelled) setMapState("ready");
@@ -168,18 +164,23 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
   }, [dark, mapState]);
 
   // Frame list: now and every 5 minutes (1 request each; tiles of unchanged frames stay cached).
+  // A new frame list restarts from "now": the first forecast frame, or the latest past one.
   useEffect(() => {
     const controller = new AbortController();
     const load = () =>
-      fetchRadarFrames(controller.signal)
+      fetchRadarFeed(controller.signal)
         .then((next) => {
-          setFrames((prev) => (prev.map((f) => f.id).join() === next.map((f) => f.id).join() ? prev : next));
-          setIndex((i) => (next.length ? next.length - 1 : i));
+          const key = next.frames.map((f) => f.id).join();
+          if (key !== feedKeyRef.current) {
+            feedKeyRef.current = key;
+            setFeed(next);
+            setIndex(next.kind === "forecast" ? 0 : Math.max(next.frames.length - 1, 0));
+          }
           setFramesError(false);
         })
         .catch((error) => {
           if (controller.signal.aborted) return;
-          console.warn("[radar] RainViewer frames failed to load", error);
+          console.warn("[radar] radar frames failed to load", error);
           setFramesError(true);
         });
     void load();
@@ -190,16 +191,17 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
     };
   }, []);
 
+  const frames = feed?.frames ?? [];
   const activeIndex = Math.min(index, Math.max(frames.length - 1, 0));
 
   // Push frames and the active frame to the map.
   useEffect(() => {
-    radarRef.current = { frames, index: activeIndex };
+    radarRef.current = { feed, index: activeIndex };
     const map = mapRef.current;
-    if (map && mapState === "ready") syncRadarLayers(map, frames, activeIndex);
-  }, [frames, activeIndex, mapState]);
+    if (map && mapState === "ready") syncRadarLayers(map, feed, activeIndex);
+  }, [feed, activeIndex, mapState]);
 
-  // Animate: 500 ms per frame, hold on the latest, loop.
+  // Animate: 500 ms per frame, hold on the last, loop.
   const isPlaying = playing && frames.length > 1;
   useEffect(() => {
     if (!isPlaying) return;
@@ -257,7 +259,7 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
   );
 
   return (
-    <RadarCard circuitName={name} footer={footer}>
+    <RadarCard circuitName={name} timeSpan={feed?.kind} footer={footer}>
       <div className={cn("relative", MAP_HEIGHT)}>
         <div
           ref={containerRef}

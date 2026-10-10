@@ -133,7 +133,9 @@ export default async function SeriesPage({ params }: PageProps<"/[series]">) {
                 ) : null
               }
             />
-            {featured.round.sessionTimesConfirmed && <RadarSlot circuit={featured.circuit} sessions={featured.sessions} />}
+            {SERIES[series].hasRainRadar && featured.round.sessionTimesConfirmed && (
+              <RadarSlot circuit={featured.circuit} sessions={featured.sessions} />
+            )}
             <RoundSessions
               series={series}
               sessions={featured.sessions}

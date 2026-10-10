@@ -17,5 +17,5 @@ Read `CONTEXT.md` for the domain vocabulary (Series, Round, Featured Round, Sess
 - UI imports schedule data only from `src/server/schedule`, weather only from `src/server/weather`, Session Results only from `src/server/results` and FIA Documents only from `src/server/documents`.
 - `getDb()` returns null without `DATABASE_URL`; local dev must still render real data.
 - Cron routes under `src/app/api/cron/*` require `Authorization: Bearer ${CRON_SECRET}`.
-- Data/credit obligations (ADR 0001): show "Data: OpenF1", "Weather data by Open-Meteo.com", "Radar: RainViewer", "Documents: FIA" credits; site stays non-commercial.
+- Data/credit obligations (ADR 0001): show "Data: OpenF1", "Weather data by Open-Meteo.com", "Forecast radar: Rainbow.ai", "Radar: RainViewer", "Documents: FIA" credits; site stays non-commercial.
 - Tests: `npm test` (vitest, `src/**/*.test.ts`). Checks: `npm run typecheck`, `npm run lint`, `npm run build`.

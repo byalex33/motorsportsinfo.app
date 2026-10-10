@@ -43,7 +43,7 @@ export default function AboutPage() {
         <p className="enter-rise mt-5 max-w-2xl leading-relaxed text-pretty text-muted-foreground sm:text-lg" style={enterDelay(ENTER.lead)}>
           motorsportsinfo.app shows the Featured Round for F1, F2, F3, the WEC, Formula E, IndyCar and MotoGP — the
           Round in progress, or the next one — with every Session in your time or Track Time, a live countdown, the
-          forecast at the Circuit for each Session and a rain radar around Session time. It is free, has no ads and no
+          forecast at the Circuit for each Session and, for F1, a rain radar of the next two hours around Session time. It is free, has no ads and no
           accounts.
         </p>
 
@@ -114,10 +114,14 @@ export default function AboutPage() {
               </li>
               <li>
                 <strong className="font-medium text-foreground">Rain radar:</strong>{" "}
+                <a className={a} href="https://www.rainbow.ai/" target="_blank" rel="noopener noreferrer">
+                  Forecast radar: Rainbow.ai
+                </a>
+                , with{" "}
                 <a className={a} href="https://www.rainviewer.com/" target="_blank" rel="noopener noreferrer">
                   Radar: RainViewer
-                </a>
-                .
+                </a>{" "}
+                showing the past two hours when the forecast is unavailable.
               </li>
               <li>
                 <strong className="font-medium text-foreground">Maps:</strong>{" "}
