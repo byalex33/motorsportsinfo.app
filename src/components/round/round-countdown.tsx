@@ -6,6 +6,7 @@ import type { Session } from "@/domain/types";
 import { useNow } from "@/lib/client-stores";
 import { countdownParts, formatCountdown, getRoundStatus } from "@/lib/round-status";
 import { formatClock, formatSessionDay } from "@/lib/time-format";
+import { sessionStartSentence, type TrackTimeText } from "@/lib/track-time";
 import { cn } from "@/lib/utils";
 import { useDisplayZone } from "./use-display-zone";
 
@@ -62,20 +63,25 @@ function RollingNumber({ value }: { value: string }) {
 }
 
 /** Live countdown to the next Session, or a "Live" badge while a Session is running. */
-export function RoundCountdown({ sessions, circuitTimeZone }: { sessions: Session[]; circuitTimeZone: string }) {
-  const now = useNow(1000);
+export function RoundCountdown({
+  sessions,
+  circuitTimeZone,
+  trackTimes,
+  renderedAt,
+}: {
+  sessions: Session[];
+  circuitTimeZone: string;
+  /** Server-rendered Track Time text per Session, shown until the viewer's zone is known. */
+  trackTimes: Record<string, TrackTimeText>;
+  /** When the page data was rendered: the server HTML (and hydration) show the status at that moment. */
+  renderedAt: string;
+}) {
+  const clock = useNow(1000);
   const zone = useDisplayZone(circuitTimeZone);
-
-  if (now === null) {
-    // Server render and hydration: a stable placeholder with the same footprint.
-    return (
-      <div className="flex flex-col items-center space-y-3" aria-hidden>
-        <div className="h-5 w-56 animate-pulse rounded-md bg-muted" />
-        <div className="h-[4.75rem] w-72 animate-pulse rounded-md bg-muted sm:h-[5.5rem] sm:w-[22rem]" />
-      </div>
-    );
-  }
-
+  // Server render and hydration: the status when the data was rendered, in Track Time, with the
+  // digits held as placeholders of the same size. Both come from props, so the two renders match.
+  const hydrating = clock === null;
+  const now = clock ?? Date.parse(renderedAt);
   const status = getRoundStatus(sessions, now);
 
   if (status.kind === "finished") {
@@ -92,8 +98,12 @@ export function RoundCountdown({ sessions, circuitTimeZone }: { sessions: Sessio
   const isLive = status.kind === "live";
   const target = isLive ? session.endsAt : session.startsAt;
   const parts = countdownParts(target, now);
-  const day = zone ? formatSessionDay(session.startsAt, zone.tz) : null;
-  const at = zone ? formatClock(session.startsAt, zone.tz) : null;
+  const track = trackTimes[session.id];
+  const when = zone
+    ? `${formatSessionDay(session.startsAt, zone.tz).weekday} ${formatClock(session.startsAt, zone.tz)}`
+    : track
+      ? `${track.weekday} ${track.clock} ${track.offset}`
+      : null;
 
   return (
     <div className="enter-focus flex flex-col items-center space-y-4">
@@ -109,16 +119,19 @@ export function RoundCountdown({ sessions, circuitTimeZone }: { sessions: Sessio
         <span className="font-medium">
           {session.name} {isLive ? "ends in" : "starts in"}
         </span>
-        {!isLive && day && at && (
-          <span className="font-mono text-xs tracking-[0.06em] text-muted-foreground uppercase tabular">
-            {day.weekday} {at}
-          </span>
+        {!isLive && when && (
+          <time dateTime={session.startsAt} className="font-mono text-xs tracking-[0.06em] text-muted-foreground uppercase tabular">
+            {when}
+          </time>
         )}
+        {/* The full start time in words for crawlers and screen readers, until the live countdown takes over. */}
+        {hydrating && track && <span className="sr-only">{sessionStartSentence(session.name, track, isLive)}</span>}
       </p>
       <div
         role="timer"
         aria-live="off"
-        aria-label={`${isLive ? `${session.name} ends in` : `${session.name} starts in`} ${formatCountdown(parts)}`}
+        aria-label={hydrating ? undefined : `${isLive ? `${session.name} ends in` : `${session.name} starts in`} ${formatCountdown(parts)}`}
+        aria-hidden={hydrating || undefined}
         className="flex items-start justify-center font-mono tabular"
       >
         {UNITS.map((u, i) => (
@@ -130,7 +143,12 @@ export function RoundCountdown({ sessions, circuitTimeZone }: { sessions: Sessio
             )}
             <span className="flex flex-col">
               <span className="text-[2.75rem] leading-none font-medium tracking-[-0.04em] sm:text-6xl">
-                <RollingNumber value={String(parts[u.key]).padStart(2, "0")} />
+                {hydrating ? (
+                  // Same glyphs and box as the digits, so nothing moves when the countdown starts.
+                  <span className="flex animate-pulse rounded-md bg-muted text-transparent">00</span>
+                ) : (
+                  <RollingNumber value={String(parts[u.key]).padStart(2, "0")} />
+                )}
               </span>
               <span className="eyebrow mt-2 text-muted-foreground">{u.label}</span>
             </span>

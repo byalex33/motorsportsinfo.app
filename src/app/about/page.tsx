@@ -1,16 +1,16 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { PageTransition } from "@/components/motion/page-transition";
 import { RevealWords } from "@/components/motion/reveal-words";
 import { ENTER, enterDelay, staggerDelay } from "@/lib/motion";
+import { pageMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "About",
   description:
     "What motorsportsinfo.app is, where its schedule and weather data come from, how your privacy is protected, and who it is not affiliated with.",
-  alternates: { canonical: "/about" },
-};
+  path: "/about",
+});
 
 const a = "text-primary underline decoration-primary/30 underline-offset-4 transition-colors hover:decoration-primary";
 

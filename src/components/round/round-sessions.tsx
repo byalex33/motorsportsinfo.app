@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CalendarClockIcon } from "lucide-react";
 import type { ForecastResult, SeriesId, Session, SessionResult } from "@/domain/types";
 import { ENTER, enterDelay } from "@/lib/motion";
+import type { TrackTimeText } from "@/lib/track-time";
 import { DisplayControls } from "./display-controls";
 import { SessionList } from "./session-list";
 import { useDisplayZone } from "./use-display-zone";
@@ -17,6 +18,8 @@ interface RoundSessionsProps {
   resultsUrl: string;
   timesConfirmed: boolean;
   circuitTimeZone: string;
+  /** Server-rendered Track Time text per Session, shown until the viewer's zone is known. */
+  trackTimes: Record<string, TrackTimeText>;
 }
 
 const SPORTSTIMES = { label: "sportstimes/f1", href: "https://github.com/sportstimes/f1" };
@@ -33,7 +36,16 @@ const DATA_CREDITS: Record<SeriesId, { label: string; href: string }> = {
 };
 
 /** Display controls and the Round's Sessions in order, cancelled ones included. */
-export function RoundSessions({ series, sessions, forecasts, results, resultsUrl, timesConfirmed, circuitTimeZone }: RoundSessionsProps) {
+export function RoundSessions({
+  series,
+  sessions,
+  forecasts,
+  results,
+  resultsUrl,
+  timesConfirmed,
+  circuitTimeZone,
+  trackTimes,
+}: RoundSessionsProps) {
   const zone = useDisplayZone(circuitTimeZone);
 
   return (
@@ -51,7 +63,7 @@ export function RoundSessions({ series, sessions, forecasts, results, resultsUrl
 
       {timesConfirmed && (
         <div className="enter-rise" style={enterDelay(ENTER.body + 15)}>
-          <DisplayControls zone={zone} />
+          <DisplayControls zone={zone} circuitTimeZone={circuitTimeZone} />
         </div>
       )}
 
@@ -76,6 +88,8 @@ export function RoundSessions({ series, sessions, forecasts, results, resultsUrl
           resultsUrl={resultsUrl}
           timesConfirmed={timesConfirmed}
           zone={zone}
+          circuitTimeZone={circuitTimeZone}
+          trackTimes={trackTimes}
         />
       ) : (
         timesConfirmed && (

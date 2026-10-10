@@ -10,6 +10,7 @@ import { staggerDelay } from "@/lib/motion";
 import { useUnitsPref } from "@/lib/prefs";
 import { getRoundStatus, sessionPhase, type SessionPhase } from "@/lib/round-status";
 import { formatSessionDay, formatTimeRange, zoneOffsetLabel } from "@/lib/time-format";
+import type { TrackTimeText } from "@/lib/track-time";
 import { cn } from "@/lib/utils";
 import { LiveDot } from "./round-countdown";
 import { SessionResultsDialog } from "./session-results-dialog";
@@ -20,21 +21,25 @@ interface SessionListProps {
   results: Record<string, SessionResult>;
   resultsUrl: string;
   timesConfirmed: boolean;
+  /** Null on the server and during hydration: rows then show the server's Track Time text. */
   zone: DisplayZone | null;
+  circuitTimeZone: string;
+  trackTimes: Record<string, TrackTimeText>;
 }
 
 // Columns on wider screens: day · Session · time · weather. Rows use subgrid so every column lines up.
 const COLS = "sm:grid sm:grid-cols-[4.5rem_minmax(0,1fr)_auto_auto] sm:gap-x-6";
 const ROW = "sm:col-span-4 sm:grid-cols-subgrid";
 
-export function SessionList({ sessions, forecasts, results, resultsUrl, timesConfirmed, zone }: SessionListProps) {
+export function SessionList({ sessions, forecasts, results, resultsUrl, timesConfirmed, zone, circuitTimeZone, trackTimes }: SessionListProps) {
   // Phases only need minute precision; the hero handles the per-second countdown.
   // With times TBC the start/end values are placeholders, so no live/next/finished states.
   const clock = useNow(60_000);
   const now = timesConfirmed ? clock : null;
   const status = now !== null ? getRoundStatus(sessions, now) : null;
   const nextId = status?.kind === "upcoming" ? status.session.id : null;
-  const offset = timesConfirmed && zone && sessions[0] ? zoneOffsetLabel(zone.tz, new Date(sessions[0].startsAt)) : null;
+  const first = sessions[0];
+  const offset = timesConfirmed && first ? (zone ? zoneOffsetLabel(zone.tz, new Date(first.startsAt)) : (trackTimes[first.id]?.offset ?? null)) : null;
 
   return (
     <ol className={cn("divide-y divide-border border-y border-border", COLS)}>
@@ -54,6 +59,8 @@ export function SessionList({ sessions, forecasts, results, resultsUrl, timesCon
           resultsUrl={resultsUrl}
           timesConfirmed={timesConfirmed}
           zone={zone}
+          zoneKey={zone?.tz ?? circuitTimeZone}
+          track={trackTimes[session.id]}
           phase={now === null ? (session.status === "cancelled" ? "cancelled" : null) : sessionPhase(session, now)}
           isNext={session.id === nextId}
         />
@@ -70,6 +77,8 @@ function SessionRow({
   resultsUrl,
   timesConfirmed,
   zone,
+  zoneKey,
+  track,
   phase,
   isNext,
 }: {
@@ -80,17 +89,24 @@ function SessionRow({
   resultsUrl: string;
   timesConfirmed: boolean;
   zone: DisplayZone | null;
+  /** The zone the row's text is in, so text re-animates only when the zone actually changes. */
+  zoneKey: string;
+  track: TrackTimeText | undefined;
   phase: SessionPhase | null;
   isNext: boolean;
 }) {
   const cancelled = session.status === "cancelled";
   const live = phase === "live";
   const finished = phase === "finished";
-  const day = timesConfirmed && zone ? formatSessionDay(session.startsAt, zone.tz) : null;
-  const range =
-    timesConfirmed && zone
+  // Viewer Time once the zone is known; until then the server's Track Time text, so the server HTML
+  // carries real times and hydration renders exactly the same strings.
+  const day = !timesConfirmed ? null : zone ? formatSessionDay(session.startsAt, zone.tz) : (track ?? null);
+  const range = !timesConfirmed
+    ? null
+    : zone
       ? formatTimeRange(session.startsAt, session.endsAt, zone.tz, undefined, { endEstimated: session.endIsEstimated })
-      : null;
+      : (track?.range ?? null);
+  const offset = !timesConfirmed ? null : zone ? zoneOffsetLabel(zone.tz, new Date(session.startsAt)) : (track?.offset ?? null);
 
   return (
     <li
@@ -103,7 +119,7 @@ function SessionRow({
     >
       {live && <span aria-hidden className="live-breathe absolute inset-y-0 left-0 w-0.5 bg-series-gradient-y" />}
 
-      <DayCell day={day} tz={zone?.tz} timesConfirmed={timesConfirmed} muted={cancelled || finished} />
+      <DayCell day={day} zoneKey={zoneKey} timesConfirmed={timesConfirmed} muted={cancelled || finished} />
 
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
@@ -135,10 +151,15 @@ function SessionRow({
               <span className="sr-only">Time </span>TBC
             </span>
           ) : range ? (
-            <span key={zone?.tz} className={cn("enter-focus", cancelled ? "text-muted-foreground line-through" : finished ? "" : "text-foreground")}>
+            <time
+              key={zoneKey}
+              dateTime={session.startsAt}
+              className={cn("enter-focus", cancelled ? "text-muted-foreground line-through" : finished ? "" : "text-foreground")}
+            >
               {cancelled && <span className="sr-only">Was </span>}
               {range}
-            </span>
+              {offset && <span className="sr-only"> {offset}</span>}
+            </time>
           ) : (
             <InlineSkeleton className="h-4 w-28" />
           )}
@@ -153,12 +174,12 @@ function SessionRow({
 
 function DayCell({
   day,
-  tz,
+  zoneKey,
   timesConfirmed,
   muted,
 }: {
-  day: ReturnType<typeof formatSessionDay> | null;
-  tz: string | undefined;
+  day: Pick<ReturnType<typeof formatSessionDay>, "weekday" | "day" | "long"> | null;
+  zoneKey: string;
   timesConfirmed: boolean;
   muted: boolean;
 }) {
@@ -171,7 +192,7 @@ function DayCell({
         <span className="text-muted-foreground">—</span>
       ) : day ? (
         <>
-          <span key={tz} aria-hidden className="enter-focus flex flex-col sm:flex-row sm:gap-[1ch]">
+          <span key={zoneKey} aria-hidden className="enter-focus flex flex-col sm:flex-row sm:gap-[1ch]">
             <span className="text-muted-foreground">{day.weekday}</span>
             <span>{day.day.padStart(2, "0")}</span>
           </span>
