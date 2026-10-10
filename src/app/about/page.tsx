@@ -52,7 +52,9 @@ export default function AboutPage() {
             <p>
               Pick a Series and you get one page: the Round that matters now. Times are shown in your device&apos;s time
               zone by default; you can switch to Track Time (the Circuit&apos;s time zone) or any other zone, and choose
-              °C or °F and km/h or mph. Cancelled Sessions stay in the list, marked as cancelled.
+              °C or °F and km/h or mph. Cancelled Sessions stay in the list, marked as cancelled. For F1, F2 and F3
+              the page also lists the FIA&apos;s documents for the Round as they are published — stewards&apos;
+              decisions, classifications and notes — each opening right here on the site.
             </p>
             <p>
               <Link href="/alerts" className={a}>
@@ -77,6 +79,10 @@ export default function AboutPage() {
                 as a fallback. Both are licensed CC BY-NC-SA 4.0.
               </li>
               <li>
+                <strong className="font-medium text-foreground">F1 Session Results:</strong> the full classification of
+                each finished Session, from OpenF1, behind a spoiler warning. Other Series link to their official results pages.
+              </li>
+              <li>
                 <strong className="font-medium text-foreground">F2 and F3 schedules:</strong> from the official timetables published on the FIA Formula 2 and
                 FIA Formula 3 websites, with the sportstimes/f1 dataset as a fallback.
               </li>
@@ -89,6 +95,15 @@ export default function AboutPage() {
                   sportstimes/f1
                 </a>{" "}
                 dataset, licensed MIT.
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">FIA documents:</strong>{" "}
+                <a className={a} href="https://www.fia.com/documents" target="_blank" rel="noopener noreferrer">
+                  Documents: FIA
+                </a>
+                . Titles and publish times from the FIA&apos;s document pages for F1, F2 and F3. The documents are the
+                FIA&apos;s own PDFs, passed through unchanged and shown on this site with PDF.js; each one can still be
+                downloaded.
               </li>
               <li>
                 <strong className="font-medium text-foreground">Weather:</strong>{" "}
@@ -136,7 +151,8 @@ export default function AboutPage() {
               </li>
               <li>
                 <strong className="font-medium text-foreground">Push notifications</strong> are optional. If you turn them on, we store an anonymous browser push
-                endpoint together with the Series, Session Types and reminder lead time you chose — nothing else. You can
+                endpoint together with the Series, Session Types, reminder lead time and FIA document alerts you chose —
+                nothing else. You can
                 remove it at any time from{" "}
                 <Link href="/alerts" className={a}>
                   Alerts

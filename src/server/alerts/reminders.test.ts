@@ -13,6 +13,7 @@ function sub(overrides: Partial<AlertSubscription> = {}): AlertSubscription {
     auth: "a",
     leadMinutes: 15,
     follows: { f1: ["qualifying", "race"] },
+    documentAlerts: {},
     timeZone: "UTC",
     failureCount: 0,
     ...overrides,

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CalendarClockIcon } from "lucide-react";
-import type { ForecastResult, SeriesId, Session } from "@/domain/types";
+import type { ForecastResult, SeriesId, Session, SessionResult } from "@/domain/types";
 import { ENTER, enterDelay } from "@/lib/motion";
 import { DisplayControls } from "./display-controls";
 import { SessionList } from "./session-list";
@@ -12,6 +12,9 @@ interface RoundSessionsProps {
   series: SeriesId;
   sessions: Session[];
   forecasts: Record<string, ForecastResult>;
+  results: Record<string, SessionResult>;
+  /** Linked from finished Sessions that have no Session Result. */
+  resultsUrl: string;
   timesConfirmed: boolean;
   circuitTimeZone: string;
 }
@@ -30,7 +33,7 @@ const DATA_CREDITS: Record<SeriesId, { label: string; href: string }> = {
 };
 
 /** Display controls and the Round's Sessions in order, cancelled ones included. */
-export function RoundSessions({ series, sessions, forecasts, timesConfirmed, circuitTimeZone }: RoundSessionsProps) {
+export function RoundSessions({ series, sessions, forecasts, results, resultsUrl, timesConfirmed, circuitTimeZone }: RoundSessionsProps) {
   const zone = useDisplayZone(circuitTimeZone);
 
   return (
@@ -66,7 +69,14 @@ export function RoundSessions({ series, sessions, forecasts, timesConfirmed, cir
       )}
 
       {sessions.length > 0 ? (
-        <SessionList sessions={sessions} forecasts={forecasts} timesConfirmed={timesConfirmed} zone={zone} />
+        <SessionList
+          sessions={sessions}
+          forecasts={forecasts}
+          results={results}
+          resultsUrl={resultsUrl}
+          timesConfirmed={timesConfirmed}
+          zone={zone}
+        />
       ) : (
         timesConfirmed && (
           <p className="enter-rise border-y border-border py-10 text-center text-sm text-muted-foreground" style={enterDelay(ENTER.rows)}>

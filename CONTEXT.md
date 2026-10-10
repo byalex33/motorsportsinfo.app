@@ -33,6 +33,10 @@ The category a Session belongs to within its Series, used for choosing which Ses
 
 _Avoid_: Session kind, session name
 
+**Session Result**:
+The finishing order of a finished Session. It is a spoiler, so it never shows in the Session list: a finished Session's RESULTS chip opens a modal that warns first and shows the full classification on request (F1 only, from OpenF1). For other Series, or before OpenF1 has published it, the modal links to the Series' official results page instead.
+_Avoid_: Classification, standings, podium (as the general term)
+
 **Schedule Override**:
 A hand-made correction to a Session's time or status. It takes precedence over what the source says, until it is removed.
 _Avoid_: Manual fix, patch
@@ -40,6 +44,10 @@ _Avoid_: Manual fix, patch
 **Circuit**:
 The venue where a Round takes place. It has a fixed location and time zone.
 _Avoid_: Track, venue
+
+**FIA Document**:
+An official document the FIA publishes for a Round on fia.com, such as a stewards' decision, a classification, a starting grid or the Race Director's notes. Only F1, F2 and F3 have them. Each is a PDF with a running number within the Round ("Doc 33").
+_Avoid_: Bulletin, decision (as the generic term), report
 
 ### Time
 
@@ -60,3 +68,7 @@ _Avoid_: Alert, notification (as the specific term)
 **Schedule Change**:
 A Session's start time moves or the Session is cancelled after it was first published.
 _Avoid_: Update, delay
+
+**Document Alert**:
+A notification sent when the FIA publishes a new FIA Document for a Round of a Series the viewer chose: stewards' documents only, or all of them. Several at once arrive as one summary.
+_Avoid_: Document notification, document reminder

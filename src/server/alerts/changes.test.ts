@@ -7,7 +7,7 @@ const previous = new Date("2026-11-21T13:15:00Z");
 const moved = new Date("2026-11-21T14:00:00Z");
 
 function sub(id: string, follows: AlertSubscription["follows"], timeZone = "UTC"): AlertSubscription {
-  return { id, endpoint: `https://push.example/${id}`, p256dh: "p", auth: "a", leadMinutes: 15, follows, timeZone, failureCount: 0 };
+  return { id, endpoint: `https://push.example/${id}`, p256dh: "p", auth: "a", leadMinutes: 15, follows, documentAlerts: {}, timeZone, failureCount: 0 };
 }
 
 const quali: AlertSession = {

@@ -8,8 +8,8 @@ import type { Circuit, Round, SeriesId } from "@/domain/types";
 import { ENTER, enterDelay } from "@/lib/motion";
 import { formatRoundDates } from "@/lib/time-format";
 
-/** "● F1 · Formula 1 · 2026 season" — the micro-label above the Round name. */
-function SeriesLine({ series, season }: { series: SeriesId; season?: number }) {
+/** "● F1 · Formula 1 · Round 18" (or "· 2026 season" when no Round is featured) — the micro-label above the Round name. */
+function SeriesLine({ series, roundNumber, season }: { series: SeriesId; roundNumber?: number; season?: number }) {
   const info = SERIES[series];
   return (
     <p className="eyebrow enter-rise flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-muted-foreground" style={enterDelay(ENTER.eyebrow)}>
@@ -19,11 +19,18 @@ function SeriesLine({ series, season }: { series: SeriesId; season?: number }) {
       </span>
       <span aria-hidden>·</span>
       <span>{info.name}</span>
-      {season !== undefined && (
+      {roundNumber !== undefined ? (
         <>
           <span aria-hidden>·</span>
-          <span>{season} season</span>
+          <span>Round {roundNumber}</span>
         </>
+      ) : (
+        season !== undefined && (
+          <>
+            <span aria-hidden>·</span>
+            <span>{season} season</span>
+          </>
+        )
       )}
     </p>
   );
@@ -42,17 +49,21 @@ function MetaItem({ icon, label, style, children }: { icon: IconSvgElement; labe
 export function RoundHero({
   series,
   round,
+  roundNumber,
   circuit,
   countdown,
 }: {
   series: SeriesId;
   round: Round;
+  roundNumber: number;
   circuit: Circuit;
   countdown: ReactNode;
 }) {
+  // F2 and F3 Rounds are already named "Round 13"; the label then keeps the season instead of repeating it.
+  const namedByNumber = round.name === `Round ${roundNumber}`;
   return (
     <section className="flex flex-col items-center text-center">
-      <SeriesLine series={series} season={round.season} />
+      <SeriesLine series={series} roundNumber={namedByNumber ? undefined : roundNumber} season={round.season} />
       <h1 className="mt-4 max-w-4xl text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
         <RevealWords text={round.name} />
       </h1>

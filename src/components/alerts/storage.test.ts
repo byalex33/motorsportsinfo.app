@@ -18,7 +18,12 @@ describe("parseSavedAlerts", () => {
     expect(parseSavedAlerts(JSON.stringify({ follows: { f1: ["race", "nope"], x: ["race"] }, leadMinutes: 60 }))).toEqual({
       follows: { f1: ["race"] },
       leadMinutes: 60,
+      documentAlerts: {},
     });
+  });
+  it("reads saved Document Alerts, dropping unknown Series and levels", () => {
+    const raw = JSON.stringify({ follows: {}, leadMinutes: 15, documentAlerts: { f1: "all", wec: "all", f2: "x" } });
+    expect(parseSavedAlerts(raw)?.documentAlerts).toEqual({ f1: "all" });
   });
   it("falls back to 15 minutes for an unknown lead time", () => {
     expect(parseSavedAlerts(JSON.stringify({ follows: {}, leadMinutes: 7 }))?.leadMinutes).toBe(15);

@@ -11,7 +11,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { SeriesId, SessionStatus, SessionType } from "@/domain/types";
+import type { DocumentAlertLevel, FiaDocumentKind, FiaDocumentSeries, SeriesId, SessionStatus, SessionType } from "@/domain/types";
 
 // ── Schedule (owned by the schedule sync) ──────────────────────────────────
 
@@ -91,6 +91,9 @@ export const sourceChecks = pgTable("source_checks", {
 /** Which Session Types a device follows, per Series. */
 export type Follows = Partial<Record<SeriesId, SessionType[]>>;
 
+/** Which FIA Documents a device gets Document Alerts for, per Series. A Series left out gets none. */
+export type DocumentAlerts = Partial<Record<FiaDocumentSeries, DocumentAlertLevel>>;
+
 export const pushSubscriptions = pgTable("push_subscriptions", {
   id: uuid("id").primaryKey().defaultRandom(),
   endpoint: text("endpoint").notNull().unique(),
@@ -100,6 +103,7 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   follows: jsonb("follows").$type<Follows>().notNull(),
   /** The device's IANA time zone, used to format times in push text. */
   timeZone: text("time_zone").notNull().default("UTC"),
+  documentAlerts: jsonb("document_alerts").$type<DocumentAlerts>().notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   failureCount: integer("failure_count").notNull().default(0),
@@ -119,3 +123,26 @@ export const remindersSent = pgTable(
   },
   (t) => [primaryKey({ columns: [t.subscriptionId, t.sessionId, t.startsAt] })],
 );
+
+// ── FIA Documents (owned by the documents work) ────────────────────────────
+
+/**
+ * Each FIA Document seen for a Round while the sync watched it. Alerts push each one once, then set
+ * notifiedAt; documents already old when first seen are stored with notifiedAt set, so never pushed.
+ */
+export const fiaDocuments = pgTable("fia_documents", {
+  /** The PDF on fia.com. */
+  url: text("url").primaryKey(),
+  series: text("series").$type<FiaDocumentSeries>().notNull(),
+  roundId: text("round_id").notNull(),
+  /** The FIA's name for the Round, e.g. "Singapore Grand Prix" or "Baku". */
+  event: text("event").notNull(),
+  number: integer("number"),
+  title: text("title").notNull(),
+  kind: text("kind").$type<FiaDocumentKind>().notNull(),
+  /** The file name our viewer opens; null for a PDF outside the FIA's document folder. */
+  file: text("file"),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  notifiedAt: timestamp("notified_at", { withTimezone: true }),
+});
