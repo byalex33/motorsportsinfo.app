@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowUpRightIcon, EyeIcon, EyeOffIcon, TrophyIcon } from "lucide-react";
+import Link from "next/link";
+import { ActivityIcon, ArrowUpRightIcon, EyeIcon, EyeOffIcon, TrophyIcon } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { Session, SessionResult } from "@/domain/types";
 import { staggerDelay } from "@/lib/motion";
+import { sessionSlug } from "@/lib/session-slug";
+import { useSpoilerRevealed } from "@/lib/spoilers";
 import { cn } from "@/lib/utils";
 
 interface SessionResultsDialogProps {
@@ -21,9 +23,10 @@ interface SessionResultsDialogProps {
  * the chip opens a modal that warns first and shows the Session Result only when asked.
  */
 export function SessionResultsDialog({ session, result, resultsUrl }: SessionResultsDialogProps) {
-  // Once revealed, reopening the modal shows the results straight away.
-  const [revealed, setRevealed] = useState(false);
+  // Once revealed (here or on the Telemetry page), reopening the modal shows the results straight away.
+  const [revealed, reveal] = useSpoilerRevealed(session.id);
   const site = new URL(resultsUrl).hostname.replace(/^www\./, "");
+  const telemetryHref = session.series === "f1" && result ? `/${session.series}/telemetry/${sessionSlug(session)}` : null;
 
   return (
     <Dialog>
@@ -52,15 +55,24 @@ export function SessionResultsDialog({ session, result, resultsUrl }: SessionRes
         </DialogHeader>
 
         <div className="min-h-0 overflow-y-auto overscroll-contain">
-          {result && (revealed ? <ResultTable result={result} /> : <HiddenResults onReveal={() => setRevealed(true)} />)}
+          {result && (revealed ? <ResultTable result={result} /> : <HiddenResults onReveal={reveal} />)}
         </div>
 
-        <div className="border-t border-border p-3">
+        <div className="flex flex-col gap-2 border-t border-border p-3 sm:flex-row">
+          {telemetryHref && revealed && (
+            <Link
+              href={telemetryHref}
+              className={buttonVariants({ variant: "outline", className: "justify-center sm:flex-1" })}
+            >
+              <ActivityIcon aria-hidden />
+              Compare telemetry
+            </Link>
+          )}
           <a
             href={resultsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={buttonVariants({ variant: result ? "ghost" : "outline", className: "w-full justify-center" })}
+            className={buttonVariants({ variant: result ? "ghost" : "outline", className: "justify-center sm:flex-1" })}
           >
             {result ? `Full results on ${site}` : `See results on ${site}`}
             <ArrowUpRightIcon aria-hidden />

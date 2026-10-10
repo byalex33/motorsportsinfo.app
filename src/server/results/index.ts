@@ -3,13 +3,9 @@
 // their official results page instead (officialResultsUrl in src/domain/series.ts).
 import { cacheLife } from "next/cache";
 import type { SeriesId, Session, SessionResult } from "@/domain/types";
-import type { OpenF1Session } from "@/server/schedule/sources/openf1";
-import { defaultContext, errorMessage, getJson } from "@/server/schedule/sources/http";
-import { matchOpenF1Session, parseOpenF1Result, type OpenF1Driver, type OpenF1SessionResult } from "./openf1";
-
-const BASE = "https://api.openf1.org/v1";
-/** OpenF1 posts a classification some minutes after a Session ends, so a miss is retried soon. */
-const PENDING_LIFE = { stale: 60, revalidate: 300, expire: 900 };
+import { matchOpenF1Session, openF1Get, openF1Pause, openF1Sessions, OPENF1_PENDING_LIFE } from "@/server/openf1";
+import { errorMessage } from "@/server/schedule/sources/http";
+import { parseOpenF1Result, type OpenF1Driver, type OpenF1SessionResult } from "./openf1";
 
 type ResultSession = Pick<Session, "id" | "type" | "startsAt">;
 
@@ -37,7 +33,7 @@ async function cachedF1Results(season: number, sessions: ResultSession[]): Promi
     return match ? [{ session, key: match.session_key, meeting: match.meeting_key }] : [];
   });
   if (matched.length === 0) {
-    cacheLife(PENDING_LIFE);
+    cacheLife(OPENF1_PENDING_LIFE);
     return {};
   }
 
@@ -45,13 +41,13 @@ async function cachedF1Results(season: number, sessions: ResultSession[]): Promi
   let results: OpenF1SessionResult[];
   let drivers: OpenF1Driver[];
   try {
-    await defaultContext.sleep(400);
-    results = asArray(await getJson(defaultContext, `${BASE}/session_result?meeting_key=${meeting}`));
-    await defaultContext.sleep(400);
-    drivers = asArray(await getJson(defaultContext, `${BASE}/drivers?meeting_key=${meeting}`));
+    await openF1Pause();
+    results = await openF1Get(`session_result?meeting_key=${meeting}`);
+    await openF1Pause();
+    drivers = await openF1Get(`drivers?meeting_key=${meeting}`);
   } catch (error) {
     console.warn(`[results] OpenF1 results unavailable for meeting ${meeting}: ${errorMessage(error)}`);
-    cacheLife(PENDING_LIFE);
+    cacheLife(OPENF1_PENDING_LIFE);
     return {};
   }
 
@@ -62,25 +58,6 @@ async function cachedF1Results(season: number, sessions: ResultSession[]): Promi
   }
   // Results can still change after the fact (penalties), so even a complete set is re-read hourly.
   if (Object.keys(out).length === sessions.length) cacheLife("hours");
-  else cacheLife(PENDING_LIFE);
+  else cacheLife(OPENF1_PENDING_LIFE);
   return out;
-}
-
-/** null when OpenF1 could not be reached; retried soon rather than cached for hours. */
-async function openF1Sessions(season: number): Promise<OpenF1Session[] | null> {
-  "use cache";
-  try {
-    const sessions = asArray<OpenF1Session>(await getJson(defaultContext, `${BASE}/sessions?year=${season}`));
-    cacheLife("hours");
-    return sessions;
-  } catch (error) {
-    console.warn(`[results] OpenF1 sessions unavailable for ${season}: ${errorMessage(error)}`);
-    cacheLife(PENDING_LIFE);
-    return null;
-  }
-}
-
-// OpenF1 answers {"detail": "No results found."} instead of an empty list.
-function asArray<T>(value: unknown): T[] {
-  return Array.isArray(value) ? (value as T[]) : [];
 }

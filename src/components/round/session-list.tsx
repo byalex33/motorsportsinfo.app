@@ -1,6 +1,7 @@
 "use client";
 
-import { CloudOffIcon } from "lucide-react";
+import Link from "next/link";
+import { ActivityIcon, CloudOffIcon } from "lucide-react";
 import { SessionForecastView } from "@/components/weather/session-forecast";
 import { InlineSkeleton } from "@/components/inline-skeleton";
 import type { ForecastResult, Session, SessionResult } from "@/domain/types";
@@ -9,6 +10,7 @@ import type { DisplayZone } from "@/lib/display-zone";
 import { staggerDelay } from "@/lib/motion";
 import { useUnitsPref } from "@/lib/prefs";
 import { getRoundStatus, sessionPhase, type SessionPhase } from "@/lib/round-status";
+import { sessionSlug } from "@/lib/session-slug";
 import { formatSessionDay, formatTimeRange, zoneOffsetLabel } from "@/lib/time-format";
 import { cn } from "@/lib/utils";
 import { LiveDot } from "./round-countdown";
@@ -122,6 +124,17 @@ function SessionRow({
             <>
               <span className="chip px-0 text-muted-foreground">Finished</span>
               <SessionResultsDialog session={session} result={result} resultsUrl={resultsUrl} />
+              {session.series === "f1" && (
+                // The Telemetry page shows its own spoiler warning, so the chip can link straight to it.
+                <Link
+                  href={`/f1/telemetry/${sessionSlug(session)}`}
+                  className="chip results-chip border border-telemetry/50 bg-telemetry/10 text-telemetry outline-none transition-colors [--chip-delay:120ms] [--chip-sheen:var(--telemetry)] hover:border-telemetry hover:bg-telemetry/20 focus-visible:ring-2 focus-visible:ring-telemetry/60"
+                >
+                  <ActivityIcon className="size-3" aria-hidden />
+                  Telemetry
+                  <span className="sr-only"> for {session.name}</span>
+                </Link>
+              )}
             </>
           )}
         </div>

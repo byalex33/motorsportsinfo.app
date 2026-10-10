@@ -1,30 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenF1Session } from "@/server/schedule/sources/openf1";
-import { formatLapTime, matchOpenF1Session, parseOpenF1Result, type OpenF1Driver, type OpenF1SessionResult } from "./openf1";
-
-function openF1Session(session_key: number, session_name: string, date_start: string): OpenF1Session {
-  return {
-    session_key,
-    session_name,
-    session_type: session_name,
-    date_start,
-    date_end: null,
-    meeting_key: 1296,
-    circuit_short_name: "Singapore",
-    location: "Marina Bay",
-    gmt_offset: "08:00:00",
-    year: 2026,
-  };
-}
-
-// Singapore 2026, as OpenF1 lists it.
-const SINGAPORE = [
-  openF1Session(11378, "Practice 1", "2026-10-09T08:30:00+00:00"),
-  openF1Session(11379, "Sprint Qualifying", "2026-10-09T12:30:00+00:00"),
-  openF1Session(11380, "Sprint", "2026-10-10T09:00:00+00:00"),
-  openF1Session(11381, "Qualifying", "2026-10-10T13:00:00+00:00"),
-  openF1Session(11382, "Race", "2026-10-11T12:00:00+00:00"),
-];
+import { parseOpenF1Result, type OpenF1Driver, type OpenF1SessionResult } from "./openf1";
 
 function driver(driver_number: number, first_name: string, last_name: string, team_name: string, session_key = 11731): OpenF1Driver {
   return {
@@ -48,31 +23,9 @@ const DRIVERS = [
   driver(10, "Pierre", "Gasly", "Alpine"),
 ];
 
-function row(session_key: number, position: number | null, driver_number: number, extra: Partial<OpenF1SessionResult>): OpenF1SessionResult {
+function row(session_key: number, position: number | string | null, driver_number: number, extra: Partial<OpenF1SessionResult>): OpenF1SessionResult {
   return { session_key, position, driver_number, dnf: false, dns: false, dsq: false, duration: null, gap_to_leader: null, ...extra };
 }
-
-describe("matchOpenF1Session", () => {
-  it("matches the OpenF1 Session of the same type at the same start", () => {
-    expect(matchOpenF1Session({ type: "sprint-qualifying", startsAt: "2026-10-09T12:30:00.000Z" }, SINGAPORE)?.session_key).toBe(11379);
-  });
-
-  it("still matches a Session whose start an override moved", () => {
-    expect(matchOpenF1Session({ type: "race", startsAt: "2026-10-11T13:00:00.000Z" }, SINGAPORE)?.session_key).toBe(11382);
-  });
-
-  it("picks the nearest of several Sessions of one type", () => {
-    const practice = [
-      openF1Session(1, "Practice 1", "2026-05-01T11:30:00Z"),
-      openF1Session(2, "Practice 2", "2026-05-01T15:00:00Z"),
-    ];
-    expect(matchOpenF1Session({ type: "practice", startsAt: "2026-05-01T15:00:00Z" }, practice)?.session_key).toBe(2);
-  });
-
-  it("returns null when nothing of that type is close", () => {
-    expect(matchOpenF1Session({ type: "qualifying", startsAt: "2026-10-03T08:00:00Z" }, SINGAPORE)).toBeNull();
-  });
-});
 
 describe("parseOpenF1Result", () => {
   it("gives a race's full classification: winner's time, gaps, laps down, retirements", () => {
@@ -85,6 +38,8 @@ describe("parseOpenF1Result", () => {
       row(11731, 4, 18, { gap_to_leader: "+1 LAP" }),
       row(11731, 5, 63, { dnf: true }),
       row(11731, null, 10, { dns: true }),
+      // OpenF1 sometimes puts a status where the position goes.
+      row(11731, "RT", 77, {}),
     ];
     expect(parseOpenF1Result(11731, results, DRIVERS)).toEqual({
       entries: [
@@ -95,6 +50,7 @@ describe("parseOpenF1Result", () => {
         { position: 5, name: "George Russell", team: "Mercedes", time: "DNF" },
         { position: null, name: "Alexander Albon", team: "Williams", time: "DNF" },
         { position: null, name: "Pierre Gasly", team: "Alpine", time: "DNS" },
+        { position: null, name: "Car 77", team: null, time: null },
       ],
     });
   });
@@ -133,14 +89,5 @@ describe("parseOpenF1Result", () => {
   it("returns null before OpenF1 has a classification", () => {
     expect(parseOpenF1Result(11380, [row(11731, 1, 3, {})], DRIVERS)).toBeNull();
     expect(parseOpenF1Result(11380, [row(11380, null, 3, { dnf: true })], DRIVERS)).toBeNull();
-  });
-});
-
-describe("formatLapTime", () => {
-  it("formats laps and race times without float drift", () => {
-    expect(formatLapTime(92.274)).toBe("1:32.274");
-    expect(formatLapTime(59.9996)).toBe("1:00.000");
-    expect(formatLapTime(6434.808)).toBe("1:47:14.808");
-    expect(formatLapTime(3600)).toBe("1:00:00.000");
   });
 });

@@ -98,6 +98,79 @@ export interface SessionResult {
   entries: SessionResultEntry[];
 }
 
+/** A driver in a Session's Telemetry. */
+export interface TelemetryDriver {
+  number: number;
+  /** Three-letter code, e.g. "VER". */
+  code: string;
+  name: string;
+  team: string | null;
+  /** The team's colour as the source gives it, e.g. "#4781D7"; null when unknown. */
+  color: string | null;
+  /** Classified position; null when not classified or before the classification is published. */
+  position: number | null;
+}
+
+/** One lap of one driver, as timed. Times in seconds, speeds in km/h. */
+export interface TelemetryLap {
+  lap: number;
+  /** ISO 8601 UTC; null when the source does not say. */
+  startsAt: string | null;
+  /** null for a lap without a time (an aborted lap, or one ended in the pit lane). */
+  time: number | null;
+  sectors: [number | null, number | null, number | null];
+  /** Speed trap, and the two intermediate timing points. */
+  trapSpeed: number | null;
+  i1Speed: number | null;
+  i2Speed: number | null;
+  /** The lap out of the pit lane, never a representative time. */
+  pitOut: boolean;
+}
+
+/** Everything timed in one finished F1 Session, for choosing what to compare. */
+export interface SessionTelemetry {
+  /** Classification order; drivers with no position last. */
+  drivers: TelemetryDriver[];
+  /** Keyed by driver number, in lap order. */
+  laps: Record<number, TelemetryLap[]>;
+}
+
+/** One driver's lap resampled onto a LapComparison's distance grid. */
+export interface LapTrace {
+  lap: number;
+  time: number;
+  /** km/h. */
+  speed: number[];
+  /** 0–100 %. */
+  throttle: number[];
+  /** 0 or 100: the source only says whether the brake is on. */
+  brake: number[];
+  gear: number[];
+}
+
+/** A stretch of the lap and who was quicker through it. */
+export interface MiniSector {
+  /** Indexes into the LapComparison's distance grid. */
+  from: number;
+  to: number;
+  /** Seconds driver A gained on driver B here; negative where B was quicker. */
+  gain: number;
+}
+
+/** Two drivers' laps lined up by distance around the track, so they can be compared point by point. */
+export interface LapComparison {
+  /** Metres from the start of the lap, evenly spaced. */
+  distance: number[];
+  a: LapTrace;
+  b: LapTrace;
+  /** Seconds driver B is behind driver A at each distance; negative where B is ahead. */
+  delta: number[];
+  /** The track at each distance, from driver A's lap (OpenF1's own units). Empty when position data is missing. */
+  x: number[];
+  y: number[];
+  miniSectors: MiniSector[];
+}
+
 export interface SessionForecast {
   kind: "forecast";
   /** ISO UTC time the forecast applies to (the Session start). */

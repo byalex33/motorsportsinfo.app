@@ -37,6 +37,10 @@ _Avoid_: Session kind, session name
 The finishing order of a finished Session. It is a spoiler, so it never shows in the Session list: a finished Session's RESULTS chip opens a modal that warns first and shows the full classification on request (F1 only, from OpenF1). For other Series, or before OpenF1 has published it, the modal links to the Series' official results page instead.
 _Avoid_: Classification, standings, podium (as the general term)
 
+**Telemetry**:
+A driver's car data (speed, throttle, brake, gear) and position through a lap, from OpenF1, for a finished F1 Session only. The site compares two drivers' fastest laps, lined up by distance around the Circuit, along with their sector times and lap times. One channel shows at a time (speed, throttle, brake or gear). Drivers are drawn in their team colours unless the viewer picks others, and a comparison can be shared as an image watermarked motorsportsinfo.app. Like the Session Result it is a spoiler, and revealing one reveals the other.
+_Avoid_: Data, stats, timing (as the general term)
+
 **Schedule Override**:
 A hand-made correction to a Session's time or status. It takes precedence over what the source says, until it is removed.
 _Avoid_: Manual fix, patch

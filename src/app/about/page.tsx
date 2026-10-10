@@ -83,6 +83,10 @@ export default function AboutPage() {
                 each finished Session, from OpenF1, behind a spoiler warning. Other Series link to their official results pages.
               </li>
               <li>
+                <strong className="font-medium text-foreground">F1 Telemetry:</strong> car data, positions and lap times
+                from OpenF1, available once a Session has finished.
+              </li>
+              <li>
                 <strong className="font-medium text-foreground">F2 and F3 schedules:</strong> from the official timetables published on the FIA Formula 2 and
                 FIA Formula 3 websites, with the sportstimes/f1 dataset as a fallback.
               </li>

@@ -28,6 +28,9 @@
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
+  --color-telemetry: var(--telemetry);
+  --color-driver-a: var(--driver-a);
+  --color-driver-b: var(--driver-b);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -77,6 +80,11 @@
   --destructive-foreground: #fafafa;
   /* Session Results chip. */
   --success: oklch(0.56 0.15 152);
+  /* TELEMETRY chip. */
+  --telemetry: #c2255c;
+  /* Telemetry's two drivers when they have no team colour (a validated categorical pair); team colours override these. */
+  --driver-a: #2a78d6;
+  --driver-b: #eb6834;
   --border: #e5e5e5;
   --input: #d4d4d4;
   --ring: oklch(0.4865 0.2423 291.8661);
@@ -115,6 +123,9 @@
   --destructive: oklch(0.704 0.191 22.2);
   --destructive-foreground: #0a0a0a;
   --success: oklch(0.79 0.17 154);
+  --telemetry: #f06595;
+  --driver-a: #3987e5;
+  --driver-b: #d95926;
   --border: #262626;
   --input: #3a3a3a;
   --ring: oklch(0.6083 0.2172 297.1153);
@@ -501,20 +512,39 @@
     animation: chip-sweep 1100ms var(--motion-in-out) 600ms both;
   }
 }
-/* The green RESULTS chip on a finished Session: springs in, then a soft sheen passes every few seconds. */
+/*
+ * The chips on a finished Session (green RESULTS, pink TELEMETRY): spring in, then a soft sheen passes every
+ * few seconds. --chip-sheen sets its colour and --chip-delay staggers a chip after its neighbour.
+ */
 @utility results-chip {
   position: relative;
   overflow: hidden;
-  animation: results-in 520ms var(--motion-spring) 250ms backwards;
+  animation: results-in 520ms var(--motion-spring) calc(250ms + var(--chip-delay, 0ms)) backwards;
   &::after {
     content: "";
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: linear-gradient(100deg, transparent 25%, color-mix(in oklch, var(--success) 40%, transparent) 50%, transparent 75%);
+    background: linear-gradient(100deg, transparent 25%, color-mix(in oklch, var(--chip-sheen, var(--success)) 40%, transparent) 50%, transparent 75%);
     transform: translateX(-100%);
-    animation: results-sheen 5s var(--motion-in-out) 900ms infinite;
+    animation: results-sheen 5s var(--motion-in-out) calc(900ms + var(--chip-delay, 0ms)) infinite;
   }
+}
+/* Telemetry draws each driver in their team's colour, fitted to each theme by src/lib/team-colors.ts. */
+[data-team-colors] {
+  --driver-a: var(--team-a-light);
+  --driver-b: var(--team-b-light);
+}
+.dark [data-team-colors] {
+  --driver-a: var(--team-a-dark);
+  --driver-b: var(--team-b-dark);
+}
+/* Look-alike colours (teammates, or Ferrari and Audi): driver B is dashed too, so colour is never the only difference. */
+[data-dashed-b] .driver-b-line {
+  stroke-dasharray: 6 4;
+}
+[data-dashed-b] .driver-b-key {
+  background: repeating-linear-gradient(90deg, var(--driver-b) 0 4px, transparent 4px 6px);
 }
 @utility live-breathe {
   animation: breathe 2400ms var(--motion-in-out) infinite;
