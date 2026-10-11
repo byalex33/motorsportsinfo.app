@@ -8,18 +8,23 @@ import { SERIES, SESSION_TYPE_LABELS } from "@/domain/series";
 import { SERIES_IDS, type SeriesId } from "@/domain/types";
 import { track } from "@/lib/analytics";
 import { useSeriesPref } from "@/lib/prefs";
+import type { SeriesSummary } from "@/lib/series-summary";
+import { SeriesSummaryLines } from "./series-summary-lines";
 
 /**
  * Every Series as a row. The viewer's last pick gets a chip — never an automatic redirect. When
- * `current` is given (the header's picker on a Series page) that row is marked instead.
+ * `current` is given (the header's picker on a Series page) that row is marked instead. With
+ * `summaries` (the home page) each full-size row also shows its Featured Round and next Session.
  */
 export function SeriesPicker({
   compact = false,
   current = null,
+  summaries,
   onNavigate,
 }: {
   compact?: boolean;
   current?: SeriesId | null;
+  summaries?: Partial<Record<SeriesId, SeriesSummary>>;
   /** Called when a row is chosen, e.g. to close the dialog around the picker. */
   onNavigate?: () => void;
 }) {
@@ -37,6 +42,7 @@ export function SeriesPicker({
         const info = SERIES[id];
         const isCurrent = current === id;
         const chip = current ? (isCurrent ? "Viewing" : null) : remembered === id ? "Last viewed" : null;
+        const summary = summaries?.[id];
         return (
           // Seven rows: a tighter step, capped so the last row has started by ~300 ms.
           <li key={id} data-series={id} className="enter-rise min-w-0" style={staggerDelay(i, 90, 35, 6)}>
@@ -77,11 +83,14 @@ export function SeriesPicker({
                     </span>
                   )}
                 </span>
-                {!compact && (
-                  <span className="mt-1 block font-mono text-[0.6875rem] leading-relaxed tracking-[0.06em] text-muted-foreground uppercase">
-                    {info.sessionTypes.map((t) => SESSION_TYPE_LABELS[t]).join(" · ")}
-                  </span>
-                )}
+                {!compact &&
+                  (summary ? (
+                    <SeriesSummaryLines summary={summary} />
+                  ) : (
+                    <span className="mt-1 block font-mono text-[0.6875rem] leading-relaxed tracking-[0.06em] text-muted-foreground uppercase">
+                      {info.sessionTypes.map((t) => SESSION_TYPE_LABELS[t]).join(" · ")}
+                    </span>
+                  ))}
               </span>
               <ArrowRightIcon
                 className="size-4 text-muted-foreground transition-[color,translate] duration-500 ease-spring group-hover:translate-x-1 group-hover:text-foreground group-focus-visible:translate-x-1 group-focus-visible:text-foreground"

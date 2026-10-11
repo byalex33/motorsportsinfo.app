@@ -2,20 +2,21 @@ import type { CSSProperties } from "react";
 
 /**
  * Entrance timeline shared by the Round, Alerts and About pages (ms after first paint).
- * Everything that carries data has started appearing by ~400 ms.
+ * Entrances start at least half visible (globals.css), so nothing here delays reading: it only
+ * orders the settle. Everything that carries data has started moving by ~200 ms.
  */
 export const ENTER = {
   eyebrow: 0,
-  title: 50,
+  title: 30,
   /** Words of a headline spread over at most this window. */
-  titleWindow: 240,
-  meta: 150,
-  metaStep: 45,
-  lead: 200,
-  countdown: 220,
-  body: 260,
-  rows: 290,
-  rowStep: 22,
+  titleWindow: 150,
+  meta: 90,
+  metaStep: 30,
+  lead: 120,
+  countdown: 130,
+  body: 160,
+  rows: 180,
+  rowStep: 18,
   /** Rows after this index share its delay, so long lists never lag. */
   rowCap: 5,
 } as const;
