@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 440" width="1280" height="440" role="img" aria-label="motorsportsinfo.app: every Session of every Series, in your time, with the weather at the Circuit">
+  <defs>
+    <radialGradient id="glow" cx="0.18" cy="0.1" r="0.9">
+      <stop offset="0" stop-color="#7c3aed" stop-opacity="0.55"/>
+      <stop offset="0.45" stop-color="#4c1d95" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#0a0a0a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="icon" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c3aed"/>
+      <stop offset="1" stop-color="#4c1d95"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="1"/>
+    </linearGradient>
+    <linearGradient id="indycar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#eb5629"/><stop offset="0.5" stop-color="#f2a83b"/><stop offset="1" stop-color="#459aa1"/>
+    </linearGradient>
+    <linearGradient id="motogp" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ef4031"/><stop offset="1" stop-color="#faec25"/>
+    </linearGradient>
+    <pattern id="cheq" width="40" height="40" patternUnits="userSpaceOnUse">
+      <rect width="20" height="20" fill="#ffffff"/>
+      <rect x="20" y="20" width="20" height="20" fill="#ffffff"/>
+    </pattern>
+    <mask id="cheq-mask">
+      <rect x="760" width="520" height="440" fill="url(#fade)"/>
+    </mask>
+    <clipPath id="mark-clip"><path d="M32 37 V20 A17 17 0 0 1 49 37 Z"/></clipPath>
+    <clipPath id="frame"><rect width="1280" height="440" rx="24"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#frame)">
+    <rect width="1280" height="440" fill="#0a0a0a"/>
+    <rect width="1280" height="440" fill="url(#glow)"/>
+    <rect x="760" width="520" height="440" fill="url(#cheq)" opacity="0.06" mask="url(#cheq-mask)"/>
+
+    <!-- Brand mark: the stopwatch with a chequered quarter -->
+    <g transform="translate(80 72)">
+      <rect width="88" height="88" rx="20" fill="url(#icon)"/>
+      <g transform="translate(13.5 14) scale(0.95)" fill="#fff">
+        <rect x="26" y="4" width="12" height="6" rx="2"/>
+        <rect x="30" y="9" width="4" height="7"/>
+        <rect x="47" y="14" width="6" height="8" rx="2" transform="rotate(45 50 18)"/>
+        <circle cx="32" cy="37" r="22" stroke="#fff" stroke-width="5" fill="none"/>
+        <g clip-path="url(#mark-clip)">
+          <rect x="32" y="20" width="4.25" height="4.25"/><rect x="40.5" y="20" width="4.25" height="4.25"/>
+          <rect x="36.25" y="24.25" width="4.25" height="4.25"/><rect x="44.75" y="24.25" width="4.25" height="4.25"/>
+          <rect x="32" y="28.5" width="4.25" height="4.25"/><rect x="40.5" y="28.5" width="4.25" height="4.25"/>
+          <rect x="36.25" y="32.75" width="4.25" height="4.25"/><rect x="44.75" y="32.75" width="4.25" height="4.25"/>
+        </g>
+        <path d="M32 37 L22 27" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="32" cy="37" r="3.5"/>
+      </g>
+    </g>
+
+    <g font-family="Inter, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+      <text x="192" y="128" font-size="44" font-weight="700" fill="#fafafa" letter-spacing="-1">motorsportsinfo<tspan fill="#a78bfa">.app</tspan></text>
+
+      <text x="80" y="244" font-size="58" font-weight="700" fill="#fafafa" letter-spacing="-2">Every Session. Your time.</text>
+      <text x="80" y="300" font-size="24" fill="#a3a3a3">Session times, live countdowns, Circuit weather and rain radar.</text>
+    </g>
+
+    <!-- Series row: colour dots only, no logos -->
+    <g font-family="ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace" font-size="17" font-weight="600" fill="#e5e5e5" letter-spacing="1.5">
+      <g transform="translate(80 344)">
+        <rect width="78" height="40" rx="20" fill="#171717" stroke="#262626"/><circle cx="22" cy="20" r="5" fill="#f73123"/><text x="36" y="26">F1</text>
+      </g>
+      <g transform="translate(170 344)">
+        <rect width="78" height="40" rx="20" fill="#171717" stroke="#262626"/><circle cx="22" cy="20" r="5" fill="#009cde"/><text x="36" y="26">F2</text>
+      </g>
+      <g transform="translate(260 344)">
+        <rect width="78" height="40" rx="20" fill="#171717" stroke="#262626"/><circle cx="22" cy="20" r="5" fill="#e35205"/><text x="36" y="26">F3</text>
+      </g>
+      <g transform="translate(350 344)">
+        <rect width="92" height="40" rx="20" fill="#171717" stroke="#262626"/><circle cx="22" cy="20" r="5" fill="#00b9ff"/><text x="36" y="26">WEC</text>
+      </g>
+      <g transform="translate(454 344)">
+        <rect width="78" height="40" rx="20" fill="#171717" stroke="#262626"/><circle cx="22" cy="20" r="5" fill="#8269ff"/><text x="36" y="26">FE</text>
+      </g>
+      <g transform="translate(544 344)">
+        <rect width="126" height="40" rx="20" fill="#171717" stroke="#262626"/><circle cx="22" cy="20" r="5" fill="url(#indycar)"/><text x="36" y="26">INDYCAR</text>
+      </g>
+      <g transform="translate(682 344)">
+        <rect width="114" height="40" rx="20" fill="#171717" stroke="#262626"/><circle cx="22" cy="20" r="5" fill="url(#motogp)"/><text x="36" y="26">MOTOGP</text>
+      </g>
+    </g>
+
+    <!-- Countdown motif -->
+    <g font-family="ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace" fill="#fafafa" text-anchor="middle">
+      <rect x="880" y="96" width="320" height="188" rx="20" fill="#111111" stroke="#262626"/>
+      <rect x="904" y="120" width="56" height="24" rx="6" fill="none" stroke="#00b9ff"/>
+      <text x="932" y="137" font-size="12" font-weight="700" fill="#00b9ff" letter-spacing="1.5">NEXT</text>
+      <text x="972" y="137" font-size="13" fill="#a3a3a3" letter-spacing="1" text-anchor="start">QUALIFYING STARTS IN</text>
+      <text x="940" y="222" font-size="50" font-weight="700">04</text>
+      <text x="990" y="216" font-size="34" fill="#404040">:</text>
+      <text x="1040" y="222" font-size="50" font-weight="700">19</text>
+      <text x="1090" y="216" font-size="34" fill="#404040">:</text>
+      <text x="1140" y="222" font-size="50" font-weight="700">16</text>
+      <text x="940" y="258" font-size="12" fill="#737373" letter-spacing="2">DAYS</text>
+      <text x="1040" y="258" font-size="12" fill="#737373" letter-spacing="2">HRS</text>
+      <text x="1140" y="258" font-size="12" fill="#737373" letter-spacing="2">MIN</text>
+    </g>
+  </g>
+</svg>
