@@ -1,6 +1,6 @@
 # motorsportsinfo.app
 
-When each Session runs and what the weather will do, for F1, F2, F3 and WEC.
+When each Session runs and what the weather will do, for F1, F2, F3, WEC, Formula E, IndyCar and MotoGP.
 
 - Domain vocabulary: [CONTEXT.md](CONTEXT.md)
 - Decisions: [docs/adr](docs/adr)
@@ -24,14 +24,19 @@ Checks: `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`.
 | Schedule sources, sync, Featured Round | `src/server/schedule/`, `src/app/api/cron/sync/` |
 | Circuits and Schedule Overrides (edit by hand) | `src/data/circuits.ts`, `src/data/overrides.ts` |
 | Weather (Open-Meteo) | `src/server/weather/`, `src/components/weather/` |
-| Rain radar (RainViewer on OpenFreeMap) | `src/components/radar/` |
-| Session Reminders, Schedule Change pushes, calendar feeds | `src/server/alerts/`, `src/app/alerts/`, `src/app/calendar/`, `src/app/api/cron/alerts/` |
+| Rain radar (Rainbow.ai forecast, RainViewer past, on OpenFreeMap) | `src/server/radar/`, `src/components/radar/`, `src/app/api/radar/` |
+| Calendar page and calendar feeds | `src/app/calendar/`, `src/components/calendar/` |
+| Session Reminders, Schedule Change pushes, Document Alerts | `src/server/alerts/`, `src/app/alerts/`, `src/app/api/cron/alerts/` |
+| OpenF1 client | `src/server/openf1/` |
+| Session Results | `src/server/results/`, `src/app/api/results/` |
+| Telemetry | `src/server/telemetry/`, `src/app/[series]/telemetry/`, `src/components/telemetry/` |
+| FIA Documents | `src/server/documents/`, `src/app/[series]/documents/`, `src/app/documents/`, `src/components/documents/` |
 | Analytics (Tracwell) | `src/lib/analytics.ts` |
 | Database schema (Drizzle + Neon) | `src/db/schema.ts` |
 
 Crons are in `vercel.ts`:
 - `/api/cron/sync` runs every 5 minutes and decides per Series whether a source check is due.
-- `/api/cron/alerts` runs every minute and sends due pushes.
+- `/api/cron/alerts` runs every minute and sends due Session Reminders, Schedule Change pushes and Document Alerts.
 
 Both require `Authorization: Bearer $CRON_SECRET`. To force a check by hand, call `/api/cron/sync?series=f1&force=1` with that header.
 
