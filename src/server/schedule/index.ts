@@ -9,7 +9,7 @@
 import { io } from "next/cache";
 import { getDb } from "@/db/client";
 import type { Circuit, FeaturedRoundResult, Round, SeriesId, Session } from "@/domain/types";
-import { loadPublishedSchedule } from "./db-read";
+import { loadPublishedSchedule, loadRoundUpdatedAt } from "./db-read";
 import { getLiveSchedule } from "./live";
 import { selectCalendarSessions, selectFeaturedRound, selectUpcomingSessions, withCircuits } from "./select";
 import type { RoundWithContext } from "./types";
@@ -50,4 +50,12 @@ export async function listUpcomingSessions(series: SeriesId[], now?: Date): Prom
 export async function listCalendarSessions(series: SeriesId[], now?: Date): Promise<SessionWithContext[]> {
   const perSeries = await Promise.all(series.map((id) => loadRounds(id)));
   return selectCalendarSessions(perSeries.flat(), await resolveNow(now));
+}
+
+/**
+ * When a Round's published schedule (the Round or any of its Sessions) last changed, as ISO UTC. Null
+ * without a database: the live sources say nothing about when they changed. Used for sitemap lastmod.
+ */
+export async function getRoundUpdatedAt(series: SeriesId, roundId: string): Promise<string | null> {
+  return loadRoundUpdatedAt(series, roundId);
 }
