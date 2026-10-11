@@ -92,14 +92,40 @@ export function parseOpenMeteoResponse(body: unknown): HourlyForecast {
   };
 }
 
+/** Open-Meteo sheds load with 429/503 when many Circuits are fetched at once (e.g. a build's prerender). */
+export const RETRY_DELAY_MS = 750;
+
+class RetryableError extends Error {}
+
+async function fetchOnce(lat: number, lon: number, init?: RequestInit): Promise<HourlyForecast> {
+  let res: Response;
+  try {
+    res = await fetch(openMeteoUrl(lat, lon), { signal: AbortSignal.timeout(10_000), ...init });
+  } catch (error) {
+    // A 10-second timeout is not worth waiting out twice.
+    if (error instanceof Error && error.name === "TimeoutError") throw error;
+    throw new RetryableError("Open-Meteo request failed", { cause: error });
+  }
+  if (!res.ok) {
+    await res.body?.cancel();
+    const message = `Open-Meteo responded ${res.status}`;
+    throw res.status === 429 || res.status >= 500 ? new RetryableError(message) : new Error(message);
+  }
+  return parseOpenMeteoResponse(await res.json());
+}
+
 /**
- * Fetches a Circuit's hourly forecast. Throws on network, HTTP or shape errors.
- * `init` lets the Next layer add fetch-cache options.
+ * Fetches a Circuit's hourly forecast. Throws on network, HTTP or shape errors, after one retry
+ * RETRY_DELAY_MS later for a network error, 429 or 5xx. `init` lets the Next layer add fetch-cache options.
  */
 export async function fetchHourlyForecast(lat: number, lon: number, init?: RequestInit): Promise<HourlyForecast> {
-  const res = await fetch(openMeteoUrl(lat, lon), { signal: AbortSignal.timeout(10_000), ...init });
-  if (!res.ok) throw new Error(`Open-Meteo responded ${res.status}`);
-  return parseOpenMeteoResponse(await res.json());
+  try {
+    return await fetchOnce(lat, lon, init);
+  } catch (error) {
+    if (!(error instanceof RetryableError)) throw error;
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    return fetchOnce(lat, lon, init);
+  }
 }
 
 function isComplete(h: HourlyForecast, i: number): boolean {
