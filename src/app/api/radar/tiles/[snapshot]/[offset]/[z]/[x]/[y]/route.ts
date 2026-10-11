@@ -1,6 +1,7 @@
 // GET /api/radar/tiles/{snapshot}/{offset}/{z}/{x}/{y} → PNG
-// Relays one Rainbow.ai forecast rain tile so the API key stays on the server. Only tiles near a Circuit,
-// in the forecast window and at the map's zooms are fetched (see parseForecastTile).
+// Relays one Rainbow.ai forecast rain tile so the API key stays on the server. Only tiles near the F1
+// Featured Round's Circuit, for a current snapshot, in the forecast window and at the map's zooms are
+// fetched (see parseForecastTile): each one counts against the monthly tile cap.
 import { forecastTileFromParams, getForecastTile } from "@/server/radar";
 
 const text = (body: string, status: number) =>
@@ -10,7 +11,7 @@ const text = (body: string, status: number) =>
   });
 
 export async function GET(_request: Request, ctx: RouteContext<"/api/radar/tiles/[snapshot]/[offset]/[z]/[x]/[y]">) {
-  const tile = forecastTileFromParams(await ctx.params);
+  const tile = await forecastTileFromParams(await ctx.params);
   if (!tile) return text("No such radar tile.\n", 404);
 
   const result = await getForecastTile(tile);
