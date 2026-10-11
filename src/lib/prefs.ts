@@ -3,6 +3,7 @@
 //   msi.series → a SeriesId string, e.g. "f1"
 //   msi.time   → JSON { "mode": "viewer" | "track" | "custom", "tz"?: string }
 //   msi.units  → JSON { "temp": "c" | "f", "wind": "kmh" | "mph" }
+//   msi.oss-note → "dismissed" once the open-source note is closed (not part of the alerts contract)
 // Every storage access is wrapped in try/catch; without storage the choice lives in memory for the visit.
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { SeriesId } from "@/domain/types";
@@ -15,6 +16,7 @@ export const PREF_KEYS = {
   series: "msi.series",
   time: "msi.time",
   units: "msi.units",
+  openSourceNote: "msi.oss-note",
 } as const;
 
 export type PrefKey = (typeof PREF_KEYS)[keyof typeof PREF_KEYS];
@@ -193,4 +195,13 @@ export function useUnitsPref(): PrefState<UnitsPref> {
     writePref(PREF_KEYS.units, JSON.stringify({ temp: next.temp, wind: next.wind }));
   }, []);
   return { value, ready: raw !== undefined, set };
+}
+
+/** True once the viewer has closed the "We're open source" note; false while hydrating, so it never flashes. */
+export function useOpenSourceNoteDismissed(): PrefState<boolean> {
+  const raw = useStoredString(PREF_KEYS.openSourceNote);
+  const set = useCallback((next: boolean) => {
+    writePref(PREF_KEYS.openSourceNote, next ? "dismissed" : "");
+  }, []);
+  return { value: raw === "dismissed", ready: raw !== undefined, set };
 }
