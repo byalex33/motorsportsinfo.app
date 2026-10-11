@@ -109,22 +109,19 @@ Why community data sources, and why that keeps the site non-commercial: [ADR 000
 
 ```mermaid
 flowchart LR
-  subgraph Sources
-    S1[OpenF1 and Jolpica]
-    S2[FIA F2 and F3 sites]
-    S3[fiawec.com]
-    S4[sportstimes/f1]
-    S5[FIA Documents]
-  end
+  S1["OpenF1 and Jolpica"] --> SYNC
+  S2["FIA F2 and F3 sites"] --> SYNC
+  S3["fiawec.com"] --> SYNC
+  S4["sportstimes/f1"] --> SYNC
+  S5["FIA Documents"] --> SYNC
+  SYNC["/api/cron/sync<br/>every 5 min"] --> DB[("Neon Postgres")]
 
-  Sources --> SYNC["/api/cron/sync<br/>every 5 min"]
-  SYNC --> DB[(Neon Postgres)]
-  OV["Schedule Overrides<br/>src/data/overrides.ts"] --> APP
   DB --> APP["Next.js 16 pages"]
-  OM[Open-Meteo] --> APP
-  RADAR[Rainbow.ai and RainViewer] --> APP
-  DB --> ALERTS["/api/cron/alerts<br/>every minute"]
-  ALERTS --> PUSH[Web Push]
+  OV["Schedule Overrides"] --> APP
+  OM["Open-Meteo"] --> APP
+  RADAR["Rainbow.ai and RainViewer"] --> APP
+
+  DB --> ALERTS["/api/cron/alerts<br/>every minute"] --> PUSH["Web Push"]
   DB --> ICS[".ics calendar feed"]
 ```
 
