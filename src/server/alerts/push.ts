@@ -1,3 +1,4 @@
+import "server-only";
 import webpush from "web-push";
 import type { OutgoingPush } from "./types";
 import { isPushServiceEndpoint } from "./validation";

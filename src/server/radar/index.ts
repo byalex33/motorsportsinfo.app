@@ -1,6 +1,7 @@
 // CONTRACT — owned by the radar work. Routes under /api/radar import only from here.
 // Forecast rain radar from Rainbow.ai (see ADR 0001). Without RAINBOW_API_KEY, past the monthly tile cap,
 // or when Rainbow fails, the snapshot is null and the map falls back to RainViewer's past radar.
+import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { cacheLife } from "next/cache";
 import { getDb } from "@/db/client";

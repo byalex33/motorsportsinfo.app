@@ -1,4 +1,5 @@
 // Shared guard for the cron routes and /api/status: `Authorization: Bearer ${CRON_SECRET}`.
+import "server-only";
 import { timingSafeEqual } from "node:crypto";
 
 /** True when the request carries the cron secret. Always false while CRON_SECRET is unset. Compared in constant time. */
