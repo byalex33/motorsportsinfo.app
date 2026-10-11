@@ -4,7 +4,7 @@
 import { SERIES } from "@/domain/series";
 import { FIA_DOCUMENT_SERIES, type DocumentAlertLevel, type FiaDocumentKind, type FiaDocumentSeries } from "@/domain/types";
 import type { DocumentAlerts } from "@/db/schema";
-import { fiaDocumentPagePath } from "@/lib/fia-document-path";
+import { fiaDocumentId, fiaDocumentPagePath } from "@/lib/fia-document-path";
 import type { AlertSubscription, OutgoingPush, PushPayload } from "./types";
 
 export type { DocumentAlerts };
@@ -53,8 +53,9 @@ export function wantsDocument(alerts: DocumentAlerts, series: FiaDocumentSeries,
   return level === "all" || (level === "stewards" && kind === "stewards");
 }
 
+/** The document's viewer page, addressed by event and number so the URL never spells out the title. */
 function documentUrl(doc: DocumentAlertRow): string {
-  return doc.file ? fiaDocumentPagePath(doc.series, doc.file) : `/${doc.series}#documents`;
+  return doc.file ? fiaDocumentPagePath(doc.series, doc.event, fiaDocumentId(doc)) : `/${doc.series}#documents`;
 }
 
 /** One document: its title, then where it is from ("FIA Doc 29 · F1 Singapore Grand Prix"). */

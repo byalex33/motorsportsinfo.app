@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { usePrefersReducedMotion } from "@/components/radar/use-client-state";
+import { CAR_NUMBER } from "@/lib/fia-document-title";
 import { cn } from "@/lib/utils";
 
 // Text hidden under shimmering grain that blows away from the click, after lab.xevrion.dev/lab/spoiler-text.
@@ -233,12 +234,9 @@ export function Spoiler({ children, className }: { children: string; className?:
   );
 }
 
-// Captured, so split() keeps the matches at the odd indexes.
-const SPOILED = /(\bCar \d+\b)/i;
-
 /** An FIA Document title in the list with every car number ("Car 27") behind a Spoiler. */
 export function SpoilerTitle({ title }: { title: string }) {
-  const parts = title.split(SPOILED);
+  const parts = title.split(CAR_NUMBER);
   if (parts.length === 1) return title;
   return parts.map((part, i) => (i % 2 === 1 ? <Spoiler key={i}>{part}</Spoiler> : part));
 }

@@ -1,6 +1,6 @@
 // FIA Document PDFs, relayed from fia.com. fia.com serves every PDF with "Content-Disposition:
 // attachment", so a link to it always downloads. /documents/<file>.pdf fetches the same PDF and relays
-// it unchanged with an inline disposition, for the viewer page (/<series>/documents/<doc>) to render.
+// it unchanged with an inline disposition, for the viewer page (/<series>/documents/<slug>) to render.
 // Only files in the FIA's decision-document folder are fetched: the host and folder are fixed here,
 // the file name is checked.
 import { BROWSER_USER_AGENT, type Fetcher } from "@/server/schedule/sources/http";
@@ -51,6 +51,27 @@ export function fiaDocumentFileFromSlug(slug: string): string | null {
   }
   const file = `${name}.pdf`;
   return isDocumentFile(file) ? file : null;
+}
+
+/**
+ * Whether fia.com has a document file, for a viewer page whose document is no longer listed. "missing"
+ * only on a clear 404 or 410; "unknown" when fia.com could not be asked, so a hiccup never hides a document.
+ */
+export async function checkFiaDocument(file: string, fetcher: Fetcher = fetch): Promise<"found" | "missing" | "unknown"> {
+  const source = fiaDocumentSource(file);
+  if (!source) return "missing";
+  try {
+    const res = await fetcher(source, {
+      method: "HEAD",
+      headers: { "User-Agent": BROWSER_USER_AGENT },
+      signal: AbortSignal.timeout(10_000),
+      cache: "no-store",
+    });
+    if (res.status === 404 || res.status === 410) return "missing";
+    return res.ok ? "found" : "unknown";
+  } catch {
+    return "unknown";
+  }
 }
 
 /** The download name fia.com gives ("2026 Singapore Grand Prix - Entry List.pdf"), or the file name. */

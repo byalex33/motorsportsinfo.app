@@ -59,9 +59,14 @@ describe("payloads", () => {
     expect(payload).toEqual({
       title: "Infringement - Car 3 - Yellow flag infringement",
       body: "FIA Doc 29 · F1 Singapore Grand Prix",
-      url: "/f1/documents/2026_x_-_car_3",
+      url: "/f1/documents/singapore-grand-prix-29",
       tag: "fia-document:https://www.fia.com/system/files/decision-document/doc_29.pdf",
     });
+  });
+
+  it("keeps the file name, which spells out the title, out of the URL", () => {
+    const payload = documentPayload(doc(3, "stewards", { number: null, file: "2026_x_-_infringement_-_car_3.pdf" }));
+    expect(payload.url).toMatch(/^\/f1\/documents\/singapore-grand-prix-h[0-9a-f]{8}$/);
   });
 
   it("opens the Series page for a document the viewer cannot open", () => {
