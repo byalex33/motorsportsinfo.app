@@ -8,6 +8,9 @@ import { useHydrated } from "@/lib/client-stores";
 interface ShareComparisonProps {
   /** The share image's path without the query, e.g. "/f1/telemetry/qualifying/image". */
   imagePath: string;
+  /** The compared drivers' codes, always written into the shared link (see shareUrl). */
+  a: string;
+  b: string;
   /** e.g. "VER vs LEC · F1 Singapore Grand Prix Qualifying telemetry". */
   text: string;
   /** For the downloaded file, e.g. "singapore-qualifying-ver-lec". */
@@ -21,7 +24,7 @@ type Status = "idle" | "working" | "copied" | "downloaded" | "failed";
  * (drivers and picked colours), with a motorsportsinfo.app watermark. Posting on X shares the link, whose
  * preview card is the same image.
  */
-export function ShareComparison({ imagePath, text, fileName }: ShareComparisonProps) {
+export function ShareComparison({ imagePath, a, b, text, fileName }: ShareComparisonProps) {
   const [status, setStatus] = useState<Status>("idle");
   // Phones can hand the image straight to the X app (or anything else) through the share sheet.
   const canShareFiles = useHydrated() && canShareImages();
@@ -33,7 +36,15 @@ export function ShareComparison({ imagePath, text, fileName }: ShareComparisonPr
     }
   }, [status]);
 
-  const imageUrl = () => `${imagePath}${window.location.search}`;
+  // The page's URL with both drivers named, even when the viewer arrived on the default pair: only a link that
+  // names them gets the comparison as its preview card (a bare link's card is spoiler-free).
+  const shareUrl = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("a", a);
+    url.searchParams.set("b", b);
+    return url;
+  };
+  const imageUrl = () => `${imagePath}${shareUrl().search}`;
   const fetchImage = async () => {
     const res = await fetch(imageUrl());
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -68,7 +79,7 @@ export function ShareComparison({ imagePath, text, fileName }: ShareComparisonPr
   function postOnX() {
     const intent = new URL("https://x.com/intent/post");
     intent.searchParams.set("text", text);
-    intent.searchParams.set("url", window.location.href);
+    intent.searchParams.set("url", shareUrl().href);
     window.open(intent, "_blank", "noopener,noreferrer");
   }
 
@@ -76,7 +87,7 @@ export function ShareComparison({ imagePath, text, fileName }: ShareComparisonPr
     setStatus("working");
     try {
       const file = new File([await fetchImage()], `${fileName}.png`, { type: "image/png" });
-      await navigator.share({ files: [file], text, url: window.location.href });
+      await navigator.share({ files: [file], text, url: shareUrl().href });
       setStatus("idle");
     } catch (error) {
       // Closing the share sheet is not a failure.

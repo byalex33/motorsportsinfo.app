@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ActivityIcon, CloudOffIcon } from "lucide-react";
 import { SessionForecastView } from "@/components/weather/session-forecast";
 import { InlineSkeleton } from "@/components/inline-skeleton";
-import type { ForecastResult, Session, SessionResult } from "@/domain/types";
+import type { ForecastResult, Session } from "@/domain/types";
 import { useNow, useOnline } from "@/lib/client-stores";
 import type { DisplayZone } from "@/lib/display-zone";
 import { staggerDelay } from "@/lib/motion";
@@ -20,7 +20,8 @@ import { SessionResultsDialog } from "./session-results-dialog";
 interface SessionListProps {
   sessions: Session[];
   forecasts: Record<string, ForecastResult>;
-  results: Record<string, SessionResult>;
+  /** Ids of the finished Sessions with a Session Result. */
+  results: string[];
   resultsUrl: string;
   timesConfirmed: boolean;
   /** Null on the server and during hydration: rows then show the server's Track Time text. */
@@ -57,7 +58,7 @@ export function SessionList({ sessions, forecasts, results, resultsUrl, timesCon
           index={index}
           session={session}
           forecast={forecasts[session.id]}
-          result={results[session.id]}
+          hasResult={results.includes(session.id)}
           resultsUrl={resultsUrl}
           timesConfirmed={timesConfirmed}
           zone={zone}
@@ -75,7 +76,7 @@ function SessionRow({
   index,
   session,
   forecast,
-  result,
+  hasResult,
   resultsUrl,
   timesConfirmed,
   zone,
@@ -87,7 +88,7 @@ function SessionRow({
   index: number;
   session: Session;
   forecast: ForecastResult | undefined;
-  result: SessionResult | undefined;
+  hasResult: boolean;
   resultsUrl: string;
   timesConfirmed: boolean;
   zone: DisplayZone | null;
@@ -139,16 +140,16 @@ function SessionRow({
           {finished && !cancelled && (
             <>
               <span className="chip px-0 text-muted-foreground">Finished</span>
-              <SessionResultsDialog session={session} result={result} resultsUrl={resultsUrl} />
+              <SessionResultsDialog session={session} hasResult={hasResult} resultsUrl={resultsUrl} />
               {session.series === "f1" && (
-                // The Telemetry page shows its own spoiler warning, so the chip can link straight to it.
-                <Link
-                  href={`/f1/telemetry/${sessionSlug(session)}`}
-                  className="chip results-chip border border-telemetry/50 bg-telemetry/10 text-telemetry outline-none transition-colors [--chip-delay:120ms] [--chip-sheen:var(--telemetry)] hover:border-telemetry hover:bg-telemetry/20 focus-visible:ring-2 focus-visible:ring-telemetry/60"
-                >
-                  <ActivityIcon className="size-3" aria-hidden />
-                  Telemetry
-                  <span className="sr-only"> for {session.name}</span>
+                // The Telemetry page shows its own spoiler warning, so the chip can link straight to it. Like the
+                // RESULTS chip, the link is a 24 px tap target that takes no more room than the chip inside.
+                <Link href={`/f1/telemetry/${sessionSlug(session)}`} className="group -my-0.5 inline-flex min-h-6 items-center outline-none">
+                  <span className="chip results-chip border border-telemetry/50 bg-telemetry/10 text-telemetry transition-colors [--chip-delay:120ms] [--chip-sheen:var(--telemetry)] group-hover:border-telemetry group-hover:bg-telemetry/20 group-focus-visible:ring-2 group-focus-visible:ring-telemetry/60">
+                    <ActivityIcon className="size-3" aria-hidden />
+                    Telemetry
+                    <span className="sr-only"> for {session.name}</span>
+                  </span>
                 </Link>
               )}
             </>

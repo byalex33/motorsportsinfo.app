@@ -1,8 +1,8 @@
-// What a Telemetry page (and its share image) shows, worked out once from the route and the query:
-// ?a=VER&b=LEC picks the drivers (default: the top two), ?ca=ff00aa&cb=… the colours (default: team colours),
-// ?ch=throttle the car data shown (default: speed).
+// What a Telemetry page, its revealed comparison (./data) and its share image (./image) show, worked out from
+// the route and the query: ?a=VER&b=LEC picks the drivers (default: the top two), ?ca=ff00aa&cb=… the colours
+// (default: team colours), ?ch=throttle the car data shown (default: speed).
 import { connection } from "next/server";
-import type { LapComparison, Round, Session, TelemetryDriver, TelemetryLap } from "@/domain/types";
+import type { LapComparison, Round, Session, SessionTelemetry, TelemetryDriver, TelemetryLap } from "@/domain/types";
 import { sessionSlug } from "@/lib/session-slug";
 import { chosenPalette, colorParam, type TeamPalette } from "@/lib/team-colors";
 import { channelParam, type TelemetryChannel } from "@/lib/telemetry-channels";
@@ -37,12 +37,15 @@ export interface ReadyComparison {
 
 type Found = { round: Round; session: Session; slug: string };
 
-export type TelemetryView =
+/** Whether there is a comparison to show, without working one out (the page shows only this before the reveal). */
+export type TelemetryStatus =
   | { kind: "not-found" }
   | ({ kind: "not-finished" } & Found)
   | ({ kind: "unavailable" } & Found)
   | ({ kind: "too-few" } & Found)
-  | ReadyComparison;
+  | ({ kind: "comparable"; sessionKey: number; telemetry: SessionTelemetry; drivers: PickerDriver[] } & Found);
+
+export type TelemetryView = Exclude<TelemetryStatus, { kind: "comparable" }> | ReadyComparison;
 
 /** The Featured Round's Session behind a Telemetry URL, or null. */
 export async function findTelemetrySession(seriesParam: string, slug: string): Promise<{ round: Round; session: Session } | null> {
@@ -53,7 +56,14 @@ export async function findTelemetrySession(seriesParam: string, slug: string): P
   return session ? { round: featured.round, session } : null;
 }
 
-export async function resolveTelemetry(seriesParam: string, slug: string, query: Query): Promise<TelemetryView> {
+/** The Featured Round's Telemetry slugs: its Sessions that aren't cancelled. */
+export async function telemetrySlugs(): Promise<string[]> {
+  const { featured } = await getSeriesPageData("f1");
+  if (featured.kind !== "round") return [];
+  return featured.sessions.filter((s) => s.status !== "cancelled").map(sessionSlug);
+}
+
+export async function telemetryStatus(seriesParam: string, slug: string): Promise<TelemetryStatus> {
   const found = await findTelemetrySession(seriesParam, slug);
   if (!found) return { kind: "not-found" };
   const { round, session } = found;
@@ -64,8 +74,15 @@ export async function resolveTelemetry(seriesParam: string, slug: string, query:
 
   const { telemetry, sessionKey } = result;
   const drivers = telemetry.drivers.map((d) => ({ ...d, hasLap: fastestLap(telemetry.laps[d.number] ?? []) !== null }));
+  if (drivers.filter((d) => d.hasLap).length < 2) return { kind: "too-few", round, session, slug };
+  return { kind: "comparable", round, session, slug, sessionKey, telemetry, drivers };
+}
+
+export async function resolveTelemetry(seriesParam: string, slug: string, query: Query): Promise<TelemetryView> {
+  const status = await telemetryStatus(seriesParam, slug);
+  if (status.kind !== "comparable") return status;
+  const { round, session, telemetry, sessionKey, drivers } = status;
   const comparable = drivers.filter((d) => d.hasLap);
-  if (comparable.length < 2) return { kind: "too-few", round, session, slug };
 
   const byCode = (value: Query[string]) => comparable.find((d) => d.code === String(value ?? "").toUpperCase());
   const a = byCode(query.a) ?? comparable[0];
