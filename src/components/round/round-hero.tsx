@@ -1,5 +1,4 @@
-import { Calendar03Icon, Location01Icon, Route03Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import { CalendarDaysIcon, MapPinIcon, RouteIcon, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { RevealWords } from "@/components/motion/reveal-words";
@@ -36,11 +35,11 @@ function SeriesLine({ series, roundNumber, season }: { series: SeriesId; roundNu
   );
 }
 
-function MetaItem({ icon, label, style, children }: { icon: IconSvgElement; label: string; style: CSSProperties; children: ReactNode }) {
+function MetaItem({ icon: Icon, label, style, children }: { icon: LucideIcon; label: string; style: CSSProperties; children: ReactNode }) {
   return (
     <div className="enter-rise flex min-w-0 items-center gap-2" style={style}>
       <dt className="sr-only">{label}</dt>
-      <HugeiconsIcon icon={icon} size={16} strokeWidth={1.75} className="shrink-0 text-series-accent" aria-hidden />
+      <Icon size={16} strokeWidth={1.75} className="shrink-0 text-series-accent" aria-hidden />
       <dd className="min-w-0">{children}</dd>
     </div>
   );
@@ -68,13 +67,13 @@ export function RoundHero({
         <RevealWords text={round.name} />
       </h1>
       <dl className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-        <MetaItem icon={Route03Icon} label="Circuit" style={enterDelay(ENTER.meta)}>
+        <MetaItem icon={RouteIcon} label="Circuit" style={enterDelay(ENTER.meta)}>
           <span className="font-medium text-foreground">{circuit.name}</span>
         </MetaItem>
-        <MetaItem icon={Location01Icon} label="Location" style={enterDelay(ENTER.meta + ENTER.metaStep)}>
+        <MetaItem icon={MapPinIcon} label="Location" style={enterDelay(ENTER.meta + ENTER.metaStep)}>
           {circuit.location}
         </MetaItem>
-        <MetaItem icon={Calendar03Icon} label="Dates" style={enterDelay(ENTER.meta + 2 * ENTER.metaStep)}>
+        <MetaItem icon={CalendarDaysIcon} label="Dates" style={enterDelay(ENTER.meta + 2 * ENTER.metaStep)}>
           <span className="flex items-center gap-2 tabular">
             {formatRoundDates(round.startDate, round.endDate)}
             {!round.sessionTimesConfirmed && <span className="chip border border-border text-muted-foreground">Times TBC</span>}

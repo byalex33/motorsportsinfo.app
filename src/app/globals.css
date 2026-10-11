@@ -753,6 +753,8 @@
   overflow: clip;
   opacity: 1;
   line-height: 1;
+  letter-spacing: normal;
+  word-spacing: normal;
   text-align: initial;
   -webkit-text-size-adjust: none;
   text-size-adjust: none;
@@ -767,6 +769,7 @@
   white-space: pre;
   cursor: text;
   transform-origin: 0% 0%;
+  user-select: text;
 }
 .pdf-text-layer > :not(.markedContent),
 .pdf-text-layer .markedContent span:not(.markedContent) {
@@ -787,6 +790,7 @@
 .pdf-text-layer ::selection {
   background: rgb(0 0 255 / 0.25);
   background: color-mix(in srgb, AccentColor, transparent 75%);
+  color: transparent;
 }
 .pdf-text-layer br::selection {
   background: transparent;
