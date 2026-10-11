@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { featuredUntil, roundOpensAt, selectCalendarSessions, selectFeaturedRound, selectUpcomingSessions } from "./select";import { makeRound, makeSession, withContext } from "./test-utils";
+import { featuredUntil, roundOpensAt, selectCalendarSessions, selectFeaturedRound, selectUpcomingRounds, selectUpcomingSessions } from "./select";
+import { makeRound, makeSession, withContext } from "./test-utils";
 
 // Singapore (UTC+8): Fri 9 – Sun 11 Oct 2026, Race 12:00–14:00 UTC on Sunday.
 const sgRound = makeRound("f1-2026-marina-bay", "marina-bay", "2026-10-09", "2026-10-11");
@@ -127,5 +128,23 @@ describe("selectCalendarSessions", () => {
       "f1-2026-marina-bay",
     );
     expect(ids("2026-12-20T00:00:00Z")).not.toContain("f1-2026-marina-bay");
+  });
+});
+
+describe("selectUpcomingRounds", () => {
+  const all = [us, next2027, sg];
+
+  it("lists every unfinished Round in calendar order, numbered within its season", () => {
+    const r = selectUpcomingRounds(all, new Date("2026-10-05T00:00:00Z"));
+    expect(r.map((x) => [x.round.id, x.roundNumber])).toEqual([
+      ["f1-2026-marina-bay", 1],
+      ["f1-2026-cota", 2],
+      ["f1-2027-sakhir", 1],
+    ]);
+  });
+
+  it("keeps a Round until 2 h after its final Session, then drops it", () => {
+    expect(selectUpcomingRounds(all, new Date("2026-10-11T15:59:00Z"))[0]?.round.id).toBe("f1-2026-marina-bay");
+    expect(selectUpcomingRounds(all, new Date("2026-10-11T16:00:00Z"))[0]?.round.id).toBe("f1-2026-cota");
   });
 });

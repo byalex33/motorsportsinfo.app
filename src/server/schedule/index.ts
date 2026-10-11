@@ -11,10 +11,11 @@ import { getDb } from "@/db/client";
 import type { Circuit, FeaturedRoundResult, Round, SeriesId, Session } from "@/domain/types";
 import { loadPublishedSchedule, loadRoundUpdatedAt } from "./db-read";
 import { getLiveSchedule } from "./live";
-import { selectCalendarSessions, selectFeaturedRound, selectUpcomingSessions, withCircuits } from "./select";
+import { selectCalendarSessions, selectFeaturedRound, selectUpcomingRounds, selectUpcomingSessions, withCircuits, type UpcomingRound } from "./select";
 import type { RoundWithContext } from "./types";
 
 export { scheduleTag } from "./tags";
+export type { UpcomingRound } from "./select";
 
 async function loadRounds(series: SeriesId): Promise<RoundWithContext[]> {
   if (getDb()) return withCircuits(await loadPublishedSchedule(series));
@@ -32,6 +33,12 @@ async function resolveNow(now: Date | undefined): Promise<Date> {
 export async function getFeaturedRound(series: SeriesId, now?: Date): Promise<FeaturedRoundResult> {
   const rounds = await loadRounds(series);
   return selectFeaturedRound(rounds, await resolveNow(now));
+}
+
+/** Every Round of the Series that hasn't finished (held for 2h after its final Session), in calendar order. */
+export async function listUpcomingRounds(series: SeriesId, now?: Date): Promise<UpcomingRound[]> {
+  const rounds = await loadRounds(series);
+  return selectUpcomingRounds(rounds, await resolveNow(now));
 }
 
 export interface SessionWithContext {

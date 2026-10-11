@@ -1,7 +1,7 @@
 // Pure selection logic shared by the database and live (no database) read paths.
 import { getCircuit } from "@/data/circuits";
 import { FEATURED_ROUND_GRACE_MINUTES } from "@/domain/series";
-import type { FeaturedRoundResult, Session } from "@/domain/types";
+import type { Circuit, FeaturedRoundResult, Round, Session } from "@/domain/types";
 import type { SessionWithContext } from "./index";
 import { addDays, MINUTE, trackMidnight } from "./time";
 import type { RoundWithContext, RoundWithSessions } from "./types";
@@ -82,6 +82,26 @@ export function selectFeaturedRound(rounds: RoundWithContext[], now: Date): Feat
   }
   const seasons = rounds.map((r) => r.round.season);
   return { kind: "season-complete", season: seasons.length > 0 ? Math.max(...seasons) : now.getUTCFullYear() };
+}
+
+/** A Round on the full calendar. */
+export interface UpcomingRound {
+  round: Round;
+  /** The Round's place in its season, e.g. 18 for Round 18. */
+  roundNumber: number;
+  circuit: Circuit;
+  /** Ordered by startsAt. Cancelled Sessions are included. */
+  sessions: Session[];
+}
+
+/** Every Round that hasn't finished (featured-grace rule), in calendar order. */
+export function selectUpcomingRounds(rounds: RoundWithContext[], now: Date): UpcomingRound[] {
+  return unfinishedRounds(rounds, now).map((r) => ({
+    round: r.round,
+    roundNumber: roundNumber(r, rounds),
+    circuit: r.circuit,
+    sessions: [...r.sessions].sort(byStart),
+  }));
 }
 
 /** All Sessions (including cancelled) of unfinished Rounds, ordered by startsAt. */

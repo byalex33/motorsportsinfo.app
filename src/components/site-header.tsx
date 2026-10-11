@@ -1,6 +1,6 @@
 "use client";
 
-import { BellIcon, ChevronsUpDownIcon } from "lucide-react";
+import { BellIcon, CalendarDaysIcon, ChevronsUpDownIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, ViewTransition, type ReactElement } from "react";
@@ -137,6 +137,19 @@ export function SiteHeader() {
         <SeriesNav current={current} />
 
         <div className="ml-auto flex shrink-0 items-center gap-1">
+          <Link
+            href="/calendar"
+            prefetch
+            aria-current={segment === "calendar" ? "page" : undefined}
+            aria-label="Calendar"
+            className={cn(
+              "flex size-8 items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-[color,background-color,scale] duration-200 outline-none hover:bg-muted active:scale-95 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:w-auto sm:px-2.5",
+              segment === "calendar" ? "text-foreground" : "text-muted-foreground",
+            )}
+          >
+            <CalendarDaysIcon className="size-4 sm:hidden" aria-hidden />
+            <span className="hidden sm:inline">Calendar</span>
+          </Link>
           <Link
             href="/alerts"
             aria-current={segment === "alerts" ? "page" : undefined}

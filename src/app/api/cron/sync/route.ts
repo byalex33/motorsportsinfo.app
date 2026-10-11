@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
     revalidateTag(scheduleTag(r.series), { expire: 0 });
     revalidatePath(`/${r.series}`);
   }
+  if (results.some((r) => r.published)) revalidatePath("/calendar");
 
   // FIA Documents for Document Alerts, after the schedule so a just-published Round is watched. Never fails the sync.
   const now = new Date();
