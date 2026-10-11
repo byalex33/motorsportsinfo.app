@@ -45,6 +45,8 @@ export interface CalendarRound {
   cancelled: boolean;
   /** The Series' Featured Round, the one its Series page shows. */
   featured: boolean;
+  /** An F1 sprint weekend: the Round has a Sprint that isn't cancelled. Other Series race a Sprint every Round. */
+  sprint: boolean;
   /** Ordered by start; cancelled Sessions included. */
   sessions: CalendarSession[];
   trackTimes: Record<string, CalendarTrackTime>;
@@ -81,6 +83,7 @@ function toCalendarRound({ round, roundNumber, circuit, sessions }: UpcomingRoun
     timesConfirmed: round.sessionTimesConfirmed,
     cancelled: allCancelled(sessions),
     featured,
+    sprint: round.series === "f1" && timed.some((s) => s.type === "sprint" && s.status !== "cancelled"),
     sessions: timed.map(({ id, name, type, startsAt, endsAt, status }) => ({ id, name, type, startsAt, endsAt, status })),
     trackTimes,
   };
