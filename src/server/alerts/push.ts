@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import type { OutgoingPush } from "./types";
+import { isPushServiceEndpoint } from "./validation";
 
 /** Pushes sent at once. */
 export const PUSH_CONCURRENCY = 10;
@@ -29,6 +30,8 @@ export function classifyPushError(error: unknown): Exclude<PushOutcome, "sent"> 
 
 export async function sendPush(push: OutgoingPush, vapid: VapidConfig): Promise<PushOutcome> {
   const { subscription, payload, ttlSeconds } = push;
+  // Rows saved before the push service check could point anywhere: never send to them, and drop them.
+  if (!isPushServiceEndpoint(subscription.endpoint)) return "gone";
   try {
     await webpush.sendNotification(
       { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } },

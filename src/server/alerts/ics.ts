@@ -1,8 +1,8 @@
 // Hand-written iCalendar (RFC 5545) output for calendar feeds. Pure: no I/O.
 import { SERIES } from "@/domain/series";
+import { SITE_URL } from "@/lib/site";
 import type { SessionWithContext } from "@/server/schedule";
 
-export const SITE_ORIGIN = "https://motorsportsinfo.app";
 const UID_DOMAIN = "motorsportsinfo.app";
 const MAX_LINE_OCTETS = 75;
 
@@ -69,7 +69,7 @@ export interface CalendarInput {
 }
 
 export function seriesPageUrl(series: string): string {
-  return `${SITE_ORIGIN}/${series}`;
+  return `${SITE_URL}/${series}`;
 }
 
 function eventLines({ session, round, circuit }: SessionWithContext, revision: SessionRevision | undefined, now: Date) {
