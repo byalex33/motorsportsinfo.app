@@ -54,6 +54,7 @@ export function CalendarRoundCard({ round, now }: { round: CalendarRound; now: n
             </span>
           </p>
         </div>
+        {round.sprint && <span className="chip shrink-0 bg-series-accent/15 text-series-accent ring-1 ring-series-accent/30">Sprint</span>}
       </header>
 
       <div className="border-t border-border px-4 py-3">
