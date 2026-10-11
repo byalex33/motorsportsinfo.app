@@ -68,8 +68,7 @@ describe("track", () => {
     expect(createTracwell).toHaveBeenCalledTimes(1);
     expect(createTracwell).toHaveBeenCalledWith({
       projectKey: "tw_live_c30cab1cc96e4c349fe89d7a22be92ab",
-      collectionMode: "product",
-      consent: "granted",
+      collectionMode: "private",
       respectDoNotTrack: true,
     });
     expect(sdkTrack.mock.calls).toEqual([

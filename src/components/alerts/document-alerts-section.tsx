@@ -45,7 +45,9 @@ export function DocumentAlertsSection({ documentAlerts, onChange }: DocumentAler
               <span id={`document-alerts-${series}`} className="eyebrow flex items-center gap-2 text-foreground">
                 <span aria-hidden className="size-1.5 rounded-full bg-series-gradient" />
                 {info.shortName}
-                <span className="sr-only"> ({info.name}) document alerts</span>
+                <span className="sr-only">
+                  {info.name !== info.shortName && ` (${info.name})`} document alerts
+                </span>
               </span>
               <RadioGroupPrimitive
                 aria-labelledby={`document-alerts-${series}`}

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FileWarningIcon } from "lucide-react";
-import type { PDFDocumentProxy, RenderTask, TextLayer } from "pdfjs-dist";
+import type { PDFDocumentProxy, PDFPageProxy, RenderTask, TextLayer } from "pdfjs-dist";
 import { cn } from "@/lib/utils";
 
 type Pdfjs = typeof import("pdfjs-dist");
@@ -34,8 +34,14 @@ interface PageSize {
 }
 
 type Loaded =
-  | { kind: "ready"; pdfjs: Pdfjs; pdf: PDFDocumentProxy; pages: PageSize[] }
+  // `firstPage` is page 1's size: the placeholder for every page until its own size is known.
+  | { kind: "ready"; pdfjs: Pdfjs; pdf: PDFDocumentProxy; firstPage: PageSize }
   | { kind: "error" };
+
+function pageSize(page: PDFPageProxy): PageSize {
+  const { width, height } = page.getViewport({ scale: 1 });
+  return { width, height };
+}
 
 /**
  * Renders a PDF in the page with PDF.js: every page at the width of the column, with a text layer on
@@ -58,12 +64,9 @@ export function PdfViewer({ src, fallbackHref }: { src: string; fallbackHref: st
         const task = pdfjs.getDocument({ url: src });
         destroy = () => task.destroy();
         const pdf = await task.promise;
-        const pages: PageSize[] = [];
-        for (let n = 1; n <= pdf.numPages; n++) {
-          const { width, height } = (await pdf.getPage(n)).getViewport({ scale: 1 });
-          pages.push({ width, height });
-        }
-        if (!cancelled) setLoaded({ kind: "ready", pdfjs, pdf, pages, src });
+        // Show the document as soon as page 1 is in; the other pages read their own sizes as they mount.
+        const firstPage = pageSize(await pdf.getPage(1));
+        if (!cancelled) setLoaded({ kind: "ready", pdfjs, pdf, firstPage, src });
       })
       .catch((error) => {
         if (cancelled) return;
@@ -103,13 +106,13 @@ export function PdfViewer({ src, fallbackHref }: { src: string; fallbackHref: st
           <div className="aspect-[1/1.414] w-full animate-pulse rounded-sm bg-muted" />
         </div>
       ) : (
-        <ol className="space-y-5" aria-label={`${state.pages.length} page${state.pages.length === 1 ? "" : "s"}`}>
-          {state.pages.map((size, index) => (
+        <ol className="space-y-5" aria-label={`${state.pdf.numPages} page${state.pdf.numPages === 1 ? "" : "s"}`}>
+          {Array.from({ length: state.pdf.numPages }, (_, index) => (
             <li key={index} className="space-y-2">
-              <PdfPage pdfjs={state.pdfjs} pdf={state.pdf} index={index} size={size} width={width} />
-              {state.pages.length > 1 && (
+              <PdfPage pdfjs={state.pdfjs} pdf={state.pdf} index={index} placeholder={state.firstPage} width={width} />
+              {state.pdf.numPages > 1 && (
                 <p className="text-center font-mono text-[0.6875rem] text-muted-foreground tabular">
-                  {index + 1} / {state.pages.length}
+                  {index + 1} / {state.pdf.numPages}
                 </p>
               )}
             </li>
@@ -124,13 +127,13 @@ function PdfPage({
   pdfjs,
   pdf,
   index,
-  size,
+  placeholder,
   width,
 }: {
   pdfjs: Pdfjs;
   pdf: PDFDocumentProxy;
   index: number;
-  size: PageSize;
+  placeholder: PageSize;
   width: number;
 }) {
   const pageRef = useRef<HTMLDivElement>(null);
@@ -138,6 +141,22 @@ function PdfPage({
   const textRef = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(index === 0);
   const [rendered, setRendered] = useState(false);
+  const [size, setSize] = useState<PageSize | null>(null);
+
+  // The real size replaces the placeholder once PDF.js has parsed the page (FIA pages are nearly all A4,
+  // so this rarely moves anything). Every page asks at once; PDF.js keeps the page for the render below.
+  useEffect(() => {
+    let cancelled = false;
+    pdf
+      .getPage(index + 1)
+      .then((page) => {
+        if (!cancelled) setSize(pageSize(page));
+      })
+      .catch(() => {}); // The render below reports a page that cannot be read.
+    return () => {
+      cancelled = true;
+    };
+  }, [pdf, index]);
 
   // Render a page once it comes near the viewport; it stays rendered after that.
   useEffect(() => {
@@ -168,7 +187,7 @@ function PdfPage({
     (async () => {
       const page = await pdf.getPage(index + 1);
       if (cancelled) return;
-      const viewport = page.getViewport({ scale: width / size.width });
+      const viewport = page.getViewport({ scale: width / pageSize(page).width });
       const ratio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
       // Render off-screen, then swap in, so a resize never flashes a blank page.
       const next = document.createElement("canvas");
@@ -196,13 +215,14 @@ function PdfPage({
       renderTask?.cancel();
       textLayer?.cancel();
     };
-  }, [near, width, pdf, pdfjs, index, size.width]);
+  }, [near, width, pdf, pdfjs, index]);
 
+  const shown = size ?? placeholder;
   return (
     <div
       ref={pageRef}
       className="relative w-full overflow-hidden rounded-sm bg-white shadow-sm ring-1 ring-foreground/10"
-      style={{ aspectRatio: `${size.width} / ${size.height}` }}
+      style={{ aspectRatio: `${shown.width} / ${shown.height}` }}
     >
       {!rendered && <div aria-hidden className="absolute inset-0 animate-pulse bg-muted/40" />}
       <canvas ref={canvasRef} aria-hidden className={cn("absolute inset-0 size-full", !rendered && "opacity-0")} />

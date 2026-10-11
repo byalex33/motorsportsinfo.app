@@ -54,7 +54,7 @@ export function CalendarFeedCard({ follows }: { follows: Follows }) {
       id="calendar-feed-heading"
       index="04"
       title="Calendar feed"
-      description="Subscribe to the ticked Sessions in Apple Calendar, Google Calendar, Outlook or any app that takes an iCal link. Times update when the schedule changes — no account needed."
+      description="Subscribe to the ticked Sessions in Apple Calendar, Google Calendar, Outlook or any app that takes an iCal link — no account needed. Apple Calendar and Outlook pick up changes within about an hour; Google Calendar can take up to a day, so turn on Session Reminders to hear about late changes straight away."
     >
       <div className="grid gap-5">
         {nothingTicked ? (

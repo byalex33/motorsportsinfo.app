@@ -4,6 +4,7 @@ import type { Circuit } from "@/domain/types";
 vi.mock("next/cache", () => ({ cacheLife: vi.fn() }));
 
 const { getSessionForecast } = await import("./index");
+const { RETRY_DELAY_MS } = await import("./open-meteo");
 
 const silverstone: Circuit = {
   id: "silverstone",
@@ -33,6 +34,7 @@ describe("getSessionForecast", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
   });
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -47,14 +49,30 @@ describe("getSessionForecast", () => {
     expect(url.searchParams.get("longitude")).toBe("-1.02");
   });
 
-  it("returns unavailable when fetch rejects", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new TypeError("fetch failed"))));
-    await expect(getSessionForecast(silverstone, "2026-10-09T01:00:00Z")).resolves.toEqual({ kind: "unavailable" });
+  /** Lets Open-Meteo's one retry happen without waiting for its backoff. */
+  async function withoutBackoff<T>(promise: Promise<T>): Promise<T> {
+    await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS);
+    return promise;
+  }
+
+  it("returns unavailable when fetch rejects, after one retry", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    const fetchMock = vi.fn(async () => Promise.reject(new TypeError("fetch failed")));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(withoutBackoff(getSessionForecast(silverstone, "2026-10-09T01:00:00Z"))).resolves.toEqual({
+      kind: "unavailable",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("returns unavailable on an HTTP error", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("rate limited", { status: 429 })));
-    await expect(getSessionForecast(silverstone, "2026-10-09T01:00:00Z")).resolves.toEqual({ kind: "unavailable" });
+  it("returns unavailable on an HTTP error, after one retry", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    const fetchMock = vi.fn(async () => new Response("rate limited", { status: 429 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(withoutBackoff(getSessionForecast(silverstone, "2026-10-09T01:00:00Z"))).resolves.toEqual({
+      kind: "unavailable",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("returns unavailable on a malformed body", async () => {

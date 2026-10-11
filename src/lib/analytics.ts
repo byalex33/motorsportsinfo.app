@@ -59,10 +59,11 @@ export function initAnalytics(): void {
       return;
     }
 
+    // Private mode never reads or writes cookies or storage: no identifier stays on the device, so no
+    // consent banner is needed. The About page's Privacy section describes this; keep the two in step.
     const client = createTracwell({
       projectKey: TRACWELL_PROJECT_KEY,
-      collectionMode: "product",
-      consent: "granted",
+      collectionMode: "private",
       respectDoNotTrack: true,
     });
     state = { status: "ready", client };

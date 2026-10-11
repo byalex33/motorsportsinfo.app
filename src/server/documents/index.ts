@@ -5,9 +5,11 @@ import { cacheLife, cacheTag } from "next/cache";
 import { FIA_DOCUMENT_SERIES, type Circuit, type FiaDocumentSeries, type Round, type RoundDocumentsResult, type SeriesId } from "@/domain/types";
 import { defaultContext, errorMessage } from "@/server/schedule/sources/http";
 import { eventMatchesRound, fetchFiaDocuments, FIA_DOCUMENT_PAGES, type FiaEventDocuments } from "./fia";
+import { checkFiaDocument } from "./viewer";
 
+export { matchDocumentPage, type DocumentPageMatch } from "./page";
 export { syncFiaDocuments, type DocumentsSyncResult } from "./sync";
-export { fiaDocumentFileFromSlug, fiaDocumentSource } from "./viewer";
+export { fiaDocumentSource } from "./viewer";
 
 /** Cache tag for a Series' fia.com listing. The sync revalidates it when it records new documents. */
 export function fiaDocumentsTag(series: FiaDocumentSeries): string {
@@ -16,6 +18,9 @@ export function fiaDocumentsTag(series: FiaDocumentSeries): string {
 
 /** Failures are cached briefly: a retry a minute later, without hammering fia.com while it is down. */
 const FAILURE_LIFE = { stale: 60, revalidate: 60, expire: 300 };
+/** The FIA issues corrections as new files, so a file it has stays there. */
+const FILE_FOUND_LIFE = { stale: 3600, revalidate: 86_400, expire: 7 * 86_400 };
+const FILE_MISSING_LIFE = { stale: 300, revalidate: 3600, expire: 86_400 };
 
 type LoadedListing = { ok: true; listing: FiaEventDocuments } | { ok: false };
 
@@ -56,4 +61,15 @@ async function seriesListing(series: FiaDocumentSeries): Promise<LoadedListing> 
     cacheLife(FAILURE_LIFE);
     return { ok: false };
   }
+}
+
+/**
+ * Whether a document file no longer in the listing is still on fia.com, for older viewer links. Only a
+ * clear "not there" counts as missing: if fia.com can't be asked, the page is shown and asked again soon.
+ */
+export async function fiaDocumentExists(file: string): Promise<boolean> {
+  "use cache";
+  const status = await checkFiaDocument(file);
+  cacheLife(status === "found" ? FILE_FOUND_LIFE : status === "missing" ? FILE_MISSING_LIFE : FAILURE_LIFE);
+  return status !== "missing";
 }

@@ -155,7 +155,8 @@ export default function AboutPage() {
               </li>
               <li>
                 <strong className="font-medium text-foreground">Your preferences stay on your device.</strong> Your last Series, time zone choice, units and
-                theme are kept in your browser&apos;s local storage and are never sent to us.
+                theme are kept in your browser&apos;s local storage, not on our side. Analytics counts some of these
+                choices when you make them (see below), but never which time zone you picked.
               </li>
               <li>
                 <strong className="font-medium text-foreground">Push notifications</strong> are optional. If you turn them on, we store an anonymous browser push
@@ -171,8 +172,16 @@ export default function AboutPage() {
                 <strong className="font-medium text-foreground">Calendar links</strong> contain only your choices of Series and Session Types.
               </li>
               <li>
-                <strong className="font-medium text-foreground">Analytics</strong> are privacy-friendly, provided by Tracwell, and respect Do Not Track: if your
-                browser sends it, nothing is recorded.
+                <strong className="font-medium text-foreground">Analytics</strong> are anonymous and provided by Tracwell. They count page views and a few
+                actions: the Series you pick, switching between your time, Track Time and another zone, changing
+                units, turning push notifications on or off, creating a calendar link, and opening the rain radar or
+                an FIA document. Nothing is stored on your device to recognise you on a later visit, and if your
+                browser sends Do Not Track, nothing is recorded.
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">Other services.</strong> While the F1 rain radar is showing, your browser loads map tiles
+                from OpenFreeMap and, when the forecast radar is unavailable, radar images from RainViewer. Like any website, they see your IP
+                address. Our host, Vercel, keeps short-lived request logs.
               </li>
             </ul>
           </Section>

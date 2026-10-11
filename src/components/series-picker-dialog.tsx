@@ -1,16 +1,15 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState, type ComponentProps } from "react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import type { ComponentProps } from "react";
+import { DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { useSeriesPref } from "@/lib/prefs";
 import { SeriesPicker } from "./series-picker";
 
 /**
- * The picker panel shared by the home modal and the header's Series switcher. Fits small screens:
- * the panel is capped to the viewport and the list scrolls under a fixed title row.
- * Named for the view transition when a Series is picked: the panel scales away over the arriving page.
+ * The header's Series switcher panel (phones). Fits small screens: the panel is capped to the
+ * viewport and the list scrolls under a fixed title row. Named for the view transition when a Series
+ * is picked: the panel scales away over the arriving page. The home page shows the full picker
+ * inline instead.
  */
 export function SeriesPickerContent({
   className,
@@ -33,28 +32,5 @@ export function SeriesPickerContent({
         <SeriesPicker compact current={current} onNavigate={onNavigate} />
       </div>
     </DialogContent>
-  );
-}
-
-/**
- * The home page is the series picker, shown as a modal. Dismissing it returns the viewer to their
- * last viewed Series; a first-time viewer has to pick one.
- */
-export function SeriesPickerDialog() {
-  const router = useRouter();
-  const { value: remembered } = useSeriesPref();
-  const [open, setOpen] = useState(true);
-
-  function onOpenChange(next: boolean) {
-    if (next) return setOpen(true);
-    if (!remembered) return;
-    setOpen(false);
-    router.push(`/${remembered}`);
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <SeriesPickerContent showCloseButton={Boolean(remembered)} />
-    </Dialog>
   );
 }

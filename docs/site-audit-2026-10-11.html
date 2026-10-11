@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>motorsportsinfo.app Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: an FIA-style bulletin. Document header box, a timing-screen summary, a numbered race plan,
+   then findings set like stewards' decisions (Fact / Why it matters / Fix / Where). Sticky index on wide screens. */
+:root {
+  --paper: #f4f5f8;
+  --surface: #ffffff;
+  --ink: #15171c;
+  --muted: #5a5f6d;
+  --rule: #d8dbe3;
+  --code-bg: #eaecf2;
+  --accent: #5b1fc4;
+  --high: #c0281b;
+  --med: #a86400;
+  --low: #2759b8;
+  --ok: #1e7a45;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f1014; --surface: #16181e; --ink: #e8e9ee; --muted: #9ba0ad; --rule: #2a2d36;
+    --code-bg: #1d2029; --accent: #a882ff; --high: #ff6f61; --med: #f1a63d; --low: #79a3ff; --ok: #5fd08f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f1014; --surface: #16181e; --ink: #e8e9ee; --muted: #9ba0ad; --rule: #2a2d36;
+  --code-bg: #1d2029; --accent: #a882ff; --high: #ff6f61; --med: #f1a63d; --low: #79a3ff; --ok: #5fd08f;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 16px/1.6 var(--body);
+  padding-inline: 16px;
+  padding-block: 40px 96px;
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 56px; }
+@media (max-width: 880px) { .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; } .index { display: none; } }
+
+a { color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+code { background: var(--code-bg); padding: 0.08em 0.35em; border-radius: 3px; overflow-wrap: anywhere; }
+pre { background: var(--code-bg); padding: 14px 16px; border-radius: 4px; overflow-x: auto; font: 400 13px/1.55 var(--mono); margin: 0; }
+pre code { background: none; padding: 0; font-size: inherit; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+.label { font: 500 11px/1.3 var(--mono); letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+
+/* Index */
+.index { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; display: grid; gap: 18px; }
+.index ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.index a { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; color: var(--ink); text-decoration: none; font-size: 14px; border-bottom: 1px solid transparent; }
+.index a:hover { border-bottom-color: var(--rule); }
+.index .n { font: 400 12px/1.6 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+main { display: grid; gap: 72px; min-width: 0; }
+
+/* Document header, after the FIA bulletin block */
+.doc-head { display: grid; gap: 28px; }
+.masthead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; border-bottom: 3px solid var(--ink); padding-bottom: 12px; }
+.masthead .site { font: 700 15px/1 var(--display); font-stretch: 112%; letter-spacing: 0.02em; }
+h1 { font-size: clamp(2.4rem, 6vw, 4rem); font-weight: 800; font-stretch: 118%; line-height: 0.98; letter-spacing: -0.02em; }
+.lede { max-width: 64ch; font-size: 1.08rem; color: var(--ink); margin: 0; }
+.fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--rule); background: var(--surface); }
+.fields > div { padding: 10px 14px; border-right: 1px solid var(--rule); display: grid; gap: 2px; min-width: 0; }
+.fields > div:last-child { border-right: 0; }
+.fields .v { font: 500 14px/1.4 var(--mono); overflow-wrap: anywhere; }
+@media (max-width: 640px) { .fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fields > div:nth-child(2) { border-right: 0; } .fields > div:nth-child(-n+2) { border-bottom: 1px solid var(--rule); } }
+
+section > h2 { font-size: 1.6rem; font-weight: 700; font-stretch: 110%; letter-spacing: -0.01em; display: flex; align-items: baseline; gap: 14px; }
+section > h2 .num { font: 500 13px/1 var(--mono); color: var(--muted); letter-spacing: 0.06em; }
+.section-intro { max-width: 64ch; color: var(--muted); margin: 10px 0 0; }
+
+/* Timing-screen summary */
+.summary { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 40px; margin-top: 22px; }
+@media (max-width: 760px) { .summary { grid-template-columns: minmax(0, 1fr); } }
+.tower-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+.tower th, .tower td { padding: 7px 10px; border-bottom: 1px solid var(--rule); text-align: right; font: 400 14px/1.3 var(--mono); }
+.tower th { font: 500 11px/1.3 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--ink); }
+.tower th:first-child, .tower td:first-child { text-align: left; font-family: var(--body); font-size: 14px; }
+.tower td a { color: var(--ink); text-decoration: none; }
+.tower td a:hover { text-decoration: underline; }
+.tower tfoot td { border-bottom: 0; border-top: 1px solid var(--ink); font-weight: 500; }
+.tower .h { color: var(--high); } .tower .m { color: var(--med); } .tower .l { color: var(--low); }
+.tower .zero { color: var(--rule); }
+.verdict { display: grid; gap: 14px; align-content: start; }
+.verdict p { margin: 0; }
+.checks { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; font-size: 14px; }
+.checks li { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 10px; }
+.checks .pass { font: 500 11px/1.9 var(--mono); letter-spacing: 0.06em; color: var(--ok); }
+
+/* Race plan */
+.plan { list-style: none; margin: 22px 0 0; padding: 0; counter-reset: p; border-top: 1px solid var(--rule); }
+.plan li { counter-increment: p; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 4px 14px; padding: 12px 0; border-bottom: 1px solid var(--rule); align-items: baseline; }
+.plan li::before { content: "P" counter(p); font: 600 15px/1.4 var(--mono); color: var(--muted); }
+.plan .what { min-width: 0; }
+.plan .what a { font-weight: 500; color: var(--ink); text-decoration: none; }
+.plan .what a:hover { text-decoration: underline; }
+.plan .what span { display: block; color: var(--muted); font-size: 14px; }
+.plan .meta { display: flex; gap: 6px; align-items: center; }
+
+/* Chips */
+.sev { font: 600 11px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 7px 3px; border: 1px solid currentColor; border-radius: 2px; white-space: nowrap; }
+.sev.high { color: var(--high); } .sev.med { color: var(--med); } .sev.low { color: var(--low); }
+.effort { font: 500 11px/1 var(--mono); letter-spacing: 0.06em; color: var(--muted); white-space: nowrap; }
+
+/* Filter bar */
+.filters { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 12px 0; border-block: 1px solid var(--rule); position: sticky; top: env(safe-area-inset-top, 0px); background: var(--paper); z-index: 2; }
+.seg { display: inline-flex; border: 1px solid var(--rule); background: var(--surface); }
+.seg button { font: 500 12px/1 var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); background: none; border: 0; border-right: 1px solid var(--rule); padding: 9px 12px; cursor: pointer; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.toggle { display: inline-flex; gap: 8px; align-items: center; font-size: 14px; color: var(--muted); cursor: pointer; }
+.progress { font: 400 13px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Findings */
+.area { display: grid; gap: 0; }
+.area > h2 { padding-bottom: 6px; }
+.finding { padding: 26px 0 28px; border-bottom: 1px solid var(--rule); display: grid; gap: 14px; }
+.finding:first-of-type { border-top: 1px solid var(--ink); margin-top: 18px; }
+.f-head { display: grid; grid-template-columns: 74px minmax(0, 1fr) auto; gap: 6px 14px; align-items: baseline; }
+.f-id { font: 600 13px/1.5 var(--mono); color: var(--muted); }
+.f-head h3 { font-size: 1.18rem; font-weight: 650; font-stretch: 104%; line-height: 1.3; }
+.f-tags { display: flex; gap: 8px; align-items: center; justify-self: end; }
+.f-body { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 8px 14px; margin: 0; }
+.f-body dt { font: 500 11px/2.1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.f-body dd { margin: 0; min-width: 0; max-width: 70ch; }
+.f-body dd p { margin: 0 0 8px; } .f-body dd p:last-child { margin: 0; }
+.f-body dd ul { margin: 0; padding-left: 18px; }
+.f-body dd pre { max-width: 100%; margin-top: 8px; }
+.done-box { display: inline-flex; align-items: center; gap: 6px; font: 500 11px/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); cursor: pointer; }
+.done-box input { width: 16px; height: 16px; accent-color: var(--ok); margin: 0; }
+.finding.is-done h3 { text-decoration: line-through; text-decoration-thickness: 1px; color: var(--muted); }
+.finding.is-done .f-body { opacity: 0.55; }
+@media (max-width: 640px) {
+  .f-head { grid-template-columns: minmax(0, 1fr); }
+  .f-tags { justify-self: start; flex-wrap: wrap; }
+  .f-body { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .f-body dd { margin-bottom: 10px; }
+  .plan li { grid-template-columns: 38px minmax(0, 1fr); }
+  .plan .meta { grid-column: 2; }
+}
+
+.method { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; margin-top: 20px; }
+.method ul { margin: 6px 0 0; padding-left: 18px; font-size: 15px; }
+.method li { margin-bottom: 4px; }
+@media (max-width: 640px) { .method { grid-template-columns: minmax(0, 1fr); } }
+footer.end { border-top: 3px solid var(--ink); padding-top: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="wrap">
+  <nav class="index" aria-label="Sections">
+    <span class="label">Index</span>
+    <ol>
+      <li><a href="#summary">Summary <span class="n">01</span></a></li>
+      <li><a href="#plan">Race plan <span class="n">02</span></a></li>
+      <li><a href="#security">Security <span class="n">5</span></a></li>
+      <li><a href="#privacy">Privacy <span class="n">2</span></a></li>
+      <li><a href="#spoilers">Spoilers <span class="n">3</span></a></li>
+      <li><a href="#ops">Reliability &amp; ops <span class="n">5</span></a></li>
+      <li><a href="#perf">Performance <span class="n">5</span></a></li>
+      <li><a href="#seo">SEO &amp; PWA <span class="n">6</span></a></li>
+      <li><a href="#a11y">Accessibility <span class="n">1</span></a></li>
+      <li><a href="#ux">UX &amp; content <span class="n">4</span></a></li>
+      <li><a href="#code">Code health <span class="n">4</span></a></li>
+      <li><a href="#method">Method &amp; limits <span class="n">03</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="doc-head">
+      <div class="masthead">
+        <span class="site">MOTORSPORTSINFO.APP</span>
+        <span class="label">Site audit · Document 01</span>
+      </div>
+      <h1>Site audit</h1>
+      <p class="lede">A full pass over the codebase, the production build and the live site. The engineering is careful and the checks are all green. What needs work is the edge that faces the public internet, the accuracy of the privacy promise, and a few places where spoilers slip past the spoiler guards.</p>
+      <div class="fields" role="group" aria-label="Document details">
+        <div><span class="label">Date</span><span class="v">11 Oct 2026</span></div>
+        <div><span class="label">Commit</span><span class="v">36b68d6 (main)</span></div>
+        <div><span class="label">Scope</span><span class="v">Code, build, live site</span></div>
+        <div><span class="label">Findings</span><span class="v">35 · 3 high</span></div>
+      </div>
+    </header>
+
+    <section id="summary" aria-labelledby="summary-h">
+      <h2 id="summary-h"><span class="num">01</span>Summary</h2>
+      <div class="summary">
+        <div class="tower-wrap">
+          <table class="tower">
+            <thead><tr><th scope="col">Area</th><th scope="col">High</th><th scope="col">Med</th><th scope="col">Low</th><th scope="col">Total</th></tr></thead>
+            <tbody>
+              <tr><td><a href="#security">Security</a></td><td class="h">2</td><td class="m">2</td><td class="l">1</td><td>5</td></tr>
+              <tr><td><a href="#privacy">Privacy</a></td><td class="h">1</td><td class="zero">0</td><td class="l">1</td><td>2</td></tr>
+              <tr><td><a href="#spoilers">Spoilers</a></td><td class="zero">0</td><td class="m">2</td><td class="l">1</td><td>3</td></tr>
+              <tr><td><a href="#ops">Reliability &amp; ops</a></td><td class="zero">0</td><td class="m">2</td><td class="l">3</td><td>5</td></tr>
+              <tr><td><a href="#perf">Performance</a></td><td class="zero">0</td><td class="m">1</td><td class="l">4</td><td>5</td></tr>
+              <tr><td><a href="#seo">SEO &amp; PWA</a></td><td class="zero">0</td><td class="m">2</td><td class="l">4</td><td>6</td></tr>
+              <tr><td><a href="#a11y">Accessibility</a></td><td class="zero">0</td><td class="m">1</td><td class="zero">0</td><td>1</td></tr>
+              <tr><td><a href="#ux">UX &amp; content</a></td><td class="zero">0</td><td class="m">1</td><td class="l">3</td><td>4</td></tr>
+              <tr><td><a href="#code">Code health</a></td><td class="zero">0</td><td class="zero">0</td><td class="l">4</td><td>4</td></tr>
+            </tbody>
+            <tfoot><tr><td>All</td><td class="h">3</td><td class="m">11</td><td class="l">21</td><td>35</td></tr></tfoot>
+          </table>
+        </div>
+        <div class="verdict">
+          <span class="label">Passed scrutineering</span>
+          <ul class="checks">
+            <li><span class="pass">PASS</span><span><code>tsc --noEmit</code>, <code>eslint</code> clean; 415 tests in 38 files pass; <code>next build</code> succeeds.</span></li>
+            <li><span class="pass">PASS</span><span>No TODOs, no stray <code>console.log</code>, no <code>any</code>, no lint suppressions.</span></li>
+            <li><span class="pass">PASS</span><span>Cron routes use a timing-safe bearer check; the PDF relay is pinned to the FIA folder; the Rainbow key never reaches the browser and the tile cap fails closed.</span></li>
+            <li><span class="pass">PASS</span><span>Schedule Changes need two agreeing checks; reminders and pushes are claimed in the database, so overlapping cron runs never double-send.</span></li>
+            <li><span class="pass">PASS</span><span>Skip link, sensible heading order, <code>role="timer"</code> countdown, reduced-motion respected, layout holds at 375 px in light and dark.</span></li>
+            <li><span class="pass">PASS</span><span>Required credits (OpenF1, Open-Meteo, Rainbow.ai, RainViewer, FIA) are on the pages that use the data.</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="plan" aria-labelledby="plan-h">
+      <h2 id="plan-h"><span class="num">02</span>Race plan</h2>
+      <p class="section-intro">The order to work in. The first five are small changes that close the real exposure; the rest improve the product.</p>
+      <ol class="plan">
+        <li><div class="what"><a href="#sec-1">Allowlist push-service hosts and rate-limit subscriptions</a><span>Stops the cron from posting to arbitrary URLs.</span></div><div class="meta"><span class="sev high">High</span><span class="effort">S</span></div></li>
+        <li><div class="what"><a href="#prv-1">Switch analytics to private mode and fix the privacy copy</a><span>One option change; removes the stored identifier.</span></div><div class="meta"><span class="sev high">High</span><span class="effort">S</span></div></li>
+        <li><div class="what"><a href="#sec-2">Upgrade PDF.js to 6.x</a><span>Clears a high-severity advisory on the document viewer.</span></div><div class="meta"><span class="sev high">High</span><span class="effort">M</span></div></li>
+        <li><div class="what"><a href="#sec-4">Tighten the radar tile relay to the Featured Round</a><span>Keeps strangers from burning the monthly Rainbow cap.</span></div><div class="meta"><span class="sev med">Med</span><span class="effort">S</span></div></li>
+        <li><div class="what"><a href="#sec-3">Add security headers</a><span>Start the CSP in report-only mode.</span></div><div class="meta"><span class="sev med">Med</span><span class="effort">S</span></div></li>
+        <li><div class="what"><a href="#spl-2">Give telemetry links a spoiler-safe preview card</a><span>Shared links currently reveal who was quicker.</span></div><div class="meta"><span class="sev med">Med</span><span class="effort">S</span></div></li>
+        <li><div class="what"><a href="#seo-1">Point www at the site</a><span>It does not resolve today.</span></div><div class="meta"><span class="sev med">Med</span><span class="effort">S</span></div></li>
+        <li><div class="what"><a href="#ops-2">Run the checks in CI</a><span>A GitHub Action on every PR.</span></div><div class="meta"><span class="sev med">Med</span><span class="effort">S</span></div></li>
+        <li><div class="what"><a href="#ux-1">Add a footer with donate and contact links</a><span>The non-commercial model depends on donations nobody can make yet.</span></div><div class="meta"><span class="sev med">Med</span><span class="effort">S</span></div></li>
+        <li><div class="what"><a href="#ops-1">Surface Schedule Flags to a human</a><span>They are written and never read.</span></div><div class="meta"><span class="sev med">Med</span><span class="effort">M</span></div></li>
+        <li><div class="what"><a href="#spl-1">Take car numbers out of document URLs</a><span>Hovering a hidden title reveals it.</span></div><div class="meta"><span class="sev med">Med</span><span class="effort">M</span></div></li>
+        <li><div class="what"><a href="#seo-2">Turn the home page into a real page</a><span>A "this weekend" view across all seven Series.</span></div><div class="meta"><span class="sev med">Med</span><span class="effort">M</span></div></li>
+      </ol>
+    </section>
+
+    <div class="filters" role="group" aria-label="Filter findings">
+      <div class="seg" role="group" aria-label="Severity">
+        <button type="button" data-filter="all" aria-pressed="true">All</button>
+        <button type="button" data-filter="high" aria-pressed="false">High</button>
+        <button type="button" data-filter="med" aria-pressed="false">Med</button>
+        <button type="button" data-filter="low" aria-pressed="false">Low</button>
+      </div>
+      <label class="toggle"><input type="checkbox" id="hide-done"> Hide done</label>
+      <span class="progress" id="progress" aria-live="polite">0 of 35 done</span>
+    </div>
+
+    <!-- SECURITY -->
+    <section id="security" class="area" aria-labelledby="security-h">
+      <h2 id="security-h">Security</h2>
+
+      <article class="finding" id="sec-1" data-sev="high">
+        <div class="f-head"><span class="f-id">SEC-1</span><h3>Anyone can make the alerts cron send requests to any URL</h3><div class="f-tags"><span class="sev high">High</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-sec-1">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>The push endpoint is validated only as "an https URL". <code>POST /api/push/subscription</code> has no rate limit, so anyone can register endpoints like <code>https://victim.example/hook</code>. Every minute the alerts cron calls <code>webpush.sendNotification</code> on each matching row.</p></dd>
+          <dt>Why</dt><dd><p>Your functions become a scheduled outbound POST source for whoever registers. A fake endpoint that answers 201 never fails, so it is never pruned, and <code>loadSubscriptions</code> reads every row on every run. A script can grow the table until the 60-second cron times out and real reminders stop.</p></dd>
+          <dt>Fix</dt><dd><p>Accept only the browser push services, and add a Vercel Firewall rate-limit rule on <code>/api/push/subscription</code> (for example 10 requests a minute per IP).</p>
+<pre><code>// src/server/alerts/validation.ts
+const PUSH_HOSTS = [
+  /^fcm\.googleapis\.com$/,               // Chrome, Edge (Chromium), Samsung, Opera
+  /(^|\.)push\.services\.mozilla\.com$/,  // Firefox
+  /^web\.push\.apple\.com$/,              // Safari, iOS Home Screen apps
+  /\.notify\.windows\.com$/,              // legacy Edge / WNS
+];
+const pushEndpoint = httpsUrl.refine(
+  (v) =&gt; PUSH_HOSTS.some((re) =&gt; re.test(new URL(v).hostname)),
+  "Unknown push service",
+);</code></pre></dd>
+          <dt>Where</dt><dd><code>src/server/alerts/validation.ts:32</code>, <code>src/server/alerts/push.ts:33</code>, <code>src/server/alerts/run.ts:38</code></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="sec-2" data-sev="high">
+        <div class="f-head"><span class="f-id">SEC-2</span><h3>PDF.js has a high-severity advisory and renders every FIA Document</h3><div class="f-tags"><span class="sev high">High</span><span class="effort">Effort M</span><label class="done-box"><input type="checkbox" id="done-sec-2">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p><code>pdfjs-dist@5.7.284</code> is inside the range of <a href="https://github.com/advisories/GHSA-hq66-cqwq-w95j">GHSA-hq66-cqwq-w95j</a> (arbitrary JavaScript when a malicious PDF is opened; fixed in 6.2.108). <code>npm audit</code> flags it.</p></dd>
+          <dt>Why</dt><dd><p>The relay only serves files from the FIA's decision-document folder, which keeps the risk low. It still means the site's safety depends on nothing malicious ever landing on fia.com, and the viewer runs on your origin, next to the push subscription.</p></dd>
+          <dt>Fix</dt><dd><p>Upgrade to <code>pdfjs-dist@6.4.299</code>. It is a major bump: re-check <code>getDocument</code>, <code>page.render({ canvas })</code> and <code>TextLayer</code> against the 6.x API, then open a few long documents (classifications, entry lists) in both themes.</p></dd>
+          <dt>Where</dt><dd><code>package.json</code>, <code>src/components/documents/pdf-viewer.tsx</code>, <code>src/components/documents/pdf.worker.ts</code></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="sec-3" data-sev="med">
+        <div class="f-head"><span class="f-id">SEC-3</span><h3>No security headers beyond HSTS</h3><div class="f-tags"><span class="sev med">Med</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-sec-3">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>Live responses for <code>/</code> and <code>/f1</code> carry <code>strict-transport-security: max-age=63072000</code> and nothing else: no CSP, <code>X-Content-Type-Options</code>, <code>Referrer-Policy</code>, <code>Permissions-Policy</code> or frame protection.</p></dd>
+          <dt>Why</dt><dd><p>The site can be framed for clickjacking (the Alerts page asks for notification permission), and there is no backstop if a script injection ever lands.</p></dd>
+          <dt>Fix</dt><dd><p>Add headers in <code>next.config.ts</code> (the Next 16 guide is at <code>node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md</code>). Ship the CSP as report-only for a week, then enforce it.</p>
+<pre><code>async headers() {
+  return [{ source: "/:path*", headers: [
+    { key: "X-Content-Type-Options", value: "nosniff" },
+    { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+    { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+    { key: "Content-Security-Policy-Report-Only", value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https://tilecache.rainviewer.com https://tiles.openfreemap.org",
+      "connect-src 'self' https://collect.tracwell.app https://api.rainviewer.com https://tiles.openfreemap.org",
+      "worker-src 'self' blob:",
+      "frame-ancestors 'none'",
+    ].join("; ") },
+  ]}];
+}</code></pre>
+<p>Once www is sorted (<a href="#seo-1">SEO-1</a>), extend HSTS with <code>includeSubDomains; preload</code>.</p></dd>
+          <dt>Where</dt><dd><code>next.config.ts</code></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="sec-4" data-sev="med">
+        <div class="f-head"><span class="f-id">SEC-4</span><h3>Anyone can drain the Rainbow.ai tile cap</h3><div class="f-tags"><span class="sev med">Med</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-sec-4">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p><code>parseForecastTile</code> accepts a tile near any of the 67 circuits in <code>CIRCUITS</code>, for any snapshot in the last two hours, every offset and every zoom in range. Each new combination is a counted upstream fetch.</p></dd>
+          <dt>Why</dt><dd><p>A short script can walk that space and spend the 30,000-tile month. The cap fails closed, so there is no bill, but the forecast radar quietly drops back to RainViewer's past frames for everyone until the 1st.</p></dd>
+          <dt>Fix</dt><dd><ul><li>Accept only tiles near the F1 Featured Round's circuit (the radar is F1-only).</li><li>Accept only the latest snapshot (and the previous one, for viewers mid-session).</li><li>Add a Firewall rate limit on <code>/api/radar/tiles/*</code>.</li></ul></dd>
+          <dt>Where</dt><dd><code>src/server/radar/rainbow.ts:37</code>, <code>src/server/radar/index.ts:80</code></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="sec-5" data-sev="low">
+        <div class="f-head"><span class="f-id">SEC-5</span><h3>The shadcn CLI ships as a runtime dependency</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-sec-5">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p><code>shadcn</code> is in <code>dependencies</code>. It pulls <code>braces</code>, <code>micromatch</code>, <code>fast-glob</code> and <code>ts-morph</code>, which account for 7 of the 8 high findings in <code>npm audit --omit=dev</code>. The app only needs <code>shadcn/tailwind.css</code>, at build time.</p></dd>
+          <dt>Fix</dt><dd><p>Move <code>shadcn</code> to <code>devDependencies</code>. Vercel installs dev dependencies for the build, so the CSS import keeps working, and the production audit drops to the PDF.js item.</p></dd>
+          <dt>Where</dt><dd><code>package.json</code>, <code>src/app/globals.css:3</code></dd>
+        </dl>
+      </article>
+    </section>
+
+    <!-- PRIVACY -->
+    <section id="privacy" class="area" aria-labelledby="privacy-h">
+      <h2 id="privacy-h">Privacy</h2>
+
+      <article class="finding" id="prv-1" data-sev="high">
+        <div class="f-head"><span class="f-id">PRV-1</span><h3>Analytics stores a persistent ID without consent, and the privacy text says otherwise</h3><div class="f-tags"><span class="sev high">High</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-prv-1">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>Tracwell is created with <code>collectionMode: "product"</code> and <code>consent: "granted"</code>. On the live site this writes <code>tracwell:tw_live_…:identity</code> with an <code>anonymousId</code> to localStorage on first visit. Tracwell's own README says product mode persists identity and to "configure consent before collection where required".</p><p>The About page says preferences "are never sent to us", but the <code>series_selected</code>, <code>timezone_mode_changed</code> and <code>units_changed</code> events send exactly those choices.</p></dd>
+          <dt>Why</dt><dd><p>Storing an identifier for analytics needs consent under the EU ePrivacy rules, and the UK only exempts analytics with clear information and an easy opt-out. A privacy promise that doesn't match the code is the bigger reputational risk for a fan site.</p></dd>
+          <dt>Fix</dt><dd><p>The site never calls <code>identify()</code>, so <code>collectionMode: "private"</code> loses only returning-visitor counts and needs no banner. Then rewrite the Analytics bullet on About to say which choices are counted.</p>
+<pre><code>// src/lib/analytics.ts
+const client = createTracwell({
+  projectKey: TRACWELL_PROJECT_KEY,
+  collectionMode: "private", // nothing written to the device
+  respectDoNotTrack: true,
+});</code></pre></dd>
+          <dt>Where</dt><dd><code>src/lib/analytics.ts:62</code>, <code>src/app/about/page.tsx:151</code></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="prv-2" data-sev="low">
+        <div class="f-head"><span class="f-id">PRV-2</span><h3>The privacy section leaves out third parties the browser talks to</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-prv-2">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>On F1 pages the browser loads map styles and tiles from OpenFreeMap and frames from RainViewer, and every page sends events to <code>collect.tracwell.app</code>. Vercel keeps request logs. None of this is mentioned.</p></dd>
+          <dt>Fix</dt><dd><p>Add one bullet: "Your browser loads map tiles from OpenFreeMap and radar from RainViewer, which see your IP address like any website. Our host, Vercel, keeps short-lived request logs."</p></dd>
+          <dt>Where</dt><dd><code>src/app/about/page.tsx:151</code></dd>
+        </dl>
+      </article>
+    </section>
+
+    <!-- SPOILERS -->
+    <section id="spoilers" class="area" aria-labelledby="spoilers-h">
+      <h2 id="spoilers-h">Spoilers</h2>
+      <p class="section-intro">The site treats Session Results and Telemetry as spoilers and does it well on screen. These are the routes around the guard.</p>
+
+      <article class="finding" id="spl-1" data-sev="med">
+        <div class="f-head"><span class="f-id">SPL-1</span><h3>Hidden car numbers are in the document URLs</h3><div class="f-tags"><span class="sev med">Med</span><span class="effort">Effort M</span><label class="done-box"><input type="checkbox" id="done-spl-1">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>The list blurs "Infringement – Car 27 – Impeding of Car 55", but its link is <code>/f1/documents/2026_singapore_grand_prix_-_infringement_-_car_27_-_impeding_of_car_55</code>. Hovering shows it in the status bar; a long-press on a phone shows it in the preview.</p></dd>
+          <dt>Fix</dt><dd><p>Address viewer pages by Round and document number (<code>/f1/documents/73</code>) and look the file up from the listing. Keep the current slug as a redirect for old links and pushes.</p></dd>
+          <dt>Where</dt><dd><code>src/lib/fia-document-path.ts:6</code>, <code>src/app/[series]/documents/[doc]/page.tsx</code></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="spl-2" data-sev="med">
+        <div class="f-head"><span class="f-id">SPL-2</span><h3>Shared telemetry links reveal the result in the preview card</h3><div class="f-tags"><span class="sev med">Med</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-spl-2">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p><code>generateMetadata</code> always attaches the comparison image. Pasting a plain <code>/f1/telemetry/qualifying</code> link into a chat unfurls a card with the top two drivers' lap times and "XXX quicker by 0.xxx s". Everyone in the group sees it before deciding to click.</p></dd>
+          <dt>Fix</dt><dd><p>Attach the comparison image only when <code>a</code> and <code>b</code> are in the URL (which is what the Share button produces). Otherwise use a neutral card: "Qualifying telemetry · spoiler-safe".</p></dd>
+          <dt>Where</dt><dd><code>src/app/[series]/telemetry/[session]/page.tsx:25</code></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="spl-3" data-sev="low">
+        <div class="f-head"><span class="f-id">SPL-3</span><h3>Spoiler data ships in the page before it is revealed</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort M</span><label class="done-box"><input type="checkbox" id="done-spl-3">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>The <code>/f1</code> HTML contains every finished Session's classification (positions and driver names) in the RSC payload. The telemetry page contains the whole comparison behind <code>SpoilerGate</code>: "Fastest laps" is in the source but not in the DOM.</p></dd>
+          <dt>Why</dt><dd><p>Reader modes, previews and curious viewers see it, and it is a large share of the page weight (<a href="#perf-1">PERF-1</a>).</p></dd>
+          <dt>Fix</dt><dd><p>Load results and telemetry on reveal from a cached route handler, using the same <code>"use cache"</code> functions.</p></dd>
+          <dt>Where</dt><dd><code>src/app/[series]/data.ts:65</code>, <code>src/components/telemetry/spoiler-gate.tsx</code></dd>
+        </dl>
+      </article>
+    </section>
+
+    <!-- OPS -->
+    <section id="ops" class="area" aria-labelledby="ops-h">
+      <h2 id="ops-h">Reliability &amp; ops</h2>
+
+      <article class="finding" id="ops-1" data-sev="med">
+        <div class="f-head"><span class="f-id">OPS-1</span><h3>Schedule Flags are written and never read</h3><div class="f-tags"><span class="sev med">Med</span><span class="effort">Effort M</span><label class="done-box"><input type="checkbox" id="done-ops-1">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p><code>schedule_flags</code> is described as "something a human should look at" (a Session vanished, an unknown Circuit, a failing source). Only the sync reads it, to resolve old flags. <code>source_checks.lastError</code> is the same. Nobody is told.</p></dd>
+          <dt>Why</dt><dd><p>A source that breaks mid-season (a redesigned fiaformula2.com page) shows a stale schedule until someone happens to look at the database.</p></dd>
+          <dt>Fix</dt><dd><p>A daily digest: push to your own subscription, or email, when there are open flags or a Series hasn't synced successfully in 24 hours. A <code>CRON_SECRET</code>-protected <code>/api/status</code> JSON also works with an uptime monitor.</p></dd>
+          <dt>Where</dt><dd><code>src/server/schedule/sync.ts:104</code>, <code>src/db/schema.ts:72</code></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="ops-2" data-sev="med">
+        <div class="f-head"><span class="f-id">OPS-2</span><h3>No CI</h3><div class="f-tags"><span class="sev med">Med</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-ops-2">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>There is no <code>.github/workflows</code>. The 415 tests, typecheck and lint only run when someone remembers. Vercel builds previews but doesn't run the tests.</p></dd>
+          <dt>Fix</dt><dd><p>One workflow on pull requests and pushes to main: <code>npm ci</code>, <code>npm run typecheck</code>, <code>npm run lint</code>, <code>npm test</code>. Under a minute today.</p></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="ops-3" data-sev="low">
+        <div class="f-head"><span class="f-id">OPS-3</span><h3>No error page</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-ops-3">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>There is no <code>app/error.tsx</code> or <code>app/global-error.tsx</code>. With a database, a failed schedule read throws by design, and a cold cache then shows Next's unbranded error screen.</p></dd>
+          <dt>Fix</dt><dd><p>Add an <code>error.tsx</code> in the style of the 404 ("Red flag"), with a retry button, the Series list and a link to the calendar feed.</p></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="ops-4" data-sev="low">
+        <div class="f-head"><span class="f-id">OPS-4</span><h3>The alerts cron reads every subscription every minute</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort M</span><label class="done-box"><input type="checkbox" id="done-ops-4">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p><code>runAlerts</code> loads all <code>push_subscriptions</code> rows before checking whether anything is due, then loops subscriptions × Sessions. There are no secondary indexes (<code>sessions.starts_at</code>, <code>schedule_changes.notified_at</code>, <code>fia_documents.notified_at</code>).</p></dd>
+          <dt>Fix</dt><dd><p>Fine at today's size. Before it grows: load subscriptions only when there are due Sessions, changes or documents; filter followers in SQL on the <code>follows</code> jsonb; add the three indexes in a migration.</p></dd>
+          <dt>Where</dt><dd><code>src/server/alerts/run.ts:220</code>, <code>src/db/schema.ts</code></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="ops-5" data-sev="low">
+        <div class="f-head"><span class="f-id">OPS-5</span><h3>Builds hit Open-Meteo hard enough to get 503s</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-ops-5">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>This audit's <code>next build</code> logged "Open-Meteo responded 503" for several circuits while prerendering with 9 workers. Those pages ship with "forecast unavailable" until the 60-second failure cache expires and a visitor triggers a re-render.</p></dd>
+          <dt>Fix</dt><dd><p>Retry once with a short backoff on 429/503 in <code>fetchHourlyForecast</code>.</p></dd>
+          <dt>Where</dt><dd><code>src/server/weather/open-meteo.ts:99</code></dd>
+        </dl>
+      </article>
+    </section>
+
+    <!-- PERFORMANCE -->
+    <section id="perf" class="area" aria-labelledby="perf-h">
+      <h2 id="perf-h">Performance</h2>
+
+      <article class="finding" id="perf-1" data-sev="med">
+        <div class="f-head"><span class="f-id">PERF-1</span><h3>Series pages with a busy Round are heavy</h3><div class="f-tags"><span class="sev med">Med</span><span class="effort">Effort M</span><label class="done-box"><input type="checkbox" id="done-perf-1">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>Measured HTML: <code>/f1</code> 130 KB (77 KB of it inline RSC payload in 38 scripts), <code>/wec</code> 90 KB, <code>/motogp</code> 86 KB, against about 38 KB for <code>/f3</code> or <code>/fe</code>. The F1 payload carries all 72 FIA document rows (8 are shown), full classifications and forecasts.</p></dd>
+          <dt>Fix</dt><dd><ul><li>Send the first 8 documents and fetch the rest on "Show all".</li><li>Load results on reveal (<a href="#spl-3">SPL-3</a>).</li><li>Trim forecast objects to the fields the row shows.</li></ul></dd>
+          <dt>Where</dt><dd><code>src/app/[series]/data.ts</code>, <code>src/components/round/round-documents.tsx:103</code></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="perf-2" data-sev="low">
+        <div class="f-head"><span class="f-id">PERF-2</span><h3>The PDF viewer waits for every page before showing the first</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-perf-2">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>The viewer awaits <code>pdf.getPage(n)</code> for every page in sequence to collect sizes, then renders. A 40-page classification shows a skeleton until all 40 are parsed.</p></dd>
+          <dt>Fix</dt><dd><p>Render page 1 as soon as it resolves and use its size as the placeholder for the rest (FIA pages are all A4), or fetch the sizes with <code>Promise.all</code>.</p></dd>
+          <dt>Where</dt><dd><code>src/components/documents/pdf-viewer.tsx:62</code></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="perf-3" data-sev="low">
+        <div class="f-head"><span class="f-id">PERF-3</span><h3>Entrance animations hold back the first readable frame</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-perf-3">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>The Round name fades in word by word from an 8 px blur over about a second, and the Session list starts at opacity 0. On a phone the first screenshot after load was a blurred title over an empty page.</p></dd>
+          <dt>Fix</dt><dd><p>Keep the motion, but start the headline and Session times visible and animate only <code>transform</code>. People open this page to read a time, often in a hurry before a Session.</p></dd>
+          <dt>Where</dt><dd><code>src/app/globals.css:346</code>, <code>src/lib/motion.ts</code></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="perf-4" data-sev="low">
+        <div class="f-head"><span class="f-id">PERF-4</span><h3>Two icon libraries for one icon</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-perf-4">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p><code>lucide-react</code> is used everywhere; <code>@hugeicons/react</code> and <code>@hugeicons/core-free-icons</code> are used only in <code>round-hero.tsx</code>.</p></dd>
+          <dt>Fix</dt><dd><p>Replace those icons with Lucide equivalents (or inline SVG) and drop both Hugeicons packages.</p></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="perf-5" data-sev="low">
+        <div class="f-head"><span class="f-id">PERF-5</span><h3>Garbage document and telemetry URLs fill the CDN cache</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-perf-5">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p><code>/f1/documents/nonexistent</code> and <code>/f1/telemetry/nope</code> answer 200 and are cached at the edge (<code>x-vercel-cache: HIT</code>, age six hours). Any string makes a new cache entry.</p></dd>
+          <dt>Fix</dt><dd><p>Resolved by <a href="#seo-3">SEO-3</a>: return a real 404 before anything streams.</p></dd>
+        </dl>
+      </article>
+    </section>
+
+    <!-- SEO -->
+    <section id="seo" class="area" aria-labelledby="seo-h">
+      <h2 id="seo-h">SEO &amp; PWA</h2>
+
+      <article class="finding" id="seo-1" data-sev="med">
+        <div class="f-head"><span class="f-id">SEO-1</span><h3>www.motorsportsinfo.app does not resolve</h3><div class="f-tags"><span class="sev med">Med</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-seo-1">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p><code>curl https://www.motorsportsinfo.app/</code> fails with "Could not resolve host". Anyone who types www gets a browser error.</p></dd>
+          <dt>Fix</dt><dd><p>Add <code>www</code> as a domain on the Vercel project, set to redirect (308) to the apex, and add the DNS record Vercel asks for.</p></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="seo-2" data-sev="med">
+        <div class="f-head"><span class="f-id">SEO-2</span><h3>The home page is a modal over an empty page</h3><div class="f-tags"><span class="sev med">Med</span><span class="effort">Effort M</span><label class="done-box"><input type="checkbox" id="done-seo-2">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>The visible page is the Series picker dialog. The <code>h1</code> and the Series links are <code>sr-only</code>. A first-time visitor gets no close button; a returning one finds that ✕ navigates to their last Series rather than closing anything.</p></dd>
+          <dt>Why</dt><dd><p>The domain's strongest URL carries almost no visible content, and the site has no answer to the question most fans actually ask: what's on this weekend?</p></dd>
+          <dt>Fix</dt><dd><p>Render the full <code>SeriesPicker</code> (the non-compact version already exists) as the page, with each row showing that Series' Featured Round and its next Session in Viewer Time. Keep the header switcher as the dialog.</p></dd>
+          <dt>Where</dt><dd><code>src/app/page.tsx</code>, <code>src/components/series-picker-dialog.tsx:43</code></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="seo-3" data-sev="low">
+        <div class="f-head"><span class="f-id">SEO-3</span><h3>Document and telemetry pages answer 200 for missing items</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort M</span><label class="done-box"><input type="checkbox" id="done-seo-3">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>Known and commented in the code: the shell streams before params are read. Both pages are <code>noindex</code>, so search is unaffected, but link checkers, uptime monitors and the CDN treat them as success.</p></dd>
+          <dt>Fix</dt><dd><p>Telemetry slugs are a small known set: validate them before streaming, as the Series route does with <code>ensureStatic</code>. Document numbers (<a href="#spl-1">SPL-1</a>) can be validated the same way.</p></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="seo-4" data-sev="low">
+        <div class="f-head"><span class="f-id">SEO-4</span><h3>Uppercase Series URLs 404</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-seo-4">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p><code>/F1</code> returns 404. People type <code>/F1</code>, <code>/WEC</code> and <code>/MotoGP</code>, and other sites link that way.</p></dd>
+          <dt>Fix</dt><dd><p>Permanent redirects for the case variants of the seven Series ids in <code>vercel.ts</code>, or one lowercase rule in a proxy.</p></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="seo-5" data-sev="low">
+        <div class="f-head"><span class="f-id">SEO-5</span><h3>Sitemap lastmod changes every five minutes</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-seo-5">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>Each Series' <code>lastModified</code> is <code>renderedAt</code>, the time the cache last re-rendered, not the time the schedule changed. Google learns to ignore a lastmod that always moves.</p></dd>
+          <dt>Fix</dt><dd><p>Use the newest <code>updated_at</code> across the Featured Round and its Sessions (or the newest FIA Document time).</p></dd>
+          <dt>Where</dt><dd><code>src/app/sitemap.ts:23</code></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="seo-6" data-sev="low">
+        <div class="f-head"><span class="f-id">SEO-6</span><h3>Manifest and theme colour disagree; the install experience is bare</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-seo-6">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>The manifest's <code>theme_color</code> is purple (<code>#6b26d9</code>) while the page's <code>themeColor</code> is white or near-black, so the installed app's title bar doesn't match the browser. The manifest has no <code>id</code>, <code>shortcuts</code> or <code>screenshots</code>. iOS users must install to get reminders, so this screen matters.</p></dd>
+          <dt>Fix</dt><dd><p>Match the colours, add <code>id: "/"</code>, add shortcuts for the seven Series and Alerts, and add two screenshots for Android's richer install sheet.</p></dd>
+          <dt>Where</dt><dd><code>src/app/manifest.ts</code>, <code>src/app/layout.tsx:43</code></dd>
+        </dl>
+      </article>
+    </section>
+
+    <!-- A11Y -->
+    <section id="a11y" class="area" aria-labelledby="a11y-h">
+      <h2 id="a11y-h">Accessibility</h2>
+
+      <article class="finding" id="a11y-1" data-sev="med">
+        <div class="f-head"><span class="f-id">A11Y-1</span><h3>Results and Telemetry chips are 16 px tall</h3><div class="f-tags"><span class="sev med">Med</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-a11y-1">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>Measured on <code>/f1</code>: each RESULTS and TELEMETRY chip is 16 px high and they sit side by side. WCAG 2.2 (2.5.8) asks for 24 × 24 px targets or equivalent spacing. They are the only way into two features on a phone.</p></dd>
+          <dt>Fix</dt><dd><p>Keep the chip's look and grow the hit area: <code>relative</code> plus an <code>after:absolute after:-inset-2</code> pseudo-element, or <code>min-h-6</code> with more padding.</p></dd>
+          <dt>Where</dt><dd><code>src/components/round/session-list.tsx</code></dd>
+        </dl>
+      </article>
+    </section>
+
+    <!-- UX -->
+    <section id="ux" class="area" aria-labelledby="ux-h">
+      <h2 id="ux-h">UX &amp; content</h2>
+
+      <article class="finding" id="ux-1" data-sev="med">
+        <div class="f-head"><span class="f-id">UX-1</span><h3>No footer: nowhere to donate, report a wrong time or get in touch</h3><div class="f-tags"><span class="sev med">Med</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-ux-1">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>ADR 0001 says "donations only", and RainViewer's permission rests on the site being donation-funded, but there is no donate link anywhere. There is also no contact or feedback link, though fans are often first to spot a wrong Session time.</p></dd>
+          <dt>Fix</dt><dd><p>A slim footer on every page: About · Alerts · Report a wrong time · Donate. Show <code>hello@motorsportsinfo.app</code> (already the VAPID subject) as text as well as a link.</p></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="ux-2" data-sev="low">
+        <div class="f-head"><span class="f-id">UX-2</span><h3>FIA Document times don't say which time zone they're in</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-ux-2">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>The Session table header reads "TIME · GMT+1"; the documents table header reads only "PUBLISHED" ("Sat 19:47"). The viewer page shows "Published Saturday 10 October, 19:47" while the PDF itself says 11 October, 02:45 (Track Time). Readers will think one is wrong.</p></dd>
+          <dt>Fix</dt><dd><p>"PUBLISHED · GMT+1" on the list, and the zone after the time on the viewer page.</p></dd>
+          <dt>Where</dt><dd><code>src/components/round/round-documents.tsx</code>, <code>src/components/documents/document-published.tsx</code></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="ux-3" data-sev="low">
+        <div class="f-head"><span class="f-id">UX-3</span><h3>The calendar feed promises faster updates than Google Calendar delivers</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-ux-3">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>The card says "Times update when the schedule changes". The feed asks for hourly refresh, but Google Calendar re-reads subscribed feeds only every 12 to 24 hours and ignores the hint.</p></dd>
+          <dt>Fix</dt><dd><p>"Apple Calendar and Outlook pick up changes within about an hour; Google Calendar can take a day. Turn on reminders to hear about late changes straight away."</p></dd>
+          <dt>Where</dt><dd><code>src/components/alerts/calendar-feed-card.tsx</code></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="ux-4" data-sev="low">
+        <div class="f-head"><span class="f-id">UX-4</span><h3>Screen readers hear "MotoGP (MotoGP)" on the Alerts page</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-ux-4">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>Each Series legend adds the full name in a visually hidden bracket. For MotoGP the short and full names are the same, so it is read twice.</p></dd>
+          <dt>Fix</dt><dd><p>Skip the hidden name when it equals the short name, here and in the Document Alerts section.</p></dd>
+          <dt>Where</dt><dd><code>src/components/alerts/selection-grid.tsx:30</code></dd>
+        </dl>
+      </article>
+    </section>
+
+    <!-- CODE -->
+    <section id="code" class="area" aria-labelledby="code-h">
+      <h2 id="code-h">Code health</h2>
+
+      <article class="finding" id="code-1" data-sev="low">
+        <div class="f-head"><span class="f-id">CODE-1</span><h3>Nothing stops server code reaching the browser bundle</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-code-1">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p>Five client components on the Alerts page import from <code>src/server/alerts/selection.ts</code> and <code>document-alerts.ts</code>. Both say "No server-only imports here" in a comment, and that comment is the only guard: no file uses the <code>server-only</code> package, so a future import of the database client or <code>VAPID_PRIVATE_KEY</code> into those modules would not fail the build.</p></dd>
+          <dt>Fix</dt><dd><p>Move the pure selection and Document Alert helpers to <code>src/domain/</code>, and add <code>import "server-only"</code> to <code>src/db/client.ts</code>, <code>src/server/alerts/push.ts</code> and <code>src/server/radar/index.ts</code>.</p></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="code-2" data-sev="low">
+        <div class="f-head"><span class="f-id">CODE-2</span><h3>Leftover create-next-app files</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-code-2">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><p><code>public/file.svg</code>, <code>globe.svg</code>, <code>next.svg</code>, <code>vercel.svg</code> and <code>window.svg</code> are unused and publicly served.</p></dd>
+          <dt>Fix</dt><dd><p>Remove them.</p></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="code-3" data-sev="low">
+        <div class="f-head"><span class="f-id">CODE-3</span><h3>Small duplications</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-code-3">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><ul><li>The cron bearer check is copied into both cron routes (<code>isAuthorized</code> and <code>authorised</code>).</li><li><code>SITE_ORIGIN</code> in <code>ics.ts</code> repeats <code>SITE_URL</code> from <code>lib/site.ts</code>.</li><li>Three <code>ui/</code> files import <code>cn</code> from <code>"cn"</code>; everything else uses <code>@/lib/utils</code>.</li></ul></dd>
+          <dt>Fix</dt><dd><p>One <code>isCronRequest()</code> in <code>src/server/cron.ts</code>; import <code>SITE_URL</code>; point the three imports at <code>@/lib/utils</code>.</p></dd>
+        </dl>
+      </article>
+
+      <article class="finding" id="code-4" data-sev="low">
+        <div class="f-head"><span class="f-id">CODE-4</span><h3>Dependency and config drift</h3><div class="f-tags"><span class="sev low">Low</span><span class="effort">Effort S</span><label class="done-box"><input type="checkbox" id="done-code-4">Done</label></div></div>
+        <dl class="f-body">
+          <dt>Fact</dt><dd><ul><li>Minor updates waiting: <code>@base-ui/react</code> 1.8 → 1.9, <code>lucide-react</code> 1.53 → 1.55.</li><li>Majors to plan, not rush: ESLint 10, TypeScript 7.</li><li>Vitest warns that <code>vitest.config.ts</code> is ESM loaded as CommonJS, which a future Vite will reject.</li></ul></dd>
+          <dt>Fix</dt><dd><p>Take the minors now; rename the config to <code>vitest.config.mts</code>. Consider Renovate or Dependabot once CI exists (<a href="#ops-2">OPS-2</a>).</p></dd>
+        </dl>
+      </article>
+    </section>
+
+    <section id="method" aria-labelledby="method-h">
+      <h2 id="method-h"><span class="num">03</span>Method &amp; limits</h2>
+      <div class="method">
+        <div>
+          <span class="label">What was done</span>
+          <ul>
+            <li>Read the app routes, API routes, server modules, service workers and key client components.</li>
+            <li>Ran typecheck, lint, the test suite, a production build, <code>npm audit</code> and <code>npm outdated</code>.</li>
+            <li>Probed the live site with curl: status codes, headers, cache state and payload sizes on every route type.</li>
+            <li>Walked the live site in a browser at desktop and 375 px, in light and dark, checking headings, hit targets, spoilers and storage.</li>
+          </ul>
+        </div>
+        <div>
+          <span class="label">What wasn't</span>
+          <ul>
+            <li>No Lighthouse or PageSpeed scores: the public PageSpeed API quota was exhausted. Payload sizes stand in.</li>
+            <li>No live push test: the browser used blocks notifications.</li>
+            <li>No load testing of the crons or relays.</li>
+            <li>The privacy and terms points are a developer's reading, not legal advice.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <footer class="end">
+      <span class="label">End of document</span>
+      <span class="label">motorsportsinfo.app · 11 Oct 2026</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  var KEY = "msi-audit-done";
+  var findings = Array.prototype.slice.call(document.querySelectorAll(".finding"));
+  var buttons = Array.prototype.slice.call(document.querySelectorAll("[data-filter]"));
+  var hideDone = document.getElementById("hide-done");
+  var progress = document.getElementById("progress");
+  var filter = "all";
+  var done = {};
+  try { done = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { done = {}; }
+
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(done)); } catch (e) {} }
+
+  function render() {
+    var count = 0;
+    findings.forEach(function (f) {
+      var isDone = !!done[f.id];
+      if (isDone) count++;
+      f.classList.toggle("is-done", isDone);
+      var box = f.querySelector(".done-box input");
+      if (box) box.checked = isDone;
+      var show = (filter === "all" || f.dataset.sev === filter) && !(hideDone.checked && isDone);
+      f.hidden = !show;
+    });
+    document.querySelectorAll(".area").forEach(function (a) {
+      var any = a.querySelector(".finding:not([hidden])");
+      a.hidden = !any;
+    });
+    progress.textContent = count + " of " + findings.length + " done";
+  }
+
+  buttons.forEach(function (b) {
+    b.addEventListener("click", function () {
+      filter = b.dataset.filter;
+      buttons.forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      render();
+    });
+  });
+  hideDone.addEventListener("change", render);
+  findings.forEach(function (f) {
+    var box = f.querySelector(".done-box input");
+    if (!box) return;
+    box.addEventListener("change", function () {
+      if (box.checked) done[f.id] = true; else delete done[f.id];
+      save();
+      render();
+    });
+  });
+  render();
+})();
+</script>
+
+</html>

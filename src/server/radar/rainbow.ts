@@ -15,8 +15,12 @@ export const RAINBOW_API = "https://api.rainbow.ai/tiles/v1";
 const LAYER = "precip";
 /** Palette 8 = RainViewer Universal Blue, the same colours as the past radar. */
 const COLOR = 8;
-/** Rainbow keeps snapshots for 2 hours; we only ever ask for the latest one, so allow a little slack. */
-const MAX_SNAPSHOT_AGE_S = 2 * 60 * 60;
+/**
+ * Snapshots before the latest that are still served. The map keeps the snapshot it was given until its
+ * 5-minute refresh, and /api/radar/snapshot is cached for 2 minutes at the CDN, so a viewer is usually at
+ * most one snapshot behind; the second covers a refresh that failed or was delayed by a sleeping tab.
+ */
+export const PREVIOUS_SNAPSHOTS = 2;
 
 export interface ForecastTile {
   snapshot: number;
@@ -31,12 +35,13 @@ function int(value: string): number | null {
 }
 
 /**
- * The tile a relay request names, or null if it is malformed, outside the forecast window or zooms,
- * or not near any Circuit. `nowS` is the current epoch second.
+ * The tile a relay request names, or null if it is malformed, not the latest snapshot (or one of the
+ * PREVIOUS_SNAPSHOTS before it), outside the forecast window or zooms, or not near one of `circuits`:
+ * the Circuits whose radar map can be open now. Each tile we accept may be a counted upstream fetch.
  */
 export function parseForecastTile(
   params: { snapshot: string; offset: string; z: string; x: string; y: string },
-  nowS: number,
+  latestSnapshot: number,
   circuits: readonly Pick<Circuit, "lat" | "lon">[],
 ): ForecastTile | null {
   const snapshot = int(params.snapshot);
@@ -45,7 +50,12 @@ export function parseForecastTile(
   const x = int(params.x);
   const y = int(params.y);
   if (snapshot === null || offset === null || z === null || x === null || y === null) return null;
-  if (snapshot % FORECAST_STEP_S !== 0 || snapshot > nowS + FORECAST_STEP_S || snapshot < nowS - MAX_SNAPSHOT_AGE_S) {
+  // Never newer than the latest: a snapshot Rainbow hasn't published yet would cache a "not found" tile.
+  if (
+    snapshot % FORECAST_STEP_S !== 0 ||
+    snapshot > latestSnapshot ||
+    snapshot < latestSnapshot - PREVIOUS_SNAPSHOTS * FORECAST_STEP_S
+  ) {
     return null;
   }
   if (offset % FORECAST_STEP_S !== 0 || offset > FORECAST_HORIZON_S) return null;

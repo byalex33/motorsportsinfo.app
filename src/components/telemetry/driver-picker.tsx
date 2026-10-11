@@ -1,7 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useTransition } from "react";
 import { ArrowLeftRightIcon, LoaderCircleIcon, RotateCcwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { TelemetryDriver } from "@/domain/types";
@@ -15,15 +13,16 @@ interface DriverPickerProps {
   drivers: (TelemetryDriver & { hasLap: boolean })[];
   a: string;
   b: string;
+  /** True while the laps of a newly picked pair load. */
+  pending: boolean;
 }
 
 /**
  * The two drivers being compared and their colours, kept in the URL (?a=VER&b=RUS&ca=…&cb=…) so a
- * comparison can be shared as it looks. While the server renders a new pair, the current charts stay up.
+ * comparison can be shared as it looks. Picking only changes the URL: the comparison around the picker fetches
+ * the new pair and keeps the current charts up meanwhile.
  */
-export function DriverPicker({ path, drivers, a, b }: DriverPickerProps) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
+export function DriverPicker({ path, drivers, a, b, pending }: DriverPickerProps) {
   const { picks } = useComparisonColors();
 
   function go(nextA: string, nextB: string, colors: { ca?: string | null; cb?: string | null } = {}) {
@@ -33,7 +32,8 @@ export function DriverPicker({ path, drivers, a, b }: DriverPickerProps) {
     // The chosen channel stays as it is.
     const ch = new URLSearchParams(window.location.search).get("ch");
     if (ch) q.set("ch", ch);
-    startTransition(() => router.replace(`${path}?${q}`, { scroll: false }));
+    // A fresh state (not Next's own) so the router picks up the new query and the comparison fetches the pair.
+    window.history.replaceState(null, "", `${path}?${q}`);
   }
   // A new driver starts from their team colour. Picking the other side's driver swaps the two rather than
   // comparing a driver with themselves; a swap takes each driver's colour with them.

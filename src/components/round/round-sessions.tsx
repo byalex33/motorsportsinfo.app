@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CalendarClockIcon } from "lucide-react";
-import type { ForecastResult, SeriesId, Session, SessionResult } from "@/domain/types";
+import type { ForecastResult, SeriesId, Session } from "@/domain/types";
 import { ENTER, enterDelay } from "@/lib/motion";
 import type { TrackTimeText } from "@/lib/track-time";
 import { DisplayControls } from "./display-controls";
@@ -13,7 +13,8 @@ interface RoundSessionsProps {
   series: SeriesId;
   sessions: Session[];
   forecasts: Record<string, ForecastResult>;
-  results: Record<string, SessionResult>;
+  /** Ids of the finished Sessions with a Session Result. The classification itself loads on reveal. */
+  results: string[];
   /** Linked from finished Sessions that have no Session Result. */
   resultsUrl: string;
   timesConfirmed: boolean;

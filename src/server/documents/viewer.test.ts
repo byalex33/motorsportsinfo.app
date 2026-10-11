@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { FIA_DOCUMENT_FOLDER, fiaDocumentFile, fiaDocumentFileFromSlug, fiaDocumentSource, serveFiaDocument } from "./viewer";
+import { checkFiaDocument, FIA_DOCUMENT_FOLDER, fiaDocumentFile, fiaDocumentFileFromSlug, fiaDocumentSource, serveFiaDocument } from "./viewer";
 
 const FILE = "2026_singapore_grand_prix_-_provisional_sprint_starting_grid.pdf";
 const SOURCE = FIA_DOCUMENT_FOLDER + FILE;
@@ -100,5 +100,23 @@ describe("serveFiaDocument", () => {
     warn.mockRestore();
     expect(res.status).toBe(302);
     expect(res.headers.get("Location")).toBe(SOURCE);
+  });
+});
+
+describe("checkFiaDocument", () => {
+  const status = (code: number) => vi.fn(async () => new Response(null, { status: code }));
+
+  it("asks fia.com for the headers only", async () => {
+    const fetcher = status(200);
+    expect(await checkFiaDocument(FILE, fetcher)).toBe("found");
+    expect(fetcher).toHaveBeenCalledWith(SOURCE, expect.objectContaining({ method: "HEAD" }));
+  });
+
+  it("is missing only when fia.com says so", async () => {
+    expect(await checkFiaDocument(FILE, status(404))).toBe("missing");
+    expect(await checkFiaDocument(FILE, status(410))).toBe("missing");
+    expect(await checkFiaDocument("../x.pdf", status(200))).toBe("missing");
+    expect(await checkFiaDocument(FILE, status(503))).toBe("unknown");
+    expect(await checkFiaDocument(FILE, vi.fn(async () => Promise.reject(new Error("ECONNRESET"))))).toBe("unknown");
   });
 });

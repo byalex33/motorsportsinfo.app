@@ -343,17 +343,18 @@
   --ease-expo: var(--motion-out);
 }
 
+/* Entrances never hide what a viewer came to read: text and data start at least half visible and
+   sharp (no blur), and only rise into place, so the first frame after load is already legible. */
 @keyframes enter-rise {
   from {
-    opacity: 0;
-    transform: translateY(10px);
+    opacity: 0.5;
+    transform: translateY(8px);
   }
 }
 @keyframes enter-word {
   from {
-    opacity: 0;
-    transform: translateY(0.32em);
-    filter: blur(8px);
+    opacity: 0.45;
+    transform: translateY(0.2em);
   }
 }
 @keyframes enter-fade {
@@ -363,8 +364,7 @@
 }
 @keyframes enter-focus {
   from {
-    opacity: 0;
-    filter: blur(3px);
+    opacity: 0.5;
   }
 }
 @keyframes enter-pop {
@@ -376,8 +376,14 @@
 }
 @keyframes enter-scale {
   from {
-    opacity: 0;
+    opacity: 0.5;
     transform: translateY(6px) scale(0.985);
+  }
+}
+/* Reduced motion: no movement, just a short settle from mostly visible. */
+@keyframes enter-settle {
+  from {
+    opacity: 0.6;
   }
 }
 @keyframes dialog-in {
@@ -471,21 +477,21 @@
    entrance (a time inside a staggered row) runs on its own clock. Fill mode is backwards
    only, so nothing keeps a transform (or stacking context) once it lands. */
 @utility enter-rise {
-  animation: enter-rise 560ms var(--motion-out) backwards;
+  animation: enter-rise 480ms var(--motion-out) backwards;
 }
 @utility enter-scale {
   animation: enter-scale 480ms var(--motion-out) backwards;
 }
 @utility enter-word {
   display: inline-block;
-  animation: enter-word 720ms var(--motion-out) backwards;
+  animation: enter-word 480ms var(--motion-out) backwards;
 }
 @utility enter-fade {
   animation: enter-fade 240ms var(--motion-out) backwards;
 }
-/* Data arriving after hydration (times, forecasts): a soft focus-in, no movement. */
+/* Data arriving after hydration (times, forecasts): a soft brighten, no movement, no blur. */
 @utility enter-focus {
-  animation: enter-focus 320ms var(--motion-out) backwards;
+  animation: enter-focus 240ms var(--motion-out) backwards;
 }
 @utility enter-pop {
   animation: enter-pop 420ms var(--motion-spring) backwards;
@@ -717,7 +723,7 @@
 ::view-transition-old(.nav-indicator-out) {
   animation: fade-out 150ms var(--motion-in) both;
 }
-/* The Series picker (home) leaves with a quick scale-out over the arriving Series page.
+/* The header's Series picker leaves with a quick scale-out over the arriving Series page.
    Only one dialog is ever open, so the backdrop can carry a fixed name. */
 [data-slot="dialog-overlay"] {
   view-transition-name: dialog-backdrop;
@@ -753,6 +759,8 @@
   overflow: clip;
   opacity: 1;
   line-height: 1;
+  letter-spacing: normal;
+  word-spacing: normal;
   text-align: initial;
   -webkit-text-size-adjust: none;
   text-size-adjust: none;
@@ -767,6 +775,7 @@
   white-space: pre;
   cursor: text;
   transform-origin: 0% 0%;
+  user-select: text;
 }
 .pdf-text-layer > :not(.markedContent),
 .pdf-text-layer .markedContent span:not(.markedContent) {
@@ -787,6 +796,7 @@
 .pdf-text-layer ::selection {
   background: rgb(0 0 255 / 0.25);
   background: color-mix(in srgb, AccentColor, transparent 75%);
+  color: transparent;
 }
 .pdf-text-layer br::selection {
   background: transparent;
@@ -808,7 +818,7 @@
   .enter-word,
   .enter-focus,
   .enter-fade {
-    animation: enter-fade 200ms ease-out backwards !important;
+    animation: enter-settle 200ms ease-out backwards !important;
   }
   .animate-ping,
   .live-breathe,

@@ -1,5 +1,41 @@
-import { describe, expect, it } from "vitest";
-import { classifyPushError, mapWithConcurrency } from "./push";
+import { describe, expect, it, vi } from "vitest";
+import type { OutgoingPush } from "./types";
+
+const sendNotification = vi.fn(async () => ({ statusCode: 201 }));
+vi.mock("web-push", () => ({ default: { sendNotification } }));
+
+const { classifyPushError, mapWithConcurrency, sendPush } = await import("./push");
+
+const vapid = { publicKey: "pub", privateKey: "priv", subject: "mailto:x@example.com" };
+const push = (endpoint: string): OutgoingPush => ({
+  subscription: {
+    id: "sub-1",
+    endpoint,
+    p256dh: "p256dh",
+    auth: "auth",
+    leadMinutes: 15,
+    follows: { f1: ["race"] },
+    documentAlerts: {},
+    timeZone: "UTC",
+    failureCount: 0,
+  },
+  payload: { title: "F1 · Race", body: "Starts in 15 minutes", url: "/f1", tag: "session:f1-x" },
+  ttlSeconds: 900,
+});
+
+describe("sendPush", () => {
+  it("sends to a browser push service", async () => {
+    sendNotification.mockClear();
+    expect(await sendPush(push("https://fcm.googleapis.com/fcm/send/abc"), vapid)).toBe("sent");
+    expect(sendNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it("never sends to an endpoint off the push services, and reports it gone so it is deleted", async () => {
+    sendNotification.mockClear();
+    expect(await sendPush(push("https://victim.example/hook"), vapid)).toBe("gone");
+    expect(sendNotification).not.toHaveBeenCalled();
+  });
+});
 
 describe("classifyPushError", () => {
   it("treats 404 and 410 as a subscription that is gone for good", () => {

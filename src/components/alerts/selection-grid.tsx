@@ -27,7 +27,7 @@ export function SelectionGrid({ follows, onToggle }: SelectionGridProps) {
               <legend className="eyebrow float-left flex w-full items-center gap-2 pb-3 text-foreground">
                 <span aria-hidden className="size-1.5 rounded-full bg-series-gradient" />
                 {series.shortName}
-                <span className="sr-only"> ({series.name})</span>
+                {series.name !== series.shortName && <span className="sr-only"> ({series.name})</span>}
               </legend>
               <ul className="clear-both grid gap-0.5">
                 {series.sessionTypes.map((type) => {
