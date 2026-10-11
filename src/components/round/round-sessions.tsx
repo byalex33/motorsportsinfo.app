@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CalendarClockIcon } from "lucide-react";
 import type { ForecastResult, SeriesId, Session } from "@/domain/types";
+import { DATA_CREDITS } from "@/lib/data-credits";
 import { ENTER, enterDelay } from "@/lib/motion";
 import type { TrackTimeText } from "@/lib/track-time";
 import { DisplayControls } from "./display-controls";
@@ -22,19 +23,6 @@ interface RoundSessionsProps {
   /** Server-rendered Track Time text per Session, shown until the viewer's zone is known. */
   trackTimes: Record<string, TrackTimeText>;
 }
-
-const SPORTSTIMES = { label: "sportstimes/f1", href: "https://github.com/sportstimes/f1" };
-
-/** Where each Series' schedule comes from (ADR 0001). */
-const DATA_CREDITS: Record<SeriesId, { label: string; href: string }> = {
-  f1: { label: "OpenF1", href: "https://openf1.org" },
-  f2: { label: "FIA Formula 2", href: "https://www.fiaformula2.com" },
-  f3: { label: "FIA Formula 3", href: "https://www.fiaformula3.com" },
-  wec: { label: "FIA WEC", href: "https://www.fiawec.com" },
-  fe: SPORTSTIMES,
-  indycar: SPORTSTIMES,
-  motogp: SPORTSTIMES,
-};
 
 /** Display controls and the Round's Sessions in order, cancelled ones included. */
 export function RoundSessions({

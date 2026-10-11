@@ -31,6 +31,11 @@ export function SiteFooter({ className }: { className?: string }) {
               </Link>
             </li>
             <li>
+              <Link href="/calendar" className={link}>
+                Calendar
+              </Link>
+            </li>
+            <li>
               <Link href="/alerts" className={link}>
                 Alerts
               </Link>

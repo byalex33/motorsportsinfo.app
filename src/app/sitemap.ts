@@ -23,7 +23,7 @@ async function seriesUpdatedAt(series: SeriesId, built: Date): Promise<Date> {
   return seriesLastModified({ scheduleUpdatedAt, documents, fallback: built });
 }
 
-// The home page, every Series page, Alerts and About. FIA Document viewer pages are left out: they
+// The home page, every Series page, the Calendar, Alerts and About. FIA Document viewer pages are left out: they
 // last only while their Round is featured and are noindex (the FIA's own pages are the source).
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const built = new Date(await builtAt());
@@ -40,6 +40,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: absoluteUrl("/"), lastModified: home, changeFrequency: "hourly", priority: 1 },
     ...series,
+    // Every Series' Rounds: it changes when any Series page does.
+    { url: absoluteUrl("/calendar"), lastModified: home, changeFrequency: "hourly", priority: 0.8 },
     { url: absoluteUrl("/alerts"), lastModified: built, changeFrequency: "monthly", priority: 0.5 },
     { url: absoluteUrl("/about"), lastModified: built, changeFrequency: "monthly", priority: 0.3 },
   ];
