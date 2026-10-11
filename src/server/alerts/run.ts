@@ -51,6 +51,14 @@ async function loadSubscriptions(db: Db): Promise<AlertSubscription[]> {
     .from(pushSubscriptions);
 }
 
+type LoadSubscriptions = () => Promise<AlertSubscription[]>;
+
+/** Loads the subscriptions at most once per run, and only once something is due: most minutes nothing is. */
+function lazySubscriptions(db: Db): LoadSubscriptions {
+  let loading: Promise<AlertSubscription[]> | null = null;
+  return () => (loading ??= loadSubscriptions(db));
+}
+
 const alertSessionColumns = {
   id: sessions.id,
   series: sessions.series,
@@ -110,14 +118,16 @@ async function claimChanges(db: Db, ids: readonly number[], now: Date): Promise<
   return new Set(rows.map((r) => r.id));
 }
 
-async function runReminders(db: Db, subs: AlertSubscription[], now: Date, send: SendFn) {
-  const due = selectDueReminders(subs, await loadReminderSessions(db, now), now);
+async function runReminders(db: Db, subs: LoadSubscriptions, now: Date, send: SendFn) {
+  const reminderSessions = await loadReminderSessions(db, now);
+  if (reminderSessions.length === 0) return { due: 0, results: [] };
+  const due = selectDueReminders(await subs(), reminderSessions, now);
   if (due.length === 0) return { due: 0, results: [] };
   const fresh = await claimReminders(db, due);
   return { due: due.length, results: await sendAll(fresh, send) };
 }
 
-async function runChanges(db: Db, subs: AlertSubscription[], now: Date, send: SendFn) {
+async function runChanges(db: Db, subs: LoadSubscriptions, now: Date, send: SendFn) {
   const rows: ScheduleChangeRow[] = await db
     .select({
       id: scheduleChanges.id,
@@ -140,13 +150,15 @@ async function runChanges(db: Db, subs: AlertSubscription[], now: Date, send: Se
     .innerJoin(rounds, eq(rounds.id, sessions.roundId))
     .where(inArray(sessions.id, sessionIds));
   const sessionsById = new Map(sessionRows.map((s) => [s.id, s]));
+  // Loaded before claiming, so a failed read leaves the changes for the next run.
+  const subscriptions = await subs();
 
   const claimed = await claimChanges(db, rows.map((r) => r.id), now);
-  const plan = planChangePushes(rows.filter((r) => claimed.has(r.id)), sessionsById, subs, now);
+  const plan = planChangePushes(rows.filter((r) => claimed.has(r.id)), sessionsById, subscriptions, now);
   return { processed: claimed.size, results: await sendAll(plan.pushes, send) };
 }
 
-async function runDocuments(db: Db, subs: AlertSubscription[], now: Date, send: SendFn) {
+async function runDocuments(db: Db, subs: LoadSubscriptions, now: Date, send: SendFn) {
   const rows: DocumentAlertRow[] = await db
     .select({
       url: fiaDocuments.url,
@@ -163,6 +175,7 @@ async function runDocuments(db: Db, subs: AlertSubscription[], now: Date, send: 
     .orderBy(fiaDocuments.firstSeenAt)
     .limit(DOCUMENTS_PER_RUN);
   if (rows.length === 0) return { processed: 0, results: [] };
+  const subscriptions = await subs();
 
   // Claimed by setting notifiedAt, so overlapping runs never push a document twice.
   const claimed = await db
@@ -171,7 +184,7 @@ async function runDocuments(db: Db, subs: AlertSubscription[], now: Date, send: 
     .where(and(inArray(fiaDocuments.url, rows.map((r) => r.url)), isNull(fiaDocuments.notifiedAt)))
     .returning({ url: fiaDocuments.url });
   const claimedUrls = new Set(claimed.map((r) => r.url));
-  const pushes = planDocumentPushes(rows.filter((r) => claimedUrls.has(r.url)), subs);
+  const pushes = planDocumentPushes(rows.filter((r) => claimedUrls.has(r.url)), subscriptions);
   return { processed: claimedUrls.size, results: await sendAll(pushes, send) };
 }
 
@@ -219,7 +232,7 @@ async function recordOutcomes(db: Db, results: { push: OutgoingPush; outcome: Pu
 
 export async function runAlerts(db: Db, vapid: VapidConfig, now: Date = new Date()): Promise<AlertsRunResult> {
   const send: SendFn = (push) => sendPush(push, vapid);
-  const subs = await loadSubscriptions(db);
+  const subs = lazySubscriptions(db);
 
   const reminders = await runReminders(db, subs, now, send);
   const changes = await runChanges(db, subs, now, send);

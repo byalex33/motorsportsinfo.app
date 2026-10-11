@@ -5,12 +5,17 @@ import { eq, sql } from "drizzle-orm";
 import { cacheLife } from "next/cache";
 import { getDb } from "@/db/client";
 import { radarTileUsage } from "@/db/schema";
-import { CIRCUITS } from "@/data/circuits";
+import { SERIES } from "@/domain/series";
+import { SERIES_IDS, type Circuit } from "@/domain/types";
+import { getFeaturedRound } from "@/server/schedule";
 import { parseForecastTile, parseSnapshot, rainbowSnapshotUrl, rainbowTileUrl, usageMonth, type ForecastTile } from "./rainbow";
 
 /** Rainbow's free tier is 30,000 tiles a month; past the cap the map shows the past radar instead. */
 const DEFAULT_MONTHLY_TILE_CAP = 30_000;
 const TIMEOUT_MS = 10_000;
+/** Rainbow publishes a snapshot every 10 minutes; a minute's cache keeps upstream calls to a few an hour. */
+const SNAPSHOT_LIFE = { stale: 60, revalidate: 60, expire: 300 };
+const RADAR_SERIES = SERIES_IDS.filter((id) => SERIES[id].hasRainRadar);
 
 function apiKey(): string | null {
   return process.env.RAINBOW_API_KEY || null;
@@ -56,8 +61,17 @@ async function takeTile(): Promise<boolean> {
 
 /** Rainbow's latest snapshot (epoch seconds), or null when the forecast radar is unavailable. */
 export async function getForecastSnapshot(): Promise<number | null> {
+  if (!apiKey() || (await overCap())) return null;
+  return latestSnapshot();
+}
+
+// One cached value for the snapshot route and the tile relay, so the relay accepts exactly the snapshots
+// viewers were given. The remote cache is shared by every instance.
+async function latestSnapshot(): Promise<number | null> {
+  "use cache: remote";
+  cacheLife(SNAPSHOT_LIFE);
   const key = apiKey();
-  if (!key || (await overCap())) return null;
+  if (!key) return null;
   try {
     const res = await fetch(rainbowSnapshotUrl(), {
       headers: { "Ocp-Apim-Subscription-Key": key },
@@ -74,17 +88,36 @@ export async function getForecastSnapshot(): Promise<number | null> {
   }
 }
 
+/**
+ * The Circuits a radar map can be open for: the Featured Round's, for each Series with a rain radar (F1).
+ * The schedule read is cached. Empty when it fails, so the relay fetches nothing.
+ */
+async function radarCircuits(): Promise<Circuit[]> {
+  try {
+    const featured = await Promise.all(RADAR_SERIES.map((id) => getFeaturedRound(id)));
+    return featured.flatMap((f) => (f.kind === "round" && f.circuit.hasRadarCoverage ? [f.circuit] : []));
+  } catch (error) {
+    console.warn("[radar] could not read the Featured Round:", error);
+    return [];
+  }
+}
+
 export type ForecastTileResult = { kind: "ok"; png: Uint8Array } | { kind: "not-found" } | { kind: "unavailable" };
 
-/** Checks a relay request's path segments; null for a tile we won't fetch. */
-export function forecastTileFromParams(params: {
+/**
+ * Checks a relay request's path segments against the latest snapshot and the Featured Round's Circuit;
+ * null for a tile we won't fetch. Fails closed: without a snapshot or a Circuit, nothing is fetched.
+ */
+export async function forecastTileFromParams(params: {
   snapshot: string;
   offset: string;
   z: string;
   x: string;
   y: string;
-}): ForecastTile | null {
-  return parseForecastTile(params, Math.floor(Date.now() / 1000), CIRCUITS);
+}): Promise<ForecastTile | null> {
+  const [latest, circuits] = await Promise.all([latestSnapshot(), radarCircuits()]);
+  if (latest === null || circuits.length === 0) return null;
+  return parseForecastTile(params, latest, circuits);
 }
 
 export async function getForecastTile(tile: ForecastTile): Promise<ForecastTileResult> {

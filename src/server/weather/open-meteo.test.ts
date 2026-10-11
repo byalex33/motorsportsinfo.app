@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  RETRY_DELAY_MS,
+  fetchHourlyForecast,
   nearestCompleteHour,
   openMeteoUrl,
   parseOpenMeteoResponse,
@@ -169,5 +171,88 @@ describe("parseOpenMeteoResponse", () => {
     expect(() =>
       parseOpenMeteoResponse({ hourly: { ...body.hourly, is_day: [0] } }),
     ).toThrow(/unequal/);
+  });
+});
+
+describe("fetchHourlyForecast", () => {
+  const body = {
+    hourly: {
+      time: [T0],
+      temperature_2m: [10.6],
+      precipitation_probability: [82],
+      weather_code: [3],
+      wind_speed_10m: [26.6],
+      wind_direction_10m: [222],
+      is_day: [0],
+    },
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  /** Starts the fetch, then lets the retry backoff elapse. */
+  async function run() {
+    const result = fetchHourlyForecast(52.08, -1.02).then(
+      (value) => ({ ok: true as const, value }),
+      (error: unknown) => ({ ok: false as const, error }),
+    );
+    await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS);
+    return result;
+  }
+
+  it.each([
+    ["429", () => new Response("rate limited", { status: 429 })],
+    ["503", () => new Response("busy", { status: 503 })],
+    ["a network error", () => Promise.reject(new TypeError("fetch failed"))],
+  ])("retries once after %s", async (_name, first) => {
+    const fetchMock = vi.fn().mockImplementationOnce(first).mockImplementationOnce(async () => Response.json(body));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await run();
+    expect(result).toMatchObject({ ok: true, value: { time: [T0], temperatureC: [10.6] } });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives up after the retry fails too", async () => {
+    const fetchMock = vi.fn(async () => new Response("busy", { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await run();
+    expect(result.ok).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry other HTTP errors, a timeout or a malformed body", async () => {
+    const badRequest = vi.fn(async () => new Response("bad", { status: 400 }));
+    vi.stubGlobal("fetch", badRequest);
+    expect((await run()).ok).toBe(false);
+    expect(badRequest).toHaveBeenCalledTimes(1);
+
+    const timeout = vi.fn(async () => Promise.reject(new DOMException("The operation timed out.", "TimeoutError")));
+    vi.stubGlobal("fetch", timeout);
+    expect((await run()).ok).toBe(false);
+    expect(timeout).toHaveBeenCalledTimes(1);
+
+    const malformed = vi.fn(async () => Response.json({ hourly: { time: [] } }));
+    vi.stubGlobal("fetch", malformed);
+    expect((await run()).ok).toBe(false);
+    expect(malformed).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits before retrying", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(async () => new Response("busy", { status: 503 }))
+      .mockImplementationOnce(async () => Response.json(body));
+    vi.stubGlobal("fetch", fetchMock);
+    const pending = fetchHourlyForecast(52.08, -1.02);
+    await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS - 1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    await pending;
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

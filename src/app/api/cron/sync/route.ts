@@ -1,27 +1,19 @@
 // Schedule sync cron (every 5 minutes, see vercel.ts). Requires `Authorization: Bearer ${CRON_SECRET}`.
 // Also records new FIA Documents during an F1/F2/F3 Round, for Document Alerts (see server/documents/sync.ts).
 // Manual runs: /api/cron/sync?series=f1&force=1 (series may be a comma-separated list).
-import { timingSafeEqual } from "node:crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { getDb } from "@/db/client";
 import { SERIES_IDS, type SeriesId } from "@/domain/types";
 import { fiaDocumentsTag, hasFiaDocuments, syncFiaDocuments, type DocumentsSyncResult } from "@/server/documents";
+import { isCronRequest } from "@/server/cron";
 import { scheduleTag } from "@/server/schedule";
 import { syncSeries, type SyncResult } from "@/server/schedule/sync";
 
 export const maxDuration = 300;
 
-function authorised(request: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  const given = Buffer.from(request.headers.get("authorization") ?? "");
-  const expected = Buffer.from(`Bearer ${secret}`);
-  return given.length === expected.length && timingSafeEqual(given, expected);
-}
-
 export async function GET(request: NextRequest) {
-  if (!authorised(request)) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isCronRequest(request)) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const db = getDb();
   if (!db) return Response.json({ error: "DATABASE_URL is not set" }, { status: 503 });
