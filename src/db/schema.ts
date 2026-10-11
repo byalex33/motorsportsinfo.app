@@ -1,6 +1,8 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   date,
+  index,
   integer,
   jsonb,
   pgTable,
@@ -29,20 +31,25 @@ export const rounds = pgTable("rounds", {
 });
 
 /** The published state of each Session, after Schedule Overrides. */
-export const sessions = pgTable("sessions", {
-  id: text("id").primaryKey(),
-  roundId: text("round_id")
-    .notNull()
-    .references(() => rounds.id, { onDelete: "cascade" }),
-  series: text("series").$type<SeriesId>().notNull(),
-  type: text("type").$type<SessionType>().notNull(),
-  name: text("name").notNull(),
-  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
-  endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
-  endIsEstimated: boolean("end_is_estimated").notNull(),
-  status: text("status").$type<SessionStatus>().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: text("id").primaryKey(),
+    roundId: text("round_id")
+      .notNull()
+      .references(() => rounds.id, { onDelete: "cascade" }),
+    series: text("series").$type<SeriesId>().notNull(),
+    type: text("type").$type<SessionType>().notNull(),
+    name: text("name").notNull(),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    endIsEstimated: boolean("end_is_estimated").notNull(),
+    status: text("status").$type<SessionStatus>().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  // The alerts cron looks up Sessions starting soon every minute.
+  (t) => [index("sessions_starts_at_idx").on(t.startsAt)],
+);
 
 /**
  * A change seen in a source but not yet published. A time change is published
@@ -57,16 +64,25 @@ export const pendingSessionChanges = pgTable("pending_session_changes", {
 });
 
 /** A published Schedule Change. Alerts push each one once, then set notifiedAt. */
-export const scheduleChanges = pgTable("schedule_changes", {
-  id: serial("id").primaryKey(),
-  sessionId: text("session_id").notNull(),
-  series: text("series").$type<SeriesId>().notNull(),
-  kind: text("kind").$type<"time" | "cancelled">().notNull(),
-  previousStartsAt: timestamp("previous_starts_at", { withTimezone: true }).notNull(),
-  newStartsAt: timestamp("new_starts_at", { withTimezone: true }),
-  detectedAt: timestamp("detected_at", { withTimezone: true }).notNull().defaultNow(),
-  notifiedAt: timestamp("notified_at", { withTimezone: true }),
-});
+export const scheduleChanges = pgTable(
+  "schedule_changes",
+  {
+    id: serial("id").primaryKey(),
+    sessionId: text("session_id").notNull(),
+    series: text("series").$type<SeriesId>().notNull(),
+    kind: text("kind").$type<"time" | "cancelled">().notNull(),
+    previousStartsAt: timestamp("previous_starts_at", { withTimezone: true }).notNull(),
+    newStartsAt: timestamp("new_starts_at", { withTimezone: true }),
+    detectedAt: timestamp("detected_at", { withTimezone: true }).notNull().defaultNow(),
+    notifiedAt: timestamp("notified_at", { withTimezone: true }),
+  },
+  // The alerts cron reads unnotified changes in id order every minute; only those are indexed.
+  (t) => [
+    index("schedule_changes_unnotified_idx")
+      .on(t.id)
+      .where(sql`${t.notifiedAt} is null`),
+  ],
+);
 
 /** Something a human should look at: a Session vanished, an unknown Circuit, a source failing. Never pushed. */
 export const scheduleFlags = pgTable("schedule_flags", {
@@ -130,22 +146,31 @@ export const remindersSent = pgTable(
  * Each FIA Document seen for a Round while the sync watched it. Alerts push each one once, then set
  * notifiedAt; documents already old when first seen are stored with notifiedAt set, so never pushed.
  */
-export const fiaDocuments = pgTable("fia_documents", {
-  /** The PDF on fia.com. */
-  url: text("url").primaryKey(),
-  series: text("series").$type<FiaDocumentSeries>().notNull(),
-  roundId: text("round_id").notNull(),
-  /** The FIA's name for the Round, e.g. "Singapore Grand Prix" or "Baku". */
-  event: text("event").notNull(),
-  number: integer("number"),
-  title: text("title").notNull(),
-  kind: text("kind").$type<FiaDocumentKind>().notNull(),
-  /** The file name our viewer opens; null for a PDF outside the FIA's document folder. */
-  file: text("file"),
-  publishedAt: timestamp("published_at", { withTimezone: true }),
-  firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
-  notifiedAt: timestamp("notified_at", { withTimezone: true }),
-});
+export const fiaDocuments = pgTable(
+  "fia_documents",
+  {
+    /** The PDF on fia.com. */
+    url: text("url").primaryKey(),
+    series: text("series").$type<FiaDocumentSeries>().notNull(),
+    roundId: text("round_id").notNull(),
+    /** The FIA's name for the Round, e.g. "Singapore Grand Prix" or "Baku". */
+    event: text("event").notNull(),
+    number: integer("number"),
+    title: text("title").notNull(),
+    kind: text("kind").$type<FiaDocumentKind>().notNull(),
+    /** The file name our viewer opens; null for a PDF outside the FIA's document folder. */
+    file: text("file"),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    notifiedAt: timestamp("notified_at", { withTimezone: true }),
+  },
+  // The alerts cron reads unnotified documents oldest first every minute; only those are indexed.
+  (t) => [
+    index("fia_documents_unnotified_idx")
+      .on(t.firstSeenAt)
+      .where(sql`${t.notifiedAt} is null`),
+  ],
+);
 
 // ── Rain radar (owned by the radar work) ───────────────────────────────────
 

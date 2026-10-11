@@ -22,6 +22,13 @@
       "when": 1791636979794,
       "tag": "0002_radar_tile_usage",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791685137595,
+      "tag": "0003_alerts_cron_indexes",
+      "breakpoints": true
     }
   ]
 }
