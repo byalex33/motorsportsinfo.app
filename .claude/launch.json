@@ -20,6 +20,18 @@
       ],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "msi-dev-live",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "DATABASE_URL=",
+        "npm",
+        "run",
+        "dev"
+      ],
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }
