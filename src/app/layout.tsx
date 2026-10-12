@@ -25,7 +25,7 @@ const mono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "motorsportsinfo.app — session times & weather for F1, F2, F3, WEC, Formula E, IndyCar and MotoGP",
+    default: "motorsportsinfo.app — session times & weather for F1, F2, F3, WEC, Formula E, IndyCar, MotoGP and more",
     template: `%s · ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,

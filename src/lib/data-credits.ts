@@ -16,4 +16,8 @@ export const DATA_CREDITS: Record<SeriesId, DataCredit> = {
   fe: SPORTSTIMES,
   indycar: SPORTSTIMES,
   motogp: SPORTSTIMES,
+  "f1-academy": SPORTSTIMES,
+  wrc: { label: "WRC", href: "https://www.wrc.com" },
+  imsa: { label: "IMSA", href: "https://www.imsa.com" },
+  nascar: { label: "NASCAR", href: "https://www.nascar.com" },
 };

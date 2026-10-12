@@ -38,7 +38,8 @@ export function CalendarRoundCard({ round, now }: { round: CalendarRound; now: n
             <span className="font-semibold text-series-accent">{info.shortName}</span>
             <span aria-hidden>·</span>
             <span>
-              {round.season} R{round.roundNumber}
+              {round.season}
+              {round.roundNumber !== null && ` R${round.roundNumber}`}
             </span>
             {live && <span className="chip bg-series-accent text-series-accent-foreground">Live</span>}
             {round.cancelled && <span className="chip bg-destructive/10 text-destructive">Cancelled</span>}

@@ -48,7 +48,7 @@ describe("subscribeSchema", () => {
     ["non-URL endpoint", { ...valid, subscription: { ...subscription, endpoint: "not a url" } }],
     ["missing keys", { ...valid, subscription: { endpoint: subscription.endpoint } }],
     ["bad key chars", { ...valid, subscription: { ...subscription, keys: { ...subscription.keys, auth: "a b" } } }],
-    ["unknown Series", { ...valid, follows: { nascar: ["race"] } }],
+    ["unknown Series", { ...valid, follows: { btcc: ["race"] } }],
     ["Session Type from another Series", { ...valid, follows: { f2: ["hyperpole"] } }],
     ["unknown Session Type", { ...valid, follows: { f1: ["warmup"] } }],
     ["follows not arrays", { ...valid, follows: { f1: "race" } }],

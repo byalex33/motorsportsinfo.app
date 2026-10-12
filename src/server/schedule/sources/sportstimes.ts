@@ -1,7 +1,9 @@
 // The MIT-licensed sportstimes/f1 dataset (github.com/sportstimes/f1): the F2 and F3 fallback, and the only
-// source for Formula E, IndyCar and MotoGP. UTC start times only (no end times), and it may lag behind the
+// source for Formula E, IndyCar, MotoGP and F1 Academy. UTC start times only (no end times), and it may lag behind the
 // official sites. Each Series' file has its own quirks:
-// - F2, F3, FE: `location` names the Circuit (lat/lon are city centres or 0, so unused for matching).
+// - F2, F3, FE, F1 Academy: `location` names the Circuit (lat/lon are city centres or 0, so unused for
+//   matching). F1 Academy's `location` is sometimes a country ("Netherlands"), so its slug is a hint too, and
+//   it can list a second qualifying at the same time as the first, which is dropped.
 // - IndyCar: no `location` and lat/lon 0, so the Round name and slug are matched against Circuit aliases.
 // - MotoGP: `name`/`location` are countries and `track` is often wrong (shifted between Rounds), so the
 //   Circuit is the nearest known one to the coordinates; a disagreeing `track` is only a warning.
@@ -11,7 +13,7 @@ import { getJson, type SourceContext } from "./http";
 import { slugify } from "../normalise";
 import type { RawRound, RawSession } from "../types";
 
-export type SportstimesSeries = "f2" | "f3" | "fe" | "indycar" | "motogp";
+export type SportstimesSeries = "f2" | "f3" | "fe" | "indycar" | "motogp" | "f1-academy";
 
 export interface SportstimesRace {
   name: string;
@@ -75,7 +77,31 @@ export function sportstimesSession(series: SportstimesSeries, key: string): Sess
       if (key === "warmup") return { name: "Warm Up", type: "practice" };
       if (key === "race") return { name: "Race", type: "race" };
       return null;
+    case "f1-academy":
+      if ((m = /^fp(\d)$/.exec(key))) return { name: `Practice ${m[1]}`, type: "practice" };
+      if ((m = /^qualifying(\d)$/.exec(key))) return { name: `Qualifying ${m[1]}`, type: "qualifying" };
+      if ((m = /^race(\d)$/.exec(key))) return { name: `Race ${m[1]}`, type: "race" };
+      return null;
   }
+}
+
+/**
+ * F1 Academy: drops a Session listed twice at the same time (a second qualifying copied from the first),
+ * then numbers only what repeats: a lone "Practice 1" becomes "Practice".
+ */
+function tidyF1AcademySessions(sessions: RawSession[]): RawSession[] {
+  const seen = new Set<string>();
+  const kept = sessions.filter((s) => {
+    const k = `${s.type}@${s.startsAt}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  return kept.map((s) => {
+    if (kept.filter((o) => o.type === s.type).length > 1) return s;
+    const name = s.name.replace(/ \d$/, "");
+    return { ...s, key: name, name };
+  });
 }
 
 /** Unknown keys that are clearly practice running. Anything else stays unmapped and is flagged. */
@@ -157,6 +183,7 @@ function roundName(series: SportstimesSeries, race: SportstimesRace, circuit: Ci
   switch (series) {
     case "f2":
     case "f3":
+    case "f1-academy":
       return `Round ${race.round}`;
     case "fe":
       return race.name.trim();
@@ -179,7 +206,7 @@ export function parseSportstimes(
   const rounds = data.races.map((race): RawRound => {
     const sourceRef = `sportstimes ${series} ${season} round ${race.round}`;
 
-    const sessions: RawSession[] = Object.entries(race.sessions ?? {}).map(([key, startsAt]) => {
+    const listed: RawSession[] = Object.entries(race.sessions ?? {}).map(([key, startsAt]) => {
       let known = sportstimesSession(series, key);
       // F2/F3 unknown keys are flagged as before; the newer Series keep practice-like ones.
       if (!known && !isFeeder && PRACTICE_LIKE.test(key)) {
@@ -195,6 +222,7 @@ export function parseSportstimes(
         cancelled: race.canceled === true,
       };
     });
+    const sessions = series === "f1-academy" ? tidyF1AcademySessions(listed) : listed;
 
     let circuitId: string | null | undefined;
     let circuitHints: string[];

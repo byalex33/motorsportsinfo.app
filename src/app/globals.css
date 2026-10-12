@@ -181,12 +181,19 @@
                        linear-gradient(96deg, #eb5629, #ee8231, #f2a83b, #459aa1, #388083)
      MotoGP   #c80502  motogp.com screen.css --g-color-brand-primary; --g-color-gradient-1 runs
                        from it to --g-color-brand-accent #faec25
+     F1 Academy #ff3ec9 / #6a00eb  f1academy.com's pink and purple (computed styles; no tokens)
+     WRC      #db0a40  wrc.com --cosmos-color-primary (-darker #c3093b, -lighter #f50b48)
+     IMSA     #e21b23  imsa.com stylesheets (the logo red)
+     NASCAR   #007ac2  nascar.com --series-1-branding-color (Cup); --nascar-primary / -secondary /
+                       -tertiary-branding-color #007ac2 / #e4002b / #ffd659
 
    Tokens keep the official hue and only move lightness where a mode needs it:
      F2 light, F3 light, IndyCar light are darkened; F1 dark, FE dark, MotoGP dark are lightened.
      WEC uses its own pairing: navy on light backgrounds (as fiawec.com does), cyan on dark —
      which also keeps it apart from the F2 blue. IndyCar's solid accent is the teal end of its
-     gradient (its red / orange would collide with F1, MotoGP and F3).
+     gradient (its red / orange would collide with F1, MotoGP and F3). F1 Academy's is its pink, not
+     its purple, which is Formula E's. WRC's crimson and IMSA's red stay close to F1 and MotoGP: those
+     are their brands. NASCAR's Cup blue is a shade off F2's; its yellow-red-blue bar tells it apart.
 
    WCAG AA (4.5:1) checked for accent text on background (#fff / #0a0a0a), subtle (#fafafa / #111)
    and muted (#f5f5f5 / #171717), and for accent-foreground on accent (chips):
@@ -198,11 +205,15 @@
      fe       #6234e0  6.80 / 6.52 / 6.24 · 6.80     #8269ff  5.10 / 4.87 / 4.62 · 5.02
      indycar  #31797c  5.05 / 4.84 / 4.63 · 5.05     #459aa1  6.02 / 5.75 / 5.46 · 5.88
      motogp   #c80502  6.04 / 5.78 / 5.54 · 6.04     #ef4031  5.14 / 4.90 / 4.65 · 5.06
+     f1-acad. #c8189a  5.18 / 4.96 / 4.75 · 5.18     #ff3ec9  6.40 / 6.10 / 5.79 · 6.32
+     wrc      #db0a40  5.09 / 4.87 / 4.66 · 5.09     #ff2a5c  5.41 / 5.16 / 4.90 · 5.37
+     imsa     #d0161e  5.50 / 5.27 / 5.05 · 5.50     #f04048  5.22 / 4.97 / 4.72 · 5.18
+     nascar   #0072b5  5.15 / 4.94 / 4.73 · 5.15     #2a9be0  6.47 / 6.17 / 5.86 · 6.33
 
    --series-gradient-stops / bg-series-gradient(-y): decorative only (active nav underline and
    dot, Series dots, the LIVE bar, the picker's hover line). It falls back to the solid accent;
-   IndyCar and MotoGP use their official gradients. Never put text on it — the light stops
-   (#f2a83b, #faec25) fail contrast.
+   IndyCar, MotoGP, F1 Academy and NASCAR use their official gradients. Never put text on it — the
+   light stops (#f2a83b, #faec25, #ffd659) fail contrast.
    --------------------------------------------------------------------------- */
 :root {
   --series-accent: var(--primary);
@@ -245,6 +256,24 @@
   --series-accent-foreground: #ffffff;
   --series-gradient-stops: #c80502 0%, #c80502 35%, #faec25 100%;
 }
+[data-series="f1-academy"] {
+  --series-accent: #c8189a;
+  --series-accent-foreground: #ffffff;
+  --series-gradient-stops: #6a00eb 0%, #ff3ec9 100%;
+}
+[data-series="wrc"] {
+  --series-accent: #db0a40;
+  --series-accent-foreground: #ffffff;
+}
+[data-series="imsa"] {
+  --series-accent: #d0161e;
+  --series-accent-foreground: #ffffff;
+}
+[data-series="nascar"] {
+  --series-accent: #0072b5;
+  --series-accent-foreground: #ffffff;
+  --series-gradient-stops: #ffd659 0%, #ffd659 33%, #e4002b 33%, #e4002b 67%, #007ac2 67%, #007ac2 100%;
+}
 
 .dark [data-series="f1"],
 .dark[data-series="f1"] {
@@ -280,6 +309,26 @@
 .dark[data-series="motogp"] {
   --series-accent: #ef4031;
   --series-accent-foreground: #180806;
+}
+.dark [data-series="f1-academy"],
+.dark[data-series="f1-academy"] {
+  --series-accent: #ff3ec9;
+  --series-accent-foreground: #180612;
+}
+.dark [data-series="wrc"],
+.dark[data-series="wrc"] {
+  --series-accent: #ff2a5c;
+  --series-accent-foreground: #18060a;
+}
+.dark [data-series="imsa"],
+.dark[data-series="imsa"] {
+  --series-accent: #f04048;
+  --series-accent-foreground: #180607;
+}
+.dark [data-series="nascar"],
+.dark[data-series="nascar"] {
+  --series-accent: #2a9be0;
+  --series-accent-foreground: #020f18;
 }
 
 /* Decorative Series gradient (solid accent unless the Series has one). Horizontal and vertical. */

@@ -41,7 +41,8 @@ export default function AboutPage() {
           <RevealWords text="A fan-made guide to when Sessions run and what the weather will do." />
         </h1>
         <p className="enter-rise mt-5 max-w-2xl leading-relaxed text-pretty text-muted-foreground sm:text-lg" style={enterDelay(ENTER.lead)}>
-          motorsportsinfo.app shows the Featured Round for F1, F2, F3, the WEC, Formula E, IndyCar and MotoGP — the
+          motorsportsinfo.app shows the Featured Round for F1, F2, F3, the WEC, Formula E, IndyCar and MotoGP, and for F1
+          Academy, the WRC, IMSA and NASCAR — the
           Round in progress, or the next one — with every Session in your time or Track Time, a live countdown, the
           forecast at the Circuit for each Session and, for F1, a rain radar of the next two hours around Session time. It is free, has no ads and no
           accounts.
@@ -94,11 +95,22 @@ export default function AboutPage() {
                 <strong className="font-medium text-foreground">WEC schedule:</strong> from the official timetables published on the FIA WEC website.
               </li>
               <li>
-                <strong className="font-medium text-foreground">Formula E, IndyCar and MotoGP schedules:</strong> from the{" "}
+                <strong className="font-medium text-foreground">Formula E, IndyCar, MotoGP and F1 Academy schedules:</strong> from the{" "}
                 <a className={a} href="https://github.com/sportstimes/f1" target="_blank" rel="noopener noreferrer">
                   sportstimes/f1
                 </a>{" "}
                 dataset, licensed MIT.
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">WRC schedule:</strong> each rally&apos;s itinerary as published on the
+                WRC website. A rally&apos;s Circuit is its service park, and each day&apos;s end is estimated from its last stage.
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">IMSA schedule:</strong> IMSA&apos;s own calendar feed for the
+                WeatherTech SportsCar Championship.
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">NASCAR schedule:</strong> the Cup Series schedule published by NASCAR.
               </li>
               <li>
                 <strong className="font-medium text-foreground">FIA documents:</strong>{" "}

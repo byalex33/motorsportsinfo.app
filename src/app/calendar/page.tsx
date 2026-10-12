@@ -11,9 +11,9 @@ import { pageMetadata } from "@/lib/seo/metadata";
 import { getCalendarPageData } from "./data";
 
 export const metadata = pageMetadata({
-  title: "Calendar – every upcoming Round of F1, F2, F3, WEC, Formula E, IndyCar and MotoGP",
+  title: "Calendar – every upcoming Round of F1, F2, F3, WEC, Formula E, IndyCar, MotoGP and more",
   description:
-    "Every Round still to come across F1, F2, F3, WEC, Formula E, IndyCar and MotoGP, with the Circuit and each Session's start in your time zone.",
+    "Every Round still to come across F1, F2, F3, WEC, Formula E, IndyCar, MotoGP, F1 Academy, WRC, IMSA and NASCAR, with the Circuit and each Session's start in your time zone.",
   path: "/calendar",
 });
 
@@ -55,8 +55,8 @@ export default function CalendarPage() {
           <RevealWords text="Every Round still to come, in your time." />
         </h1>
         <p className="enter-rise mt-5 max-w-2xl leading-relaxed text-pretty text-muted-foreground sm:text-lg" style={enterDelay(ENTER.lead)}>
-          F1, F2, F3, WEC, Formula E, IndyCar and MotoGP: each Round that hasn&apos;t finished, with its Circuit and
-          every Session&apos;s start in your time zone. Rounds drop off two hours after their final Session.
+          F1, F2, F3, WEC, Formula E, IndyCar and MotoGP, plus F1 Academy, WRC, IMSA and NASCAR: each Round that
+          hasn&apos;t finished, with its Circuit and every Session&apos;s start in your time zone. Rounds drop off two hours after their final Session.
         </p>
         <div className="enter-rise mt-10 sm:mt-14" style={enterDelay(ENTER.body)}>
           <Suspense fallback={<CalendarSkeleton />}>

@@ -4,7 +4,7 @@
 
 <br>
 
-**When every Session runs and what the weather will do there, for F1, F2, F3, WEC, Formula E, IndyCar and MotoGP.**
+**When every Session runs and what the weather will do there, for F1, F2, F3, WEC, Formula E, IndyCar and MotoGP, plus F1 Academy, WRC, IMSA and NASCAR.**
 
 [**motorsportsinfo.app**](https://motorsportsinfo.app) &nbsp;·&nbsp; [Calendar](https://motorsportsinfo.app/calendar) &nbsp;·&nbsp; [Alerts](https://motorsportsinfo.app/alerts) &nbsp;·&nbsp; [Domain language](CONTEXT.md) &nbsp;·&nbsp; [Decisions](docs/adr)
 
@@ -102,6 +102,12 @@
 | **Formula E** | sportstimes/f1 | none | |
 | **IndyCar** | sportstimes/f1 | none | |
 | **MotoGP** | sportstimes/f1 | none | |
+| **F1 Academy** | sportstimes/f1 | none | |
+| **WRC** | [wrc.com](https://www.wrc.com) rally itineraries | none | |
+| **IMSA** | IMSA's calendar feed (ECAL, `IMSA_CALENDAR_URL`) | none | |
+| **NASCAR** (Cup) | [NASCAR's schedule feed](https://www.nascar.com) | none | |
+
+F2, F3, Formula E, F1 Academy, WRC and IMSA sit under **Other** in the header.
 
 Why community data sources, and why that keeps the site non-commercial: [ADR 0001](docs/adr/0001-community-data-sources-keep-site-non-commercial.md).
 
@@ -113,6 +119,7 @@ flowchart LR
   S2["FIA F2 and F3 sites"] --> SYNC
   S3["fiawec.com"] --> SYNC
   S4["sportstimes/f1"] --> SYNC
+  S6["wrc.com, IMSA and NASCAR feeds"] --> SYNC
   S5["FIA Documents"] --> SYNC
   SYNC["/api/cron/sync<br/>every 5 min"] --> DB[("Neon Postgres")]
 
@@ -199,5 +206,5 @@ The site is non-commercial and uses no official Series logos or marks. It relies
 - Forecast radar: [Rainbow.ai](https://www.rainbow.ai)
 - Radar: [RainViewer](https://www.rainviewer.com)
 - Documents: [FIA](https://www.fia.com)
-- Schedules: [sportstimes/f1](https://github.com/sportstimes/f1), [Jolpica](https://jolpi.ca) and the official F2, F3 and WEC sites
+- Schedules: [sportstimes/f1](https://github.com/sportstimes/f1), [Jolpica](https://jolpi.ca), the official F2, F3, WEC and WRC sites, and IMSA's and NASCAR's own schedule feeds
 - Base map: [OpenFreeMap](https://openfreemap.org)

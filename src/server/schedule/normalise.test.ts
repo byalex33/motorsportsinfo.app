@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normaliseRounds, slugify } from "./normalise";
+import { isIdOfSeries, normaliseRounds, slugify } from "./normalise";
 import { applyOverrides } from "./overrides";
 import { localWithOffsetToIso, trackDate, trackMidnight } from "./time";
 import type { RawRound } from "./types";
@@ -119,5 +119,14 @@ describe("applyOverrides", () => {
     ]);
     expect(result.rounds[0].sessions[0].status).toBe("cancelled");
     expect(result.warnings).toEqual([expect.stringContaining("f1-2026-monza:sprint")]);
+  });
+});
+
+describe("isIdOfSeries", () => {
+  it("tells F1 ids from F1 Academy ids", () => {
+    expect(isIdOfSeries("f1-2026-monaco:race", "f1")).toBe(true);
+    expect(isIdOfSeries("f1-academy-2026-monaco:race-1", "f1")).toBe(false);
+    expect(isIdOfSeries("f1-academy-2026-monaco:race-1", "f1-academy")).toBe(true);
+    expect(isIdOfSeries("f2-2026-baku:feature-race", "f1")).toBe(false);
   });
 });

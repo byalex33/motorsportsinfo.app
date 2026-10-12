@@ -14,7 +14,7 @@ export function fixtureJson<T>(name: string): T {
 }
 
 export function makeSession(roundId: string, slug: string, startsAt: string, opts: Partial<Session> = {}): Session {
-  const series = roundId.split("-")[0] as SeriesId;
+  const series = /^(.+?)-\d{4}-/.exec(roundId)![1] as SeriesId;
   const start = new Date(startsAt);
   return {
     id: `${roundId}:${slug}`,
@@ -31,12 +31,13 @@ export function makeSession(roundId: string, slug: string, startsAt: string, opt
 }
 
 export function makeRound(id: string, circuitId: string, startDate: string, endDate: string, opts: Partial<Round> = {}): Round {
-  const [series, season, ...slug] = id.split("-");
+  // "f1-academy-2026-monaco" → f1-academy, 2026, monaco.
+  const [, series, season, slug] = /^(.+?)-(\d{4})-(.+)$/.exec(id)!;
   return {
     id,
     series: series as SeriesId,
     season: Number(season),
-    slug: slug.join("-"),
+    slug,
     name: id,
     circuitId,
     startDate,

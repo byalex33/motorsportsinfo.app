@@ -1,0 +1,310 @@
+{
+ "data": [
+  {
+   "content": [
+    {
+     "type": "faq",
+     "title": "(Version 3) All Times UTC +1",
+     "elements": [
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Wednesday, 06.05."
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "15:01: Shakedown - Baltar (5.72 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Thursday, 07.05."
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "15:05: SS1 Águeda / Sever (15.08 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "16:05: SS2 Sever / Albergaria (20.24km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "18:05: SS3 Figueira da Foz SSS (1.93 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Friday 08.05."
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "07:35: SS4 Mortágua 1 (14.59 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "08:55: SS5 Arganil 1 (18.62 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "10:13: SS6 Lousã 1 (7.07 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "12:30: SS7 SS5 Arganil 2 (18.62 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "13:25: SS8 Góis (15.66 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "14:08: SS9 Lousã 2 (7.07 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "15:45: SS10 Mortágua 2 (14.59 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Saturday, 09.05."
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "07:00: SS11 Felgueiras 1 (8.81 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "08:05: SS12 Cabeceiras de Basto 1 (19.91 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "09:35: SS13 Amarante 1 (26.24 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "11:05: SS14 Paredes 1 (16.09 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "14:00: SS15 Felgueiras 2 (8.81 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "15:05: SS16 Cabeceiras de Basto 2 (19.91 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "16:35: SS17 Amarante 2 (26.24 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "18:05: SS18 Paredes 2 (16.09 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "19:05: SS19 Lousada SSS (3.78 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Sunday, 10.05."
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "08:05: SS20 Vieira do Minho 1 (21.60 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "09:35: SS21 Fafe 2 (11.18 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "10:35: SS22 Vieira do Minho 2 (21.60 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "13:15: SS 23 Wolf Power Stage - Fafe 2 (11.18 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

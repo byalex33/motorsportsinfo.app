@@ -84,6 +84,10 @@ const SPORT: Record<SeriesId, string> = {
   fe: "Formula racing",
   indycar: "Open-wheel racing",
   motogp: "Motorcycle racing",
+  "f1-academy": "Formula racing",
+  wrc: "Rallying",
+  imsa: "Endurance racing",
+  nascar: "Stock car racing",
 };
 
 const isNumbered = (round: Round) => /^Round \d+$/.test(round.name);

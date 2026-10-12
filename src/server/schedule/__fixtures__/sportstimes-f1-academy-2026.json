@@ -1,0 +1,89 @@
+{
+ "races": [
+  {
+   "name": "Chinese",
+   "location": "Shanghai",
+   "latitude": 31.3807,
+   "longitude": 121.2498,
+   "round": 1,
+   "slug": "chinese",
+   "sessions": {
+    "fp1": "2026-03-13T01:10:00Z",
+    "qualifying1": "2026-03-13T06:10:00Z",
+    "race1": "2026-03-14T05:45:00Z",
+    "race2": "2026-03-15T02:40:00Z"
+   }
+  },
+  {
+   "name": "Canadian",
+   "location": "Montreal",
+   "latitude": 45.5034,
+   "longitude": -73.5267,
+   "round": 2,
+   "slug": "canadian",
+   "sessions": {
+    "fp1": "2026-05-22T13:00:00Z",
+    "qualifying1": "2026-05-22T22:18:00Z",
+    "qualifying2": "2026-05-22T22:18:00Z",
+    "race1": "2026-05-23T22:05:00Z",
+    "race2": "2026-05-24T14:45:00Z"
+   }
+  },
+  {
+   "name": "British",
+   "location": "Silverstone",
+   "latitude": 52.0706,
+   "longitude": -1.0174,
+   "round": 3,
+   "slug": "british",
+   "sessions": {
+    "fp1": "2026-07-03T06:45:00Z",
+    "qualifying1": "2026-07-03T17:00:00Z",
+    "race1": "2026-07-04T17:05:00Z",
+    "race2": "2026-07-05T09:00:00Z"
+   }
+  },
+  {
+   "name": "Zandvoort",
+   "location": "Netherlands",
+   "latitude": 0,
+   "longitude": 0,
+   "round": 4,
+   "slug": "zandvoort",
+   "sessions": {
+    "fp1": "2026-08-21T12:00:00Z",
+    "qualifying1": "2026-08-22T07:20:00Z",
+    "race1": "2026-08-22T12:35:00Z",
+    "race2": "2026-08-23T08:30:00Z"
+   }
+  },
+  {
+   "name": "United States",
+   "location": "Austin",
+   "latitude": 30.1328,
+   "longitude": -97.6411,
+   "round": 5,
+   "slug": "austin",
+   "sessions": {
+    "fp1": "2026-10-22T06:00:00Z",
+    "qualifying1": "2026-10-22T07:00:00Z",
+    "race1": "2026-10-24T13:00:00Z",
+    "race2": "2026-10-25T06:00:00Z"
+   }
+  },
+  {
+   "name": "Las Vegas",
+   "location": "Las Vegas",
+   "latitude": 36.166747,
+   "longitude": -115.148708,
+   "round": 6,
+   "slug": "las-vegas",
+   "sessions": {
+    "fp1": "2026-11-19T08:00:00Z",
+    "qualifying1": "2026-11-19T09:00:00Z",
+    "race1": "2026-11-20T08:00:00Z",
+    "race2": "2026-11-21T08:00:00Z"
+   }
+  }
+ ]
+}

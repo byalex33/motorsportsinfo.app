@@ -1,0 +1,284 @@
+{
+ "data": [
+  {
+   "content": [
+    {
+     "type": "faq",
+     "elements": [
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Thursday, 27 August 2026"
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "Shakedown - Carmen del Paraná (5.60 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Friday, 28 August 2026"
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "09:03: SS1 Cambyreta 1 (24.65 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "09:56: SS2 Nueva Alborada 1 (15.66 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "10:49 SS3 Yerbateras 1 (33.88 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "11:50: SS4 - SSS Autodromo 1 (2.50 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "14:19: SS5 Cambyreta 2 (24.65 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "15:12: SS6 Nueva Alborada 1 (15.66 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "16:05: SS7 Yerbateras 2 (33.88 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "17:18: SS8 - SSS Autodromo 2 (2.50 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Saturday, 29 August 2026"
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "08:19: SS9 Bella Vista 1 (21.15 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "09:12: SS10 Bella Vista Sur 1 (11.57 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "10:05: SS11 Hohenau 1 (19.40 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "11:02: SS12 Trinidad 1 (15.00 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "14:16: SS13 Bella Vista 2 (21.15 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "15:09: SS14 Bella Vista Sur 2 (11.57 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "16:05: SS15 Hohenau 2 (19.40 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "17:02: SS16 Trinidad 2 (15.00 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "18:05: SS17 - SSS Encarnación Costanera (3.10 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Sunday, 30 August 2026"
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "07:05: SS18 Encarnación 1 (10.26 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "08:38: SS19 Artigas 1 (19.60 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "10:51: SS20 Artigas Oeste (8.44 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "11:43: SS21 Artigas 2 (19.60 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "14:15: SS22 Encarnación 2 - WOLF POWER STAGE (10.26 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

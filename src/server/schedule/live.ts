@@ -2,6 +2,7 @@
 // apply Schedule Overrides, and memoise in-process for 15 minutes.
 import { SCHEDULE_OVERRIDES } from "@/data/overrides";
 import type { SeriesId } from "@/domain/types";
+import { isIdOfSeries } from "./normalise";
 import { applyOverrides } from "./overrides";
 import { fetchSeriesSchedule } from "./sources";
 import { MINUTE } from "./time";
@@ -21,7 +22,7 @@ async function load(series: SeriesId): Promise<RoundWithSessions[]> {
   const schedule = await fetchSeriesSchedule(series);
   for (const p of schedule.problems) console.error(`[schedule:${series}] ${p}`);
   for (const w of schedule.warnings) console.warn(`[schedule:${series}] ${w}`);
-  const overrides = SCHEDULE_OVERRIDES.filter((o) => o.sessionId.startsWith(`${series}-`));
+  const overrides = SCHEDULE_OVERRIDES.filter((o) => isIdOfSeries(o.sessionId, series));
   const { rounds, warnings } = applyOverrides(schedule.rounds, overrides);
   for (const w of warnings) console.warn(`[schedule:${series}] ${w}`);
   return rounds;

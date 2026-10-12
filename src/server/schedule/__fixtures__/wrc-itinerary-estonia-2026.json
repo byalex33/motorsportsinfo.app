@@ -1,0 +1,233 @@
+{
+ "data": [
+  {
+   "content": [
+    {
+     "type": "faq",
+     "title": "Itinerary (Version 1.0_13.04.2026), All Times UTC+3",
+     "elements": [
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Friday, 17 July"
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "08:01: Shakedown Kastre (4.08 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "13:03: SS1 Raanitsa 1 (21.45 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "13:56: SS2 Karaski 1 (11.97 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "14:49: SS3 Kanepi 1 (17,.43 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "16:46: SS4 Raanitsa 2 (21.45 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "17:39: SS5 Karaski 2 (11.97 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "18:32: SS6 Kanepi 2 (17,.43 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "19:35: SSS7 Elva linn (1.72 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Saturday, 18 July"
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "09:56: SS8 Peipsiääre 1 (24.35 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "10:49: SS9 Mustvee 1 (10.67 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "12:10: SS10 Peipsiääre 2 (24.35 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "13:03: SS11 SS9 Mustvee 2 (10.67 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "15:48: SS12 Kambja 1 (23.74 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "17:05: SS13 Otepää 1 (15.16 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "17:58: SS14 Kambja 2 (23.74 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "19:05: SS15 Otepää 2 (15.16 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "20:35: SSS16 Tartu vald (1.76 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Sunday, 18 July"
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "11:05: SS17 Kääriku 1 (24.39 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "13:15: SS18 Wolf Powerstage - Kääriku 2 (24.39 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

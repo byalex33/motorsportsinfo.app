@@ -11,10 +11,10 @@ import { toSeriesSummary, type SeriesSummary } from "@/lib/series-summary";
 import { getSeriesPageData } from "./[series]/data";
 
 export const metadata = pageMetadata({
-  title: "motorsportsinfo.app — session times & weather for F1, F2, F3, WEC, Formula E, IndyCar and MotoGP",
+  title: "motorsportsinfo.app — session times & weather for F1, F2, F3, WEC, Formula E, IndyCar, MotoGP and more",
   absoluteTitle: true,
   description:
-    "The next Round of F1, F2, F3, WEC, Formula E, IndyCar and MotoGP: every Session in your time zone, with a live countdown and the forecast for each Session.",
+    "The next Round of F1, F2, F3, WEC, Formula E, IndyCar, MotoGP, F1 Academy, WRC, IMSA and NASCAR: every Session in your time zone, with a live countdown and the forecast for each Session.",
   path: "/",
 });
 
@@ -51,8 +51,8 @@ export default function HomePage() {
           <RevealWords text="The next Round of every Series, in your time." />
         </h1>
         <p className="enter-rise mt-5 max-w-2xl leading-relaxed text-pretty text-muted-foreground sm:text-lg" style={enterDelay(ENTER.lead)}>
-          F1, F2, F3, WEC, Formula E, IndyCar and MotoGP: pick a Series for every Session of its next Round in your time
-          zone or Track Time, with a live countdown and the forecast at the Circuit.
+          F1, F2, F3, WEC, Formula E, IndyCar and MotoGP, plus F1 Academy, WRC, IMSA and NASCAR: pick a Series for every
+          Session of its next Round in your time zone or Track Time, with a live countdown and the forecast at the Circuit.
         </p>
         <nav aria-label="All Series" className="mt-10 sm:mt-14">
           {/* Only seen on a cold cache: every Series without its Featured Round, until that arrives. */}

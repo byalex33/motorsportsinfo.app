@@ -5,10 +5,13 @@ import type { RawRound, SourceSchedule } from "../types";
 import { fetchFiaFeederSeason, type FeederSeries } from "./fia-feeder";
 import { fillTbcRounds } from "./fill-tbc";
 import { defaultContext, errorMessage, type SourceContext } from "./http";
+import { fetchImsaSeason } from "./imsa";
 import { fetchJolpicaSeason } from "./jolpica";
+import { fetchNascarSeason } from "./nascar";
 import { fetchOpenF1Season } from "./openf1";
 import { fetchSportstimesSeason, type SportstimesSeries } from "./sportstimes";
 import { fetchWecSeasons } from "./wec";
+import { fetchWrcSeason } from "./wrc";
 
 interface Loaded {
   rounds: RawRound[];
@@ -84,6 +87,11 @@ export const SOURCES: Record<SeriesId, { primary: SourceDef; fallback?: SourceDe
   fe: { primary: sportstimes("fe") },
   indycar: { primary: sportstimes("indycar") },
   motogp: { primary: sportstimes("motogp") },
+  "f1-academy": { primary: sportstimes("f1-academy") },
+  // Each Series' own feed, with no fallback (ADR 0001).
+  wrc: { primary: { name: "wrc.com", load: perSeason(fetchWrcSeason) } },
+  imsa: { primary: { name: "imsa-ecal", load: perSeason(fetchImsaSeason) } },
+  nascar: { primary: { name: "nascar", load: perSeason(fetchNascarSeason) } },
 };
 
 export class SourceFailure extends Error {

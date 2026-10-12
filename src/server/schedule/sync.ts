@@ -8,6 +8,7 @@ import type { SeriesId } from "@/domain/types";
 import { decideCheckDue, type CheckDecision } from "./check-due";
 import { groupSessions, roundToRow, sessionToRow } from "./db-rows";
 import { diffSchedule, planChangesPublished, type PendingChange, type SchedulePlan } from "./diff";
+import { isIdOfSeries, seriesIdLikePattern } from "./normalise";
 import { applyOverrides } from "./overrides";
 import { withCircuits } from "./select";
 import { fetchSeriesSchedule } from "./sources";
@@ -35,7 +36,7 @@ async function loadState(db: Db, series: SeriesId) {
   const [roundRows, sessionRows, pendingRows, flagRows, checkRows] = await Promise.all([
     db.select().from(rounds).where(eq(rounds.series, series)),
     db.select().from(sessions).where(eq(sessions.series, series)),
-    db.select().from(pendingSessionChanges).where(like(pendingSessionChanges.sessionId, `${series}-%`)),
+    db.select().from(pendingSessionChanges).where(like(pendingSessionChanges.sessionId, seriesIdLikePattern(series))),
     db
       .select({ id: scheduleFlags.id, sessionId: scheduleFlags.sessionId, message: scheduleFlags.message })
       .from(scheduleFlags)
@@ -154,7 +155,7 @@ export async function syncSeries(db: Db, series: SeriesId, options: SyncOptions 
     return { series, status: "failed", reason: decision.reason, published: false, error: message };
   }
 
-  const overrides = (options.overrides ?? SCHEDULE_OVERRIDES).filter((o) => o.sessionId.startsWith(`${series}-`));
+  const overrides = (options.overrides ?? SCHEDULE_OVERRIDES).filter((o) => isIdOfSeries(o.sessionId, series));
   const applied = applyOverrides(schedule.rounds, overrides);
   const plan = diffSchedule({
     now,

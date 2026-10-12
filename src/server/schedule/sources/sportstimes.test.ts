@@ -1,4 +1,4 @@
-// sportstimes as the only source for Formula E, IndyCar and MotoGP. Fixtures are the full 2026 files
+// sportstimes as the only source for Formula E, IndyCar, MotoGP and F1 Academy. Fixtures are the full 2026 files
 // (localeKey removed) so every Round can be checked against the Circuit list.
 import { describe, expect, it } from "vitest";
 import { normaliseRounds } from "../normalise";
@@ -34,6 +34,7 @@ describe("every 2026 Round resolves to a Circuit", () => {
     ["fe", 17],
     ["indycar", 18],
     ["motogp", 22],
+    ["f1-academy", 6],
   ] as const)("%s: %i Rounds, no problems", (series, count) => {
     const { rounds, problems } = normalise(series);
     expect(problems).toEqual([]);
@@ -274,6 +275,33 @@ describe("sportstimes MotoGP", () => {
   it("uses Track Time dates", () => {
     // Phillip Island's first Session is Thursday 23:45 UTC, Friday morning at the track.
     expect(byId["motogp-2026-phillip-island"].round).toMatchObject({ startDate: "2026-10-23", endDate: "2026-10-25" });
+  });
+});
+
+describe("sportstimes F1 Academy", () => {
+  const { rounds, warnings } = normalise("f1-academy");
+  const byId = Object.fromEntries(rounds.map((r) => [r.round.id, r]));
+
+  it("numbers Rounds and matches Circuits by location or slug", () => {
+    expect(warnings).toEqual([]);
+    expect(rounds.map((r) => [r.round.id, r.round.name])).toEqual([
+      ["f1-academy-2026-shanghai", "Round 1"],
+      ["f1-academy-2026-montreal", "Round 2"],
+      ["f1-academy-2026-silverstone", "Round 3"],
+      // location "Netherlands", slug "zandvoort"
+      ["f1-academy-2026-zandvoort", "Round 4"],
+      ["f1-academy-2026-cota", "Round 5"],
+      ["f1-academy-2026-las-vegas", "Round 6"],
+    ]);
+  });
+
+  it("drops a second qualifying listed at the same time, and numbers only what repeats", () => {
+    expect(byId["f1-academy-2026-montreal"].sessions.map((s) => [s.id, s.type, minutes(s)])).toEqual([
+      ["f1-academy-2026-montreal:practice", "practice", 40],
+      ["f1-academy-2026-montreal:qualifying", "qualifying", 30],
+      ["f1-academy-2026-montreal:race-1", "race", 30],
+      ["f1-academy-2026-montreal:race-2", "race", 30],
+    ]);
   });
 });
 

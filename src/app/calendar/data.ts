@@ -27,7 +27,8 @@ export interface CalendarRound {
   series: SeriesId;
   /** "Singapore Grand Prix", "Round 13 · Baku". */
   name: string;
-  roundNumber: number;
+  /** null for a Round the Series doesn't number (NASCAR's exhibition races). */
+  roundNumber: number | null;
   season: number;
   circuitName: string;
   /** "Marina Bay, Singapore". */

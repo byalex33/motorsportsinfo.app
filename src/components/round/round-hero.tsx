@@ -16,8 +16,12 @@ function SeriesLine({ series, roundNumber, season }: { series: SeriesId; roundNu
         <span aria-hidden className="size-1.5 rounded-full bg-series-gradient" />
         {info.shortName}
       </span>
-      <span aria-hidden>·</span>
-      <span>{info.name}</span>
+      {info.name !== info.shortName && (
+        <>
+          <span aria-hidden>·</span>
+          <span>{info.name}</span>
+        </>
+      )}
       {roundNumber !== undefined ? (
         <>
           <span aria-hidden>·</span>
@@ -54,7 +58,8 @@ export function RoundHero({
 }: {
   series: SeriesId;
   round: Round;
-  roundNumber: number;
+  /** null for a Round the Series doesn't number: the season is shown instead. */
+  roundNumber: number | null;
   circuit: Circuit;
   countdown: ReactNode;
 }) {
@@ -62,7 +67,7 @@ export function RoundHero({
   const namedByNumber = round.name === `Round ${roundNumber}`;
   return (
     <section className="flex flex-col items-center text-center">
-      <SeriesLine series={series} roundNumber={namedByNumber ? undefined : roundNumber} season={round.season} />
+      <SeriesLine series={series} roundNumber={namedByNumber || roundNumber === null ? undefined : roundNumber} season={round.season} />
       <h1 className="mt-4 max-w-4xl text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
         <RevealWords text={round.name} />
       </h1>

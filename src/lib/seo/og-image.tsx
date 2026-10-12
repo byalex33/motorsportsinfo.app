@@ -7,7 +7,8 @@ import type { OgText } from "./og-text";
 
 export const OG_SIZE = { width: 1200, height: 630 };
 export const OG_CONTENT_TYPE = "image/png";
-export const BRAND_OG_ALT = "motorsportsinfo.app — session times and weather for F1, F2, F3, WEC, Formula E, IndyCar and MotoGP";
+export const BRAND_OG_ALT =
+  "motorsportsinfo.app — session times and weather for F1, F2, F3, WEC, Formula E, IndyCar, MotoGP, F1 Academy, WRC, IMSA and NASCAR";
 
 /**
  * Series accents on a black background: the dark-mode tokens from globals.css ([data-series] under
@@ -21,6 +22,10 @@ export const OG_SERIES_COLOURS: Record<SeriesId, { accent: string; gradient: str
   fe: { accent: "#8269ff", gradient: ["#8269ff", "#8269ff"] },
   indycar: { accent: "#459aa1", gradient: ["#eb5629", "#ee8231", "#f2a83b", "#459aa1", "#388083"] },
   motogp: { accent: "#ef4031", gradient: ["#c80502", "#c80502", "#faec25"] },
+  "f1-academy": { accent: "#ff3ec9", gradient: ["#6a00eb", "#ff3ec9"] },
+  wrc: { accent: "#ff2a5c", gradient: ["#ff2a5c", "#ff2a5c"] },
+  imsa: { accent: "#f04048", gradient: ["#f04048", "#f04048"] },
+  nascar: { accent: "#2a9be0", gradient: ["#ffd659", "#e4002b", "#007ac2"] },
 };
 
 /** The Deep Purple primary in dark mode (--primary under .dark, oklch(0.608 0.217 297) ≈ #8b5cf6). */

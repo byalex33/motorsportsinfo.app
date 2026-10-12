@@ -13,6 +13,8 @@ export interface RawSession {
   startsAt: string;
   /** ISO 8601 UTC, or null when the source gives no end time. */
   endsAt: string | null;
+  /** True when the source's end time is itself an estimate (a rally day's end, from its last stage). */
+  endIsEstimated?: boolean;
   /** True only when the source explicitly says the Session is cancelled. */
   cancelled: boolean;
 }

@@ -95,6 +95,15 @@ describe("roundNumber", () => {
     expect(selectFeaturedRound([sg, jeddah, us, wec], new Date("2026-10-20T00:00:00Z"))).toMatchObject({ roundNumber: 2 });
   });
 
+  it("leaves NASCAR's exhibition races unnumbered, and doesn't count them", () => {
+    const clashRound = makeRound("nascar-2026-bowman-gray", "bowman-gray", "2026-02-04", "2026-02-04", { name: "Cook Out Clash at Bowman Gray" });
+    const clash = withContext(clashRound, [makeSession(clashRound.id, "race", "2026-02-04T23:00:00Z")]);
+    const d500Round = makeRound("nascar-2026-daytona", "daytona", "2026-02-11", "2026-02-15", { name: "DAYTONA 500" });
+    const d500 = withContext(d500Round, [makeSession(d500Round.id, "race", "2026-02-15T18:30:00Z")]);
+    expect(selectFeaturedRound([clash, d500], new Date("2026-02-01T00:00:00Z"))).toMatchObject({ roundNumber: null });
+    expect(selectFeaturedRound([clash, d500], new Date("2026-02-10T00:00:00Z"))).toMatchObject({ roundNumber: 1 });
+  });
+
   it("uses the official number an F2 or F3 Round is named by", () => {
     const round = makeRound("f2-2026-baku", "baku", "2026-09-24", "2026-09-26", { name: "Round 11" });
     const baku = withContext(round, [makeSession(round.id, "feature-race", "2026-09-26T07:00:00Z")]);

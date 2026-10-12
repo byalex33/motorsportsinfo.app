@@ -1,0 +1,276 @@
+{
+ "data": [
+  {
+   "content": [
+    {
+     "type": "faq",
+     "title": "(Version 1.0) All Times UTC +2",
+     "elements": [
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Thursday, 9 April 2026"
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "10:01: Shakedown (3.44 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "18:30: Ceremonial Start - Rijeka Korzo"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Friday, 10 April 2026"
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "9:13: SS1 Vodice - Brest 1 (14.12 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "10:11: SS2 Lake Butoniga - Motovun 1 (13.78 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "11:14: SS3 Beram - Cerovlje 1 (23.78 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "12:02: SS4 Učka 1 (11.75 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "15:15: SS5 Vodice - Brest 2 (14.12 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "16:13: SS6 Lake Butoniga - Motovun 2 (13.78 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "17:16: SS7 Beram - Cerovlje 2 (23.78 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "18:04: SS8 Učka 2 (11.75 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Saturday, April 202611"
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "08:43: SS9 Platak 1 (16.26 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "09:41: SS10 Ravna Gora - Skrad 1 (10.13 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "11:05: SS11 Generalski Stol - Zdihovo 1 (22.48 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "12:03: SS12 Pećurkovo Brdo - Mrežnički Novaki 1 (9.11 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "14:12: SS13 Pećurkovo Brdo - Mrežnički Novaki 2 (9.11 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "15:05: SS14 Generalski Stol - Zdihovo 2 (22.48 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "16:23: SS15 Ravna Gora - Skrad 2 (10.13 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "17:22: SS16 Platak 2 (16.26 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Sunday, 12 April 2026"
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "08:05: SS17 Bribir - Novi Vinodolski 1 (14.17 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "09:05: SS18 Alan - Senj 1 (14.56 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "10:38: SS19 Bribir - Novi Vinodolski 2 (14.17 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "13:15: SS20 Wolf Power Stage, Alan - Senj 2 (14.56 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

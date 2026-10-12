@@ -23,6 +23,16 @@ export function sessionId(roundIdValue: string, slug: string): string {
   return `${roundIdValue}:${slug}`;
 }
 
+/** Whether a Round or Session id is one of `series`'s: "f1-2026-…" is F1's, "f1-academy-2026-…" is not. */
+export function isIdOfSeries(id: string, series: SeriesId): boolean {
+  return id.startsWith(`${series}-`) && /^\d{4}-/.test(id.slice(series.length + 1));
+}
+
+/** SQL LIKE pattern for `series`'s ids ("f1-____-%"): the year keeps "f1-" from matching "f1-academy-". */
+export function seriesIdLikePattern(series: SeriesId): string {
+  return `${series}-____-%`;
+}
+
 function firstStart(raw: RawRound): string {
   const starts = raw.sessions.map((s) => s.startsAt).sort();
   return starts[0] ?? raw.startDate ?? "9999";
@@ -33,7 +43,8 @@ function firstStart(raw: RawRound): string {
  * - The Round slug is the Circuit id, so ids agree between a primary source and its fallback.
  *   A second Round at the same Circuit in one season gets "-2".
  * - Session slugs come from the source's Session name ("Practice 1" → "practice-1").
- * - Missing end times use the Series' default Session length and set endIsEstimated.
+ * - Missing end times use the Series' default Session length and set endIsEstimated, as does a source's own
+ *   estimated end.
  * - A Round with no Session times keeps its dates and has sessionTimesConfirmed=false.
  * - An unknown Circuit or unmappable Session is reported as a problem and skipped, never guessed.
  */
@@ -81,12 +92,11 @@ export function normaliseRounds(
         usedSessionSlugs.add(sessionSlug);
 
         const sourceEnd = toIso(s.endsAt);
-        const endIsEstimated = !sourceEnd || sourceEnd <= startsAt;
+        const hasSourceEnd = !!sourceEnd && sourceEnd > startsAt;
+        const endIsEstimated = !hasSourceEnd || s.endIsEstimated === true;
         // For WEC Races the length is in the Round name ("6 Hours of Barcelona") rather than "Race".
         const lengthName = /\d+\s*hours?/i.test(s.name) ? s.name : `${s.name} ${raw.name}`;
-        const endsAt = endIsEstimated
-          ? addMinutes(startsAt, defaultSessionMinutes(series, s.type, lengthName))
-          : sourceEnd!;
+        const endsAt = hasSourceEnd ? sourceEnd! : addMinutes(startsAt, defaultSessionMinutes(series, s.type, lengthName));
 
         sessions.push({
           id: sessionId(id, sessionSlug),

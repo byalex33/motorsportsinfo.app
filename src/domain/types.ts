@@ -1,6 +1,18 @@
 // Core domain types. Vocabulary is defined in CONTEXT.md — keep names in sync.
 
-export const SERIES_IDS = ["f1", "f2", "f3", "wec", "fe", "indycar", "motogp"] as const;
+export const SERIES_IDS = [
+  "f1",
+  "f2",
+  "f3",
+  "wec",
+  "fe",
+  "indycar",
+  "motogp",
+  "f1-academy",
+  "wrc",
+  "imsa",
+  "nascar",
+] as const;
 export type SeriesId = (typeof SERIES_IDS)[number];
 
 export type SessionType =
@@ -11,7 +23,10 @@ export type SessionType =
   | "race"
   | "sprint-race"
   | "feature-race"
-  | "hyperpole";
+  | "hyperpole"
+  | "shakedown"
+  | "stages"
+  | "power-stage";
 
 export type SessionStatus = "scheduled" | "cancelled";
 
@@ -67,8 +82,8 @@ export type FeaturedRoundResult =
   | {
       kind: "round";
       round: Round;
-      /** The Round's place in its season, e.g. 18 for Round 18. */
-      roundNumber: number;
+      /** The Round's place in its season, e.g. 18 for Round 18; null for a Round the Series doesn't number. */
+      roundNumber: number | null;
       circuit: Circuit;
       /** Ordered by startsAt. Cancelled Sessions are included. */
       sessions: Session[];

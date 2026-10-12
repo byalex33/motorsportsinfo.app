@@ -1,7 +1,9 @@
-import type { SeriesId, SessionType } from "./types";
+import { SERIES_IDS, type SeriesId, type SessionType } from "./types";
 
 export interface SeriesInfo {
   id: SeriesId;
+  /** "main" Series are links in the header; "other" Series sit in its Other menu. */
+  group: "main" | "other";
   /** Plain-text name. No official logos or marks anywhere on the site. */
   name: string;
   shortName: string;
@@ -16,6 +18,7 @@ export interface SeriesInfo {
 export const SERIES: Record<SeriesId, SeriesInfo> = {
   f1: {
     id: "f1",
+    group: "main",
     name: "Formula 1",
     shortName: "F1",
     sessionTypes: ["practice", "sprint-qualifying", "sprint", "qualifying", "race"],
@@ -24,6 +27,7 @@ export const SERIES: Record<SeriesId, SeriesInfo> = {
   },
   f2: {
     id: "f2",
+    group: "other",
     name: "Formula 2",
     shortName: "F2",
     sessionTypes: ["practice", "qualifying", "sprint-race", "feature-race"],
@@ -32,6 +36,7 @@ export const SERIES: Record<SeriesId, SeriesInfo> = {
   },
   f3: {
     id: "f3",
+    group: "other",
     name: "Formula 3",
     shortName: "F3",
     sessionTypes: ["practice", "qualifying", "sprint-race", "feature-race"],
@@ -40,6 +45,7 @@ export const SERIES: Record<SeriesId, SeriesInfo> = {
   },
   wec: {
     id: "wec",
+    group: "main",
     name: "World Endurance Championship",
     shortName: "WEC",
     sessionTypes: ["practice", "qualifying", "hyperpole", "race"],
@@ -48,6 +54,7 @@ export const SERIES: Record<SeriesId, SeriesInfo> = {
   },
   fe: {
     id: "fe",
+    group: "other",
     name: "Formula E",
     shortName: "FE",
     sessionTypes: ["practice", "qualifying", "race"],
@@ -56,6 +63,7 @@ export const SERIES: Record<SeriesId, SeriesInfo> = {
   },
   indycar: {
     id: "indycar",
+    group: "main",
     name: "IndyCar Series",
     shortName: "IndyCar",
     sessionTypes: ["practice", "qualifying", "race"],
@@ -64,13 +72,60 @@ export const SERIES: Record<SeriesId, SeriesInfo> = {
   },
   motogp: {
     id: "motogp",
+    group: "main",
     name: "MotoGP",
     shortName: "MotoGP",
     sessionTypes: ["practice", "qualifying", "sprint", "race"],
     defaultReminderTypes: ["sprint", "race"],
     hasRainRadar: false,
   },
+  "f1-academy": {
+    id: "f1-academy",
+    group: "other",
+    name: "F1 Academy",
+    shortName: "F1 Academy",
+    sessionTypes: ["practice", "qualifying", "race"],
+    defaultReminderTypes: ["qualifying", "race"],
+    hasRainRadar: false,
+  },
+  wrc: {
+    id: "wrc",
+    group: "other",
+    name: "World Rally Championship",
+    shortName: "WRC",
+    sessionTypes: ["shakedown", "stages", "power-stage"],
+    defaultReminderTypes: ["stages", "power-stage"],
+    hasRainRadar: false,
+  },
+  imsa: {
+    id: "imsa",
+    group: "other",
+    name: "IMSA WeatherTech SportsCar Championship",
+    shortName: "IMSA",
+    sessionTypes: ["practice", "qualifying", "race"],
+    defaultReminderTypes: ["qualifying", "race"],
+    hasRainRadar: false,
+  },
+  nascar: {
+    id: "nascar",
+    group: "main",
+    name: "NASCAR Cup Series",
+    shortName: "NASCAR",
+    sessionTypes: ["practice", "qualifying", "race"],
+    defaultReminderTypes: ["qualifying", "race"],
+    hasRainRadar: false,
+  },
 };
+
+/** The Series shown as links in the header, in SERIES_IDS order. */
+export const MAIN_SERIES_IDS: SeriesId[] = SERIES_IDS.filter((id) => SERIES[id].group === "main");
+/** The Series in the header's Other menu, in SERIES_IDS order. */
+export const OTHER_SERIES_IDS: SeriesId[] = SERIES_IDS.filter((id) => SERIES[id].group === "other");
+/**
+ * Every Series in the order lists show them: the header's links, then the Other menu. SERIES_IDS keeps its
+ * own order, which calendar feed URLs are built in.
+ */
+export const DISPLAY_SERIES_IDS: SeriesId[] = [...MAIN_SERIES_IDS, ...OTHER_SERIES_IDS];
 
 export const SESSION_TYPE_LABELS: Record<SessionType, string> = {
   practice: "Practice",
@@ -81,6 +136,9 @@ export const SESSION_TYPE_LABELS: Record<SessionType, string> = {
   "sprint-race": "Sprint Race",
   "feature-race": "Feature Race",
   hyperpole: "Hyperpole",
+  shakedown: "Shakedown",
+  stages: "Stages",
+  "power-stage": "Power Stage",
 };
 
 /**
@@ -107,6 +165,24 @@ export function defaultSessionMinutes(series: SeriesId, type: SessionType, sessi
     if (/^practice\b/i.test(sessionName)) return 60;
     return { practice: 45, qualifying: 15, sprint: 25, race: 45 }[type as string] ?? 45;
   }
+  if (series === "f1-academy") return { practice: 40, qualifying: 30, race: 30 }[type as string] ?? 40;
+  // A rally day's end comes from its last stage (see sources/wrc.ts); these cover the rest.
+  if (series === "wrc") return { shakedown: 180, stages: 480, "power-stage": 45 }[type as string] ?? 60;
+  if (series === "imsa") {
+    if (type !== "race") return type === "qualifying" ? 75 : 90;
+    if (/\b24\b/.test(sessionName)) return 1440;
+    if (/petit le mans/i.test(sessionName)) return 600;
+    const words: Record<string, number> = { six: 6, ten: 10, twelve: 12 };
+    const hours = /(\d+|six|ten|twelve)\s*hours?/i.exec(sessionName);
+    if (!hours) return 160;
+    return (Number(hours[1]) || words[hours[1].toLowerCase()]) * 60;
+  }
+  if (series === "nascar") {
+    if (/duel/i.test(sessionName)) return 75;
+    if (type !== "race") return type === "qualifying" ? 60 : 50;
+    if (/\b600\b/.test(sessionName)) return 270;
+    return /\b500\b/.test(sessionName) ? 210 : 180;
+  }
   return 60;
 }
 
@@ -130,7 +206,23 @@ export function officialResultsUrl(series: SeriesId, season: number): string {
       return "https://www.indycar.com/results";
     case "motogp":
       return "https://www.motogp.com/en/gp-results";
+    case "f1-academy":
+      return "https://www.f1academy.com/Racing-Series/Calendar";
+    case "wrc":
+      return "https://www.wrc.com/en/results-and-standings";
+    case "imsa":
+      return "https://www.imsa.com/weathertech/results/";
+    case "nascar":
+      return `https://www.nascar.com/nascar-cup-series/${season}/schedule/`;
   }
+}
+
+/**
+ * Whether the Series counts this Round in its numbering. NASCAR's exhibition races (the Clash, the All-Star
+ * Race) are Rounds here but not numbered: the Daytona 500 is race 1.
+ */
+export function isNumberedRound(series: SeriesId, roundName: string): boolean {
+  return !(series === "nascar" && /\bclash\b|\ball-star\b/i.test(roundName));
 }
 
 /** A Round stays the Featured Round until this long after its final Session ends. */

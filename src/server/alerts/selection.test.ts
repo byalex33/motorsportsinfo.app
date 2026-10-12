@@ -17,7 +17,9 @@ describe("encodeSelection / decodeSelection", () => {
   it("round-trips every Series with every Session Type", () => {
     const all: Follows = Object.fromEntries(SERIES_IDS.map((s) => [s, [...SERIES[s].sessionTypes]]));
     const spec = encodeSelection(all);
-    expect(spec).toBe("f1-p-sq-s-q-r_f2-p-q-sr-fr_f3-p-q-sr-fr_wec-p-q-h-r_fe-p-q-r_indycar-p-q-r_motogp-p-q-s-r");
+    expect(spec).toBe(
+      "f1-p-sq-s-q-r_f2-p-q-sr-fr_f3-p-q-sr-fr_wec-p-q-h-r_fe-p-q-r_indycar-p-q-r_motogp-p-q-s-r_f1-academy-p-q-r_wrc-sd-st-ps_imsa-p-q-r_nascar-p-q-r",
+    );
     expect(decodeSelection(spec)).toEqual(all);
   });
 
@@ -97,7 +99,7 @@ describe("follows helpers", () => {
     expect(
       normalizeFollows({
         f1: ["race", "race", "hyperpole", "practice"],
-        nascar: ["race"],
+        btcc: ["race"],
         f2: "qualifying" as unknown as string[],
         wec: [],
       }),

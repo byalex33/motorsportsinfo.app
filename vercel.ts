@@ -3,7 +3,7 @@ import type { VercelConfig } from "@vercel/config/v1";
 // Only `config` is exported: Vercel reads this file's exports as configuration.
 
 /** The Series ids, as in src/domain/types.ts (src/vercel-config.test.ts keeps the two in step). */
-const SERIES_URL_IDS = ["f1", "f2", "f3", "wec", "fe", "indycar", "motogp"] as const;
+const SERIES_URL_IDS = ["f1", "f2", "f3", "wec", "fe", "indycar", "motogp", "f1-academy", "wrc", "imsa", "nascar"] as const;
 
 /**
  * A permanent redirect from any upper- or mixed-case spelling of a Series page (/F1, /WEC, /MotoGP,

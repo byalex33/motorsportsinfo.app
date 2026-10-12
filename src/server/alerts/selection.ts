@@ -16,6 +16,9 @@ export const SESSION_TYPE_CODES: Record<SessionType, string> = {
   "sprint-race": "sr",
   "feature-race": "fr",
   hyperpole: "h",
+  shakedown: "sd",
+  stages: "st",
+  "power-stage": "ps",
 };
 
 const CODE_TO_TYPE = new Map<string, SessionType>(
@@ -83,8 +86,10 @@ export function decodeSelection(spec: string): Follows | null {
   if (!spec || spec.length > 200) return null;
   const follows: Partial<Record<SeriesId, SessionType[]>> = {};
   for (const group of spec.split("_")) {
-    const [series, ...codes] = group.split("-");
-    if (!isSeriesId(series) || follows[series] || codes.length === 0) return null;
+    // Series ids may contain "-" ("f1-academy"); Session Type codes never do.
+    const series = SERIES_IDS.filter((id) => group.startsWith(`${id}-`)).sort((a, b) => b.length - a.length)[0];
+    const codes = series ? group.slice(series.length + 1).split("-") : [];
+    if (!series || follows[series] || codes.length === 0) return null;
     const types: SessionType[] = [];
     for (const code of codes) {
       const type = CODE_TO_TYPE.get(code);

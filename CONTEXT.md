@@ -1,17 +1,17 @@
 # motorsportsinfo.app
 
-A go-to page for motorsport fans to find out when each session runs and what the weather will be, across F1, F2, F3, WEC, Formula E, IndyCar and MotoGP.
+A go-to page for motorsport fans to find out when each session runs and what the weather will be, across F1, F2, F3, WEC, Formula E, IndyCar and MotoGP, plus F1 Academy, WRC, IMSA and NASCAR.
 
 ## Language
 
 ### Calendar
 
 **Series**:
-A championship the site covers: F1, F2, F3, WEC, Formula E (FE), IndyCar or MotoGP (the premier class only).
+A championship the site covers: F1, F2, F3, WEC, Formula E (FE), IndyCar, MotoGP (the premier class only), F1 Academy, WRC, IMSA (the WeatherTech SportsCar Championship only) or NASCAR (the Cup Series only). The header links F1, WEC, IndyCar, MotoGP and NASCAR; the Other Series (F2, F3, FE, F1 Academy, WRC and IMSA) sit in its Other menu.
 _Avoid_: Category, championship, sport
 
 **Round**:
-One scheduled meeting of a single Series at a Circuit, such as the F1 Bahrain Grand Prix or F2 Round 1. Rounds from different Series at the same Circuit on the same dates are still separate Rounds.
+One scheduled meeting of a single Series at a Circuit, such as the F1 Bahrain Grand Prix, F2 Round 1 or a WRC rally. Rounds from different Series at the same Circuit on the same dates are still separate Rounds. NASCAR's exhibition races (the Clash, the All-Star Race) are Rounds but are not numbered; the Daytona Duels are qualifying Sessions of the Daytona 500.
 _Avoid_: Event, weekend, race, Grand Prix (as a generic term)
 
 **Featured Round**:
@@ -30,6 +30,10 @@ The category a Session belongs to within its Series, used for choosing which Ses
 - Formula E: Practice, Qualifying, Race. Each race of a double-header is its own Round.
 - IndyCar: Practice (including Final Practice and Warm-up), Qualifying, Race
 - MotoGP: Practice (Free Practice 1 and 2, Practice, Warm Up), Qualifying (Q1, Q2), Sprint, Race
+- F1 Academy: Practice, Qualifying, Race (Race 1, Race 2…)
+- WRC: Shakedown, Stages (one Session per day of special stages, "Day 1 (SS1–SS6)", ending an estimated 75 minutes after its last stage starts), Power Stage
+- IMSA: Practice (including Warm-up), Qualifying, Race
+- NASCAR: Practice, Qualifying (including the Daytona Duels), Race
 
 _Avoid_: Session kind, session name
 
@@ -46,7 +50,7 @@ A hand-made correction to a Session's time or status. It takes precedence over w
 _Avoid_: Manual fix, patch
 
 **Circuit**:
-The venue where a Round takes place. It has a fixed location and time zone.
+The venue where a Round takes place. It has a fixed location and time zone. A WRC rally runs on public roads, so its Circuit is its service park.
 _Avoid_: Track, venue
 
 **FIA Document**:

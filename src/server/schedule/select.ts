@@ -1,6 +1,6 @@
 // Pure selection logic shared by the database and live (no database) read paths.
 import { getCircuit } from "@/data/circuits";
-import { FEATURED_ROUND_GRACE_MINUTES } from "@/domain/series";
+import { FEATURED_ROUND_GRACE_MINUTES, isNumberedRound } from "@/domain/series";
 import type { Circuit, FeaturedRoundResult, Round, Session } from "@/domain/types";
 import type { SessionWithContext } from "./index";
 import { addDays, MINUTE, trackMidnight } from "./time";
@@ -52,14 +52,22 @@ export function unfinishedRounds(rounds: RoundWithContext[], now: Date): RoundWi
 
 /**
  * The Round's place in its season: its Series' Rounds that season in calendar order, not counting Rounds
- * whose every Session is cancelled (the Series renumber around those). F2 and F3 Rounds are named by their
- * official number ("Round 13"), which wins over the count.
+ * whose every Session is cancelled (the Series renumber around those) or that the Series doesn't number
+ * (null for those). F2, F3 and F1 Academy Rounds are named by their official number ("Round 13"), which
+ * wins over the count.
  */
-function roundNumber(target: RoundWithContext, rounds: RoundWithContext[]): number {
+function roundNumber(target: RoundWithContext, rounds: RoundWithContext[]): number | null {
   const official = /^Round (\d+)$/.exec(target.round.name);
   if (official) return Number(official[1]);
+  if (!isNumberedRound(target.round.series, target.round.name)) return null;
   const season = rounds
-    .filter((r) => r.round.series === target.round.series && r.round.season === target.round.season && !allCancelled(r))
+    .filter(
+      (r) =>
+        r.round.series === target.round.series &&
+        r.round.season === target.round.season &&
+        !allCancelled(r) &&
+        isNumberedRound(r.round.series, r.round.name),
+    )
     .sort((a, b) => firstInstant(a) - firstInstant(b));
   return season.findIndex((r) => r.round.id === target.round.id) + 1;
 }
@@ -87,8 +95,8 @@ export function selectFeaturedRound(rounds: RoundWithContext[], now: Date): Feat
 /** A Round on the full calendar. */
 export interface UpcomingRound {
   round: Round;
-  /** The Round's place in its season, e.g. 18 for Round 18. */
-  roundNumber: number;
+  /** The Round's place in its season, e.g. 18 for Round 18; null for a Round the Series doesn't number. */
+  roundNumber: number | null;
   circuit: Circuit;
   /** Ordered by startsAt. Cancelled Sessions are included. */
   sessions: Session[];

@@ -1,0 +1,282 @@
+{
+ "data": [
+  {
+   "content": [
+    {
+     "type": "faq",
+     "elements": [
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Wednesday, 20 January 2027"
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "14:01: Shakedown - GAP (4.25 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Thursday, 21 January 2027"
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "13:45: Official start (Port Hercule, Monaco)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "15:35: SS 1 Col de Bleine / Aiglun (25.47 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "18:05: SS 2 Clumanc / Lambruisse (20.95 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "20:05: SS 3 - Esclangon / Seyne-les-Alpes (23.80 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Friday, 22 January 2027"
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "09:25: SS 4 Agnières-en-Dévoluy / Pellafol (17.20 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "10:25: SS 5 La Salle-en-Beaumont / Les Côtes-de-Corps (14.40 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "11:25: SS 6 Saint-Maurice / Aubessagne (18.68 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "14:45: SS 7 Agnières-en-Dévoluy / Pellafo (17.20 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "15:45: SS 8 La Salle-en-Beaumont / Les Côtes-de-Corps (14.40 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "16:45: SS 9 Saint-Maurice / Aubessagne (18.68 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Saturday, 23 January 2027"
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "08:05: SS 10 - Laborel / Montauban-sur-l’Ouvèze (18.58 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "10:05: SS 11 Saint-Nazaire-le-Désert / La Motte-Chalancon (22.00 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "11:15: SS 12 La Bâtie-des-Fonts / Sigottier (15.88 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "15:05: SS 13 Laborel / Montauban-sur-l’Ouvèz (18.58 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "17:05: SS 14 - Saint-Nazaire-le-Désert / La Motte-Chalancon (22.00 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "18:25: SS 15 La Bâtie-des-Fonts / Sigottier (15.88 km)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "question": [
+        {
+         "variant": "text",
+         "text": "Sunday, 24 January 2027"
+        }
+       ],
+       "answer": [
+        {
+         "type": "list",
+         "enumerationType": "bullet",
+         "items": [
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "08:00: SS 16 - Clumanc / Lambruisse (20.95 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "09:40: SS 17 - Col de Bleine / Aiglun (25.47 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "13:15: SS 18 La Bollène-Vésubie / Moulinet - Wolf Power Stage (23.45 km)"
+            }
+           ]
+          },
+          {
+           "label": null,
+           "elements": [
+            {
+             "variant": "text",
+             "text": "17:00: Prize-giving ceremony (Port Hercule, Monaco)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
