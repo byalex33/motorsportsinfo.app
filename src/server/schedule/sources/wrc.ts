@@ -30,8 +30,12 @@ export const WRC_SERVICE_PARKS: [RegExp, string][] = [
   [/finland/i, "jyvaskyla"],
   [/paraguay/i, "encarnacion"],
   [/chile/i, "concepcion"],
+  // Sardinia's "Rally Italia Sardegna" first: from 2027 the Italian round is "Rally d'Italia", based in Rome.
   [/sardegna/i, "alghero"],
+  [/italia/i, "rome"],
   [/scotland/i, "aberdeen"],
+  [/rally us\b|united states/i, "knoxville"],
+  [/saudi/i, "jeddah-service-park"],
 ];
 
 export interface WrcEvent {

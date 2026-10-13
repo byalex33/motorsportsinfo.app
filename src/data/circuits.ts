@@ -880,6 +880,32 @@ const ENTRIES: CircuitEntry[] = [
     lon: 8.3196,
     aliases: [],
   },
+  // 2027 newcomers, placed at the host city until their service parks are confirmed: Rally d'Italia moves
+  // to Rome; Rally US's proposed park is World's Fair Park, Knoxville; Rally Saudi Arabia used Jeddah in 2025.
+  {
+    id: "rome",
+    name: "Rome service park",
+    location: "Rome, Italy",
+    lat: 41.9028,
+    lon: 12.4964,
+    aliases: [],
+  },
+  {
+    id: "knoxville",
+    name: "Knoxville service park",
+    location: "Knoxville, United States",
+    lat: 35.9617,
+    lon: -83.923,
+    aliases: [],
+  },
+  {
+    id: "jeddah-service-park",
+    name: "Jeddah service park",
+    location: "Jeddah, Saudi Arabia",
+    lat: 21.5433,
+    lon: 39.1728,
+    aliases: [],
+  },
   {
     id: "aberdeen",
     name: "P&J Live",

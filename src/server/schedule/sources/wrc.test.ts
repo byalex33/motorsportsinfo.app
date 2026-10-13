@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { normaliseRounds } from "../normalise";
 import { fixtureJson } from "../test-utils";
-import { itinerarySlug, parseUtcOffset, parseWrcRally, wrcRoundName, type WrcEvent } from "./wrc";
+import { itinerarySlug, parseUtcOffset, parseWrcRally, wrcRoundName, wrcServicePark, type WrcEvent } from "./wrc";
 
 const season = fixtureJson<{ data: WrcEvent[] }>("wrc-season-2026.json").data;
 const event = (slug: string) => season.find((e) => e.reference.uriSlug === slug)!;
@@ -90,8 +90,15 @@ describe("WRC rallies", () => {
 
   it("flags a rally whose service park isn't known", () => {
     const warnings: string[] = [];
-    const raw = parseWrcRally({ ...event("wrc-rally-chile-bio-bio-2026"), content: { title: "WRC Rally US 2027" } }, null, 2027, warnings);
-    expect(normaliseRounds("wrc", [raw]).problems).toEqual([expect.stringContaining('Unknown Circuit for WRC 2027 "Rally US"')]);
+    const raw = parseWrcRally({ ...event("wrc-rally-chile-bio-bio-2026"), content: { title: "WRC Rally Atlantis 2027" } }, null, 2027, warnings);
+    expect(normaliseRounds("wrc", [raw]).problems).toEqual([expect.stringContaining('Unknown Circuit for WRC 2027 "Rally Atlantis"')]);
+  });
+
+  it("knows the service parks of the 2027 newcomers, and keeps Sardinia apart from Rome", () => {
+    expect(wrcServicePark("WRC Rally d'Italia 2027")).toBe("rome");
+    expect(wrcServicePark("WRC Rally Italia Sardegna 2026")).toBe("alghero");
+    expect(wrcServicePark("WRC Rally US 2027")).toBe("knoxville");
+    expect(wrcServicePark("WRC Rally Saudi Arabia 2027")).toBe("jeddah-service-park");
   });
 
   it("knows the service park of every 2026 rally", () => {
