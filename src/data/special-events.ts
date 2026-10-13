@@ -26,6 +26,8 @@ export interface SpecialEventEntry {
   source: { label: string; href: string };
   watch: { label: string; href: string } | null;
   announcement: string;
+  /** A [data-accent] rule in src/app/globals.css that colours the page, or null for the site's purple. */
+  accent: string | null;
   /** Where the times came from and when they were checked. */
   note: string;
 }
@@ -53,6 +55,7 @@ export const SPECIAL_EVENTS: SpecialEventEntry[] = [
     source: { label: "GT World Challenge Europe", href: "https://www.gt-world-challenge-europe.com/event/255/portimao" },
     watch: { label: "Free on GT World's YouTube channel", href: "https://www.youtube.com/@GTWorld" },
     announcement: "Max Verstappen races GT3 at Portimão this weekend",
+    accent: "verstappen",
     note:
       "Checked 13 Oct 2026: gt-world-challenge-europe.com event page and live-coverage listing, motorsport.com; the race moved to Saturday evening (dailysportscar.com, 1 Aug 2026) to avoid the WEC clash.",
   },

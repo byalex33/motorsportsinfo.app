@@ -88,12 +88,12 @@ export function RoundHero({
   );
 }
 
-/** A Special Event's hero: like RoundHero, in the site's own colour, with what it is and where to watch it. */
+/** A Special Event's hero: like RoundHero, in the event's accent (the site's own colour unless it has one), with what it is and where to watch it. */
 export function SpecialEventHero({ event, countdown }: { event: SpecialEvent; countdown: ReactNode }) {
   return (
     <section className="flex flex-col items-center text-center">
       <p className="eyebrow enter-rise flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-muted-foreground" style={enterDelay(ENTER.eyebrow)}>
-        <span className="inline-flex items-center gap-1.5 font-semibold text-primary">
+        <span className="inline-flex items-center gap-1.5 font-semibold text-series-accent">
           <SparklesIcon className="size-3" aria-hidden />
           Special
         </span>
@@ -122,7 +122,7 @@ export function SpecialEventHero({ event, countdown }: { event: SpecialEvent; co
               href={event.watch.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-primary underline decoration-primary/30 underline-offset-4 transition-colors outline-none hover:decoration-primary focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex items-center gap-1 text-series-accent underline decoration-series-accent/30 underline-offset-4 transition-colors outline-none hover:decoration-series-accent focus-visible:ring-2 focus-visible:ring-ring"
             >
               {event.watch.label}
               <ArrowUpRightIcon className="size-3.5" aria-hidden />

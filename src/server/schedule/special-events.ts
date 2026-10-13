@@ -40,6 +40,7 @@ export function toSpecialEvent(entry: SpecialEventEntry): SpecialEvent {
     source: entry.source,
     watch: entry.watch,
     announcement: entry.announcement,
+    accent: entry.accent,
   };
 }
 
@@ -64,6 +65,8 @@ export interface SpecialEventAnnouncement {
   id: string;
   href: string;
   text: string;
+  /** The Special Event's accent (see SpecialEvent), or null for the site's purple. */
+  accent: string | null;
   /** ISO UTC: the announcement hides itself from then on. */
   until: string;
 }
@@ -77,6 +80,7 @@ export function listSpecialEventAnnouncements(): SpecialEventAnnouncement[] {
     id: event.id,
     href: `/special/${event.slug}`,
     text: event.announcement,
+    accent: event.accent,
     until: specialEventAnnouncedUntil(event),
   }));
 }

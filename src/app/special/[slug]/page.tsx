@@ -42,7 +42,7 @@ export default async function SpecialEventPage({ params }: PageProps<"/special/[
 
   return (
     <PageTransition>
-      <main className="mx-auto w-full max-w-5xl flex-1 space-y-14 px-4 pt-10 pb-20 sm:space-y-16 sm:px-6 sm:pt-16">
+      <main data-accent={event.accent ?? undefined} className="mx-auto w-full max-w-5xl flex-1 space-y-14 px-4 pt-10 pb-20 sm:space-y-16 sm:px-6 sm:pt-16">
         <PageStamp at={renderedAt} />
         <SpecialEventHero
           event={event}

@@ -221,7 +221,8 @@
 }
 /* Re-declared on every [data-series] element so var(--series-accent) resolves to that Series. */
 :root,
-[data-series] {
+[data-series],
+[data-accent] {
   --series-gradient-stops: var(--series-accent), var(--series-accent);
   --series-gradient: linear-gradient(90deg, var(--series-gradient-stops));
 }
@@ -329,6 +330,25 @@
 .dark[data-series="nascar"] {
   --series-accent: #2a9be0;
   --series-accent-foreground: #020f18;
+}
+
+/* ---------------------------------------------------------------------------
+   Special Event accents: set by `accent` in src/data/special-events.ts as data-accent on the page and
+   the announcement strip (whose 7% tint keeps link text at 4.56 light / 8.34 dark).
+   Same tokens and the same AA checks as the Series accents above.
+     verstappen  #f59b06  Max Verstappen's orange (given by the site owner); light mode darkens it
+                          in OKLCH, keeping the hue, as F2 / F3 / IndyCar do
+                 light: bg / subtle / muted · chip       dark: bg / subtle / muted · chip
+     verstappen  #9e6202  5.00 / 4.79 / 4.58 · 5.00     #f59b06  9.03 / 8.61 / 8.17 · 8.64
+   --------------------------------------------------------------------------- */
+[data-accent="verstappen"] {
+  --series-accent: #9e6202;
+  --series-accent-foreground: #ffffff;
+}
+.dark [data-accent="verstappen"],
+.dark[data-accent="verstappen"] {
+  --series-accent: #f59b06;
+  --series-accent-foreground: #180f02;
 }
 
 /* Decorative Series gradient (solid accent unless the Series has one). Horizontal and vertical. */
