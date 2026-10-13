@@ -18,6 +18,7 @@ const entry: SpecialEventEntry = {
   source: { label: "Source", href: "https://example.com" },
   watch: null,
   announcement: "Something special",
+  accent: null,
   note: "test",
 };
 
@@ -67,6 +68,7 @@ describe("the hand-entered Special Events", () => {
       id: "special-2026-verstappen-portimao",
       href: "/special/verstappen-portimao",
       text: "Max Verstappen races GT3 at Portimão this weekend",
+      accent: "verstappen",
       until: "2026-10-17T21:00:00.000Z",
     });
   });

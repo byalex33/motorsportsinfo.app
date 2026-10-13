@@ -108,6 +108,8 @@ export interface SpecialEvent {
   watch: LabelledLink | null;
   /** The one line in the site-wide announcement, e.g. "Max Verstappen races GT3 at Portimão this weekend". */
   announcement: string;
+  /** A [data-accent] rule in src/app/globals.css that colours the page, or null for the site's purple. */
+  accent: string | null;
 }
 
 export interface Round {
