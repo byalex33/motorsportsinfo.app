@@ -7,8 +7,8 @@ import type { Circuit, Round, SeriesId, SpecialEvent } from "@/domain/types";
 import { ENTER, enterDelay } from "@/lib/motion";
 import { formatRoundDates } from "@/lib/time-format";
 
-/** "● F1 · Formula 1 · Round 18" (or "· 2026 season" when no Round is featured) — the micro-label above the Round name. */
-function SeriesLine({ series, roundNumber, season }: { series: SeriesId; roundNumber?: number; season?: number }) {
+/** "● F1 · Formula 1 · 2026 season" — the micro-label above a Series page's headline when no Round is featured. */
+function SeriesLine({ series, season }: { series: SeriesId; season?: number }) {
   const info = SERIES[series];
   return (
     <p className="eyebrow enter-rise flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-muted-foreground" style={enterDelay(ENTER.eyebrow)}>
@@ -22,18 +22,11 @@ function SeriesLine({ series, roundNumber, season }: { series: SeriesId; roundNu
           <span>{info.name}</span>
         </>
       )}
-      {roundNumber !== undefined ? (
+      {season !== undefined && (
         <>
           <span aria-hidden>·</span>
-          <span>Round {roundNumber}</span>
+          <span>{season} season</span>
         </>
-      ) : (
-        season !== undefined && (
-          <>
-            <span aria-hidden>·</span>
-            <span>{season} season</span>
-          </>
-        )
       )}
     </p>
   );
@@ -50,24 +43,25 @@ function MetaItem({ icon: Icon, label, style, children }: { icon: LucideIcon; la
 }
 
 export function RoundHero({
-  series,
   round,
   roundNumber,
   circuit,
   countdown,
 }: {
-  series: SeriesId;
   round: Round;
   /** null for a Round the Series doesn't number: the season is shown instead. */
   roundNumber: number | null;
   circuit: Circuit;
   countdown: ReactNode;
 }) {
-  // F2 and F3 Rounds are already named "Round 13"; the label then keeps the season instead of repeating it.
+  // F2 and F3 Rounds are already named "Round 13", and NASCAR's exhibition races aren't numbered: the label
+  // then shows the season instead.
   const namedByNumber = round.name === `Round ${roundNumber}`;
   return (
     <section className="flex flex-col items-center text-center">
-      <SeriesLine series={series} roundNumber={namedByNumber || roundNumber === null ? undefined : roundNumber} season={round.season} />
+      <p className="eyebrow enter-rise text-muted-foreground" style={enterDelay(ENTER.eyebrow)}>
+        {namedByNumber || roundNumber === null ? `${round.season} season` : `Round ${roundNumber}`}
+      </p>
       <h1 className="mt-4 max-w-4xl text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
         <RevealWords text={round.name} />
       </h1>

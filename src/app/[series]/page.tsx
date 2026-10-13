@@ -119,7 +119,6 @@ export default async function SeriesPage({ params }: PageProps<"/[series]">) {
         ) : (
           <>
             <RoundHero
-              series={series}
               round={featured.round}
               roundNumber={featured.roundNumber}
               circuit={featured.circuit}
