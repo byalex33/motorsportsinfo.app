@@ -47,17 +47,9 @@ export default function CalendarPage() {
   return (
     <PageTransition>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-10 pb-20 sm:px-6 sm:pt-16">
-        <p className="eyebrow enter-rise flex items-center gap-2 text-muted-foreground" style={enterDelay(ENTER.eyebrow)}>
-          <span aria-hidden className="size-1.5 rounded-full bg-primary" />
-          Calendar
-        </p>
-        <h1 className="mt-4 max-w-3xl text-[2.25rem] leading-[1.05] font-semibold tracking-[-0.04em] text-balance sm:text-5xl">
-          <RevealWords text="Every Round still to come, in your time." />
+        <h1 className="max-w-3xl text-[2.25rem] leading-[1.05] font-semibold tracking-[-0.04em] text-balance sm:text-5xl">
+          <RevealWords text="Calendar" />
         </h1>
-        <p className="enter-rise mt-5 max-w-2xl leading-relaxed text-pretty text-muted-foreground sm:text-lg" style={enterDelay(ENTER.lead)}>
-          F1, F2, F3, WEC, Formula E, IndyCar and MotoGP, plus F1 Academy, WRC, IMSA and NASCAR: each Round that
-          hasn&apos;t finished, with its Circuit and every Session&apos;s start in your time zone. Rounds drop off two hours after their final Session.
-        </p>
         <div className="enter-rise mt-10 sm:mt-14" style={enterDelay(ENTER.body)}>
           <Suspense fallback={<CalendarSkeleton />}>
             <Calendar />
