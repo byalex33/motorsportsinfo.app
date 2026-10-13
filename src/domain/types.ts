@@ -44,12 +44,14 @@ export interface Circuit {
   hasRadarCoverage: boolean;
 }
 
-export interface Session {
+/** What every Session has, in a Series' Round or in a Special Event. The Session list and countdown need only this. */
+export interface TimedSession {
   /** Stable id: `${roundId}:${slug}` e.g. "f1-2026-las-vegas:qualifying". */
   id: string;
+  /** The id of its Round, or of its Special Event. */
   roundId: string;
-  series: SeriesId;
-  type: SessionType;
+  /** Null for a Special Event's Session. */
+  series: SeriesId | null;
   /** Display name as the series uses it, e.g. "Free Practice 1", "Hyperpole". */
   name: string;
   /** ISO 8601 UTC. */
@@ -59,6 +61,53 @@ export interface Session {
   /** True when endsAt came from a default Session length, not the source. */
   endIsEstimated: boolean;
   status: SessionStatus;
+}
+
+export interface Session extends TimedSession {
+  series: SeriesId;
+  type: SessionType;
+}
+
+/** A Session of a Special Event. It belongs to no Series, so it has no Session Type. */
+export interface SpecialEventSession extends TimedSession {
+  series: null;
+}
+
+/** A link shown with its label, e.g. a data credit or where to watch. */
+export interface LabelledLink {
+  label: string;
+  href: string;
+}
+
+/**
+ * A one-off Round outside the Series the site covers, featured for a limited time on its own page and in
+ * the site-wide announcement, e.g. Max Verstappen's GT World Challenge Europe race at Portimão. Entered by
+ * hand; it has no Session Reminders or calendar feed.
+ */
+export interface SpecialEvent {
+  /** Stable id, also the Sessions' roundId, e.g. "special-2026-verstappen-portimao". */
+  id: string;
+  /** The page is /special/{slug}. */
+  slug: string;
+  /** Headline, e.g. "Max Verstappen at Portimão". */
+  name: string;
+  /** The championship and Round it belongs to, e.g. "GT World Challenge Europe · Endurance Cup finale". */
+  championship: string;
+  /** A sentence or two on what is happening and why the site features it. */
+  summary: string;
+  circuit: Circuit;
+  /** ISO date (YYYY-MM-DD) of the first day, in Track Time. */
+  startDate: string;
+  /** ISO date (YYYY-MM-DD) of the last day, in Track Time. */
+  endDate: string;
+  /** Ordered by startsAt. */
+  sessions: SpecialEventSession[];
+  /** Where the times come from; also where finished Sessions link for results. */
+  source: LabelledLink;
+  /** Where to watch it, when there is a free or official stream. */
+  watch: LabelledLink | null;
+  /** The one line in the site-wide announcement, e.g. "Max Verstappen races GT3 at Portimão this weekend". */
+  announcement: string;
 }
 
 export interface Round {

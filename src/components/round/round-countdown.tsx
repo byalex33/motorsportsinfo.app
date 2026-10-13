@@ -2,7 +2,7 @@
 
 import { FlagIcon } from "lucide-react";
 import { Fragment, useState } from "react";
-import type { Session } from "@/domain/types";
+import type { TimedSession } from "@/domain/types";
 import { useNow } from "@/lib/client-stores";
 import { countdownParts, formatCountdown, getRoundStatus } from "@/lib/round-status";
 import { formatClock, formatSessionDay } from "@/lib/time-format";
@@ -68,13 +68,16 @@ export function RoundCountdown({
   circuitTimeZone,
   trackTimes,
   renderedAt,
+  finishedNote = "The next Round appears here shortly.",
 }: {
-  sessions: Session[];
+  sessions: TimedSession[];
   circuitTimeZone: string;
   /** Server-rendered Track Time text per Session, shown until the viewer's zone is known. */
   trackTimes: Record<string, TrackTimeText>;
   /** When the page data was rendered: the server HTML (and hydration) show the status at that moment. */
   renderedAt: string;
+  /** Shown after "Round complete." once every Session has finished. */
+  finishedNote?: string;
 }) {
   const clock = useNow(1000);
   const zone = useDisplayZone(circuitTimeZone);
@@ -89,7 +92,7 @@ export function RoundCountdown({
       <p className="enter-focus flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-sm">
         <FlagIcon className="size-4 text-series-accent" aria-hidden />
         <span className="font-medium">Round complete.</span>
-        <span className="text-muted-foreground">The next Round appears here shortly.</span>
+        <span className="text-muted-foreground">{finishedNote}</span>
       </p>
     );
   }

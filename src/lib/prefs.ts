@@ -4,6 +4,7 @@
 //   msi.time   → JSON { "mode": "viewer" | "track" | "custom", "tz"?: string }
 //   msi.units  → JSON { "temp": "c" | "f", "wind": "kmh" | "mph" }
 //   msi.oss-note → "dismissed" once the open-source note is closed (not part of the alerts contract)
+//   msi.announcement → the id of the last Special Event announcement closed (not part of the alerts contract)
 // Every storage access is wrapped in try/catch; without storage the choice lives in memory for the visit.
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { SeriesId } from "@/domain/types";
@@ -17,6 +18,7 @@ export const PREF_KEYS = {
   time: "msi.time",
   units: "msi.units",
   openSourceNote: "msi.oss-note",
+  announcement: "msi.announcement",
 } as const;
 
 export type PrefKey = (typeof PREF_KEYS)[keyof typeof PREF_KEYS];
@@ -204,4 +206,16 @@ export function useOpenSourceNoteDismissed(): PrefState<boolean> {
     writePref(PREF_KEYS.openSourceNote, next ? "dismissed" : "");
   }, []);
   return { value: raw === "dismissed", ready: raw !== undefined, set };
+}
+
+/**
+ * The id of the Special Event announcement the viewer last closed; null when none, and while hydrating, so a
+ * closed announcement never flashes. A newer Special Event has a new id, so its announcement shows again.
+ */
+export function useDismissedAnnouncement(): PrefState<string | null> {
+  const raw = useStoredString(PREF_KEYS.announcement);
+  const set = useCallback((next: string | null) => {
+    writePref(PREF_KEYS.announcement, next ?? "");
+  }, []);
+  return { value: raw || null, ready: raw !== undefined, set };
 }

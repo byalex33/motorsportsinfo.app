@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { CalendarClockIcon } from "lucide-react";
-import type { ForecastResult, SeriesId, Session } from "@/domain/types";
-import { DATA_CREDITS } from "@/lib/data-credits";
+import type { ForecastResult, LabelledLink, TimedSession } from "@/domain/types";
 import { ENTER, enterDelay } from "@/lib/motion";
 import type { TrackTimeText } from "@/lib/track-time";
 import { DisplayControls } from "./display-controls";
@@ -11,8 +10,9 @@ import { SessionList } from "./session-list";
 import { useDisplayZone } from "./use-display-zone";
 
 interface RoundSessionsProps {
-  series: SeriesId;
-  sessions: Session[];
+  /** Where the schedule comes from, credited under the list (ADR 0001). */
+  credit: LabelledLink;
+  sessions: TimedSession[];
   forecasts: Record<string, ForecastResult>;
   /** Ids of the finished Sessions with a Session Result. The classification itself loads on reveal. */
   results: string[];
@@ -26,7 +26,7 @@ interface RoundSessionsProps {
 
 /** Display controls and the Round's Sessions in order, cancelled ones included. */
 export function RoundSessions({
-  series,
+  credit,
   sessions,
   forecasts,
   results,
@@ -90,8 +90,8 @@ export function RoundSessions({
 
       {/* Credits required by the data licences (ADR 0001). The radar map credits its own sources. */}
       <p className="enter-fade text-center font-mono text-[0.6875rem] tracking-[0.04em] text-muted-foreground" style={enterDelay(ENTER.rows + 120)}>
-        <a className="transition-colors hover:text-foreground" href={DATA_CREDITS[series].href} target="_blank" rel="noopener noreferrer">
-          Data: {DATA_CREDITS[series].label}
+        <a className="transition-colors hover:text-foreground" href={credit.href} target="_blank" rel="noopener noreferrer">
+          Data: {credit.label}
         </a>
         {" · "}
         <a className="transition-colors hover:text-foreground" href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">

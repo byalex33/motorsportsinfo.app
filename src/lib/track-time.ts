@@ -1,7 +1,7 @@
 // Track Time text rendered on the server, so Session times are in the HTML that crawlers (and viewers
 // before hydration) see. The client shows these exact strings until it knows the viewer's zone, then
 // switches to Viewer Time — the strings travel as props, so server HTML and hydration always match.
-import type { Session } from "@/domain/types";
+import type { TimedSession } from "@/domain/types";
 import { formatClock, formatSessionDay, formatTimeRange, zoneOffsetLabel } from "@/lib/time-format";
 
 /** Fixed locale for server-rendered text: 24-hour clock, "Sat 10 Oct". */
@@ -28,7 +28,7 @@ export interface TrackTimeText {
 }
 
 /** Track Time text for one Session in the Circuit's zone `tz`. */
-export function trackTimeText(session: Session, tz: string): TrackTimeText {
+export function trackTimeText(session: TimedSession, tz: string): TrackTimeText {
   const start = new Date(session.startsAt);
   const day = formatSessionDay(session.startsAt, tz, LOCALE);
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "numeric" }).formatToParts(start);
@@ -47,7 +47,7 @@ export function trackTimeText(session: Session, tz: string): TrackTimeText {
 }
 
 /** Track Time text for every Session, keyed by Session id. Plain data, safe to pass to client components. */
-export function trackTimeTexts(sessions: Session[], tz: string): Record<string, TrackTimeText> {
+export function trackTimeTexts(sessions: TimedSession[], tz: string): Record<string, TrackTimeText> {
   return Object.fromEntries(sessions.map((s) => [s.id, trackTimeText(s, tz)]));
 }
 

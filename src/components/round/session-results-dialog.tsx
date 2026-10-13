@@ -5,17 +5,17 @@ import { useEffect, useSyncExternalStore } from "react";
 import { ActivityIcon, ArrowUpRightIcon, EyeIcon, EyeOffIcon, RotateCcwIcon, TrophyIcon } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import type { Session, SessionResult } from "@/domain/types";
+import type { SessionResult, TimedSession } from "@/domain/types";
 import { staggerDelay } from "@/lib/motion";
 import { sessionSlug } from "@/lib/session-slug";
 import { useSpoilerRevealed } from "@/lib/spoilers";
 import { cn } from "@/lib/utils";
 
 interface SessionResultsDialogProps {
-  session: Session;
+  session: TimedSession;
   /** False when the site has no Session Result (other Series, or OpenF1 has not published it). */
   hasResult: boolean;
-  /** The Series' official results page. */
+  /** The Series' (or Special Event's) official results page. */
   resultsUrl: string;
 }
 

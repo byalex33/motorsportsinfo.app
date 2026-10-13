@@ -16,6 +16,7 @@ import type { RoundWithContext } from "./types";
 
 export { scheduleTag } from "./tags";
 export type { UpcomingRound } from "./select";
+export { getSpecialEvent, listSpecialEventAnnouncements, listSpecialEvents, type SpecialEventAnnouncement } from "./special-events";
 
 async function loadRounds(series: SeriesId): Promise<RoundWithContext[]> {
   if (getDb()) return withCircuits(await loadPublishedSchedule(series));

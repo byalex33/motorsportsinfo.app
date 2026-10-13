@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AnalyticsProvider } from "@/components/analytics-provider";
+import { AnnouncementBanner } from "@/components/announcement-banner";
 import { OfflineBanner } from "@/components/offline-banner";
 import { OpenSourceNote } from "@/components/open-source-note";
 import { ServiceWorkerRegistration } from "@/components/service-worker";
@@ -8,6 +9,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SITE_DESCRIPTION, SITE_LOCALE, SITE_NAME, SITE_URL } from "@/lib/site";
+import { listSpecialEventAnnouncements } from "@/server/schedule";
 import "./globals.css";
 
 const sans = Geist({
@@ -65,6 +67,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </a>
           <SiteHeader />
           <OfflineBanner />
+          <AnnouncementBanner announcements={listSpecialEventAnnouncements()} />
           <div id="main" className="flex flex-1 flex-col">
             {children}
           </div>
