@@ -12,7 +12,7 @@ import {
 
 describe("storage keys (shared contract with alerts)", () => {
   it("are stable", () => {
-    expect(PREF_KEYS).toEqual({ series: "msi.series", time: "msi.time", units: "msi.units", openSourceNote: "msi.oss-note" });
+    expect(PREF_KEYS).toEqual({ series: "msi.series", time: "msi.time", units: "msi.units", openSourceNote: "msi.oss-note", announcement: "msi.announcement" });
   });
 });
 

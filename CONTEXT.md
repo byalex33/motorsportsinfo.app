@@ -18,6 +18,10 @@ _Avoid_: Event, weekend, race, Grand Prix (as a generic term)
 The one Round a Series page shows. It is the Round in progress, or else the next upcoming one. A Round stays featured until 2 hours after its final Session ends.
 _Avoid_: Current round, next race, upcoming event
 
+**Special Event**:
+A one-off Round outside the covered Series that the site features for a limited time, such as Max Verstappen's GT World Challenge Europe race at Portimão. It is entered by hand, has its own page (/special/…) with Sessions and forecasts, and is announced in a strip under the header until 2 hours after its final Session ends. Its Sessions have no Session Type, and it has no Session Reminders, calendar feed or Session Results.
+_Avoid_: One-off, guest race, bonus event
+
 **Session**:
 A single on-track running period within a Round, with a start and end time, such as FP1, Qualifying, Hyperpole or Race.
 _Avoid_: Event, race (unless it is the Race session)

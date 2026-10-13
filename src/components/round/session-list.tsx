@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ActivityIcon, CloudOffIcon } from "lucide-react";
 import { SessionForecastView } from "@/components/weather/session-forecast";
 import { InlineSkeleton } from "@/components/inline-skeleton";
-import type { ForecastResult, Session } from "@/domain/types";
+import type { ForecastResult, TimedSession } from "@/domain/types";
 import { useNow, useOnline } from "@/lib/client-stores";
 import type { DisplayZone } from "@/lib/display-zone";
 import { staggerDelay } from "@/lib/motion";
@@ -18,7 +18,7 @@ import { LiveDot } from "./round-countdown";
 import { SessionResultsDialog } from "./session-results-dialog";
 
 interface SessionListProps {
-  sessions: Session[];
+  sessions: TimedSession[];
   forecasts: Record<string, ForecastResult>;
   /** Ids of the finished Sessions with a Session Result. */
   results: string[];
@@ -86,7 +86,7 @@ function SessionRow({
   isNext,
 }: {
   index: number;
-  session: Session;
+  session: TimedSession;
   forecast: ForecastResult | undefined;
   hasResult: boolean;
   resultsUrl: string;

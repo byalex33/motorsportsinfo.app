@@ -15,6 +15,7 @@ import { calendarFeedPath } from "@/server/alerts/selection";
 import { roundDisplayName, roundEventName, roundJsonLd, seriesBreadcrumbJsonLd } from "@/lib/seo/json-ld";
 import { pageMetadata } from "@/lib/seo/metadata";
 import { absoluteUrl } from "@/lib/site";
+import { DATA_CREDITS } from "@/lib/data-credits";
 import { trackTimeTexts } from "@/lib/track-time";
 import { isSeriesId } from "@/lib/series-id";
 import { formatRoundDates } from "@/lib/time-format";
@@ -137,7 +138,7 @@ export default async function SeriesPage({ params }: PageProps<"/[series]">) {
               <RadarSlot circuit={featured.circuit} sessions={featured.sessions} />
             )}
             <RoundSessions
-              series={series}
+              credit={DATA_CREDITS[series]}
               sessions={featured.sessions}
               forecasts={forecasts}
               results={results}

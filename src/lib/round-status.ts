@@ -1,16 +1,16 @@
 // Pure helpers: which Session is live or next, and countdown maths.
 import { RADAR_LEAD_MINUTES } from "@/domain/series";
-import type { Session } from "@/domain/types";
+import type { Session, TimedSession } from "@/domain/types";
 
-export type RoundStatus =
-  | { kind: "live"; session: Session }
-  | { kind: "upcoming"; session: Session }
+export type RoundStatus<S extends TimedSession = Session> =
+  | { kind: "live"; session: S }
+  | { kind: "upcoming"; session: S }
   | { kind: "finished" };
 
 export type SessionPhase = "cancelled" | "finished" | "live" | "upcoming";
 
 /** Phase of one Session at `now`. Cancelled Sessions stay cancelled whatever the time. */
-export function sessionPhase(session: Session, now: number): SessionPhase {
+export function sessionPhase(session: TimedSession, now: number): SessionPhase {
   if (session.status === "cancelled") return "cancelled";
   const start = Date.parse(session.startsAt);
   const end = Date.parse(session.endsAt);
@@ -23,7 +23,7 @@ export function sessionPhase(session: Session, now: number): SessionPhase {
  * The Session the hero counts towards. A running Session wins (earliest-starting if several overlap);
  * otherwise the next Session to start. Cancelled Sessions are ignored.
  */
-export function getRoundStatus(sessions: Session[], now: number): RoundStatus {
+export function getRoundStatus<S extends TimedSession>(sessions: S[], now: number): RoundStatus<S> {
   const active = sessions
     .filter((s) => s.status !== "cancelled")
     .slice()

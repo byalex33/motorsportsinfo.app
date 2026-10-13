@@ -1,9 +1,9 @@
-import { CalendarDaysIcon, MapPinIcon, RouteIcon, type LucideIcon } from "lucide-react";
+import { ArrowUpRightIcon, CalendarDaysIcon, MapPinIcon, PlayIcon, RouteIcon, SparklesIcon, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { RevealWords } from "@/components/motion/reveal-words";
 import { SERIES } from "@/domain/series";
-import type { Circuit, Round, SeriesId } from "@/domain/types";
+import type { Circuit, Round, SeriesId, SpecialEvent } from "@/domain/types";
 import { ENTER, enterDelay } from "@/lib/motion";
 import { formatRoundDates } from "@/lib/time-format";
 
@@ -84,6 +84,58 @@ export function RoundHero({
             {!round.sessionTimesConfirmed && <span className="chip border border-border text-muted-foreground">Times TBC</span>}
           </span>
         </MetaItem>
+      </dl>
+      {countdown && (
+        <div className="enter-rise mt-10 w-full min-w-0 border-t border-border pt-10 sm:mt-12 sm:pt-12" style={enterDelay(ENTER.countdown)}>
+          {countdown}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** A Special Event's hero: like RoundHero, in the site's own colour, with what it is and where to watch it. */
+export function SpecialEventHero({ event, countdown }: { event: SpecialEvent; countdown: ReactNode }) {
+  return (
+    <section className="flex flex-col items-center text-center">
+      <p className="eyebrow enter-rise flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-muted-foreground" style={enterDelay(ENTER.eyebrow)}>
+        <span className="inline-flex items-center gap-1.5 font-semibold text-primary">
+          <SparklesIcon className="size-3" aria-hidden />
+          Special
+        </span>
+        <span aria-hidden>·</span>
+        <span>{event.championship}</span>
+      </p>
+      <h1 className="mt-4 max-w-4xl text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
+        <RevealWords text={event.name} />
+      </h1>
+      <p className="enter-rise mt-5 max-w-2xl leading-relaxed text-pretty text-muted-foreground" style={enterDelay(ENTER.lead)}>
+        {event.summary}
+      </p>
+      <dl className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+        <MetaItem icon={RouteIcon} label="Circuit" style={enterDelay(ENTER.meta)}>
+          <span className="font-medium text-foreground">{event.circuit.name}</span>
+        </MetaItem>
+        <MetaItem icon={MapPinIcon} label="Location" style={enterDelay(ENTER.meta + ENTER.metaStep)}>
+          {event.circuit.location}
+        </MetaItem>
+        <MetaItem icon={CalendarDaysIcon} label="Dates" style={enterDelay(ENTER.meta + 2 * ENTER.metaStep)}>
+          <span className="tabular">{formatRoundDates(event.startDate, event.endDate)}</span>
+        </MetaItem>
+        {event.watch && (
+          <MetaItem icon={PlayIcon} label="Watch" style={enterDelay(ENTER.meta + 3 * ENTER.metaStep)}>
+            <a
+              href={event.watch.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-primary underline decoration-primary/30 underline-offset-4 transition-colors outline-none hover:decoration-primary focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {event.watch.label}
+              <ArrowUpRightIcon className="size-3.5" aria-hidden />
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          </MetaItem>
+        )}
       </dl>
       {countdown && (
         <div className="enter-rise mt-10 w-full min-w-0 border-t border-border pt-10 sm:mt-12 sm:pt-12" style={enterDelay(ENTER.countdown)}>

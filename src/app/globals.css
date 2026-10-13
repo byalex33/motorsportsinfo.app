@@ -459,6 +459,19 @@
     opacity: 0;
   }
 }
+/* The announcement strip opens and closes its own height (on a grid wrapper), so the page below slides, never jumps. */
+@keyframes announce-in {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+@keyframes announce-out {
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
 @keyframes nav-indicator-in {
   from {
     opacity: 0;
