@@ -7,7 +7,7 @@ import { pageMetadata } from "@/lib/seo/metadata";
 export const metadata = pageMetadata({
   title: "Session Reminders, FIA document alerts & calendar feeds",
   description:
-    "Session Reminders on your phone or computer, alerts for new FIA documents, and a calendar feed of F1, F2, F3, WEC, Formula E, IndyCar, MotoGP, F1 Academy, WRC, IMSA and NASCAR Session times.",
+    "Session Reminders on your phone or computer, alerts for new FIA documents, and a calendar feed of F1, F2, F3, WEC, Formula E, IndyCar, MotoGP, F1 Academy, WRC, IMSA, NASCAR, GT World Challenge Europe, DTM and Super GT Session times.",
   path: "/alerts",
 });
 
@@ -24,7 +24,7 @@ export default function AlertsPage() {
             <RevealWords text="Alerts" />
           </h1>
           <p className="enter-rise mt-5 max-w-2xl leading-relaxed text-pretty text-muted-foreground sm:text-lg" style={enterDelay(ENTER.meta)}>
-            Get a Session Reminder before the Sessions you follow, or put them in your calendar. Covers F1, F2, F3, WEC, Formula E, IndyCar, MotoGP, F1 Academy, WRC, IMSA and NASCAR — and for F1, F2 and F3, a notification when the FIA publishes a new document.
+            Get a Session Reminder before the Sessions you follow, or put them in your calendar. Covers F1, F2, F3, WEC, Formula E, IndyCar, MotoGP, F1 Academy, WRC, IMSA, NASCAR, GT World Challenge Europe, DTM and Super GT — and for F1, F2 and F3, a notification when the FIA publishes a new document.
           </p>
         </header>
         <AlertsPanel />

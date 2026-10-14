@@ -20,4 +20,7 @@ export const DATA_CREDITS: Record<SeriesId, DataCredit> = {
   wrc: { label: "WRC", href: "https://www.wrc.com" },
   imsa: { label: "IMSA", href: "https://www.imsa.com" },
   nascar: { label: "NASCAR", href: "https://www.nascar.com" },
+  "gtwc-europe": { label: "GT World Challenge Europe", href: "https://www.gt-world-challenge-europe.com" },
+  dtm: { label: "DTM", href: "https://www.dtm.com" },
+  "super-gt": { label: "Super GT", href: "https://supergt.net" },
 };

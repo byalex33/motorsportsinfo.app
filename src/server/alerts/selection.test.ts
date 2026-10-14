@@ -18,7 +18,7 @@ describe("encodeSelection / decodeSelection", () => {
     const all: Follows = Object.fromEntries(SERIES_IDS.map((s) => [s, [...SERIES[s].sessionTypes]]));
     const spec = encodeSelection(all);
     expect(spec).toBe(
-      "f1-p-sq-s-q-r_f2-p-q-sr-fr_f3-p-q-sr-fr_wec-p-q-h-r_fe-p-q-r_indycar-p-q-r_motogp-p-q-s-r_f1-academy-p-q-r_wrc-sd-st-ps_imsa-p-q-r_nascar-p-q-r",
+      "f1-p-sq-s-q-r_f2-p-q-sr-fr_f3-p-q-sr-fr_wec-p-q-h-r_fe-p-q-r_indycar-p-q-r_motogp-p-q-s-r_f1-academy-p-q-r_wrc-sd-st-ps_imsa-p-q-r_nascar-p-q-r_gtwc-europe-p-q-r_dtm-p-q-r_super-gt-p-q-r",
     );
     expect(decodeSelection(spec)).toEqual(all);
   });

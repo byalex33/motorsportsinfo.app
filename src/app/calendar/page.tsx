@@ -13,7 +13,7 @@ import { getCalendarPageData } from "./data";
 export const metadata = pageMetadata({
   title: "Calendar – every upcoming Round of F1, F2, F3, WEC, Formula E, IndyCar, MotoGP and more",
   description:
-    "Every Round still to come across F1, F2, F3, WEC, Formula E, IndyCar, MotoGP, F1 Academy, WRC, IMSA and NASCAR, with the Circuit and each Session's start in your time zone.",
+    "Every Round still to come across F1, F2, F3, WEC, Formula E, IndyCar, MotoGP, F1 Academy, WRC, IMSA, NASCAR, GT World Challenge Europe, DTM and Super GT, with the Circuit and each Session's start in your time zone.",
   path: "/calendar",
 });
 

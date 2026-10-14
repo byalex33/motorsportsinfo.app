@@ -4,12 +4,15 @@ import { normaliseRounds } from "../normalise";
 import type { RawRound, SourceSchedule } from "../types";
 import { fetchFiaFeederSeason, type FeederSeries } from "./fia-feeder";
 import { fillTbcRounds } from "./fill-tbc";
+import { fetchDtmSeason } from "./dtm";
 import { defaultContext, errorMessage, type SourceContext } from "./http";
+import { fetchGtwcSeason } from "./gtwc";
 import { fetchImsaSeason } from "./imsa";
 import { fetchJolpicaSeason } from "./jolpica";
 import { fetchNascarSeason } from "./nascar";
 import { fetchOpenF1Season } from "./openf1";
 import { fetchSportstimesSeason, type SportstimesSeries } from "./sportstimes";
+import { fetchSuperGtSeason } from "./super-gt";
 import { fetchWecSeasons } from "./wec";
 import { fetchWrcSeason } from "./wrc";
 
@@ -92,6 +95,9 @@ export const SOURCES: Record<SeriesId, { primary: SourceDef; fallback?: SourceDe
   wrc: { primary: { name: "wrc.com", load: perSeason(fetchWrcSeason) } },
   imsa: { primary: { name: "imsa-ecal", load: perSeason(fetchImsaSeason) } },
   nascar: { primary: { name: "nascar", load: perSeason(fetchNascarSeason) } },
+  "gtwc-europe": { primary: { name: "gt-world-challenge-europe.com", load: perSeason(fetchGtwcSeason) } },
+  dtm: { primary: { name: "dtm.com", load: perSeason(fetchDtmSeason) } },
+  "super-gt": { primary: { name: "supergt.net", load: perSeason(fetchSuperGtSeason) } },
 };
 
 export class SourceFailure extends Error {

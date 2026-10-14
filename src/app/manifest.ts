@@ -10,7 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "motorsportsinfo.app",
     short_name: "MSI",
-    description: "Session times and weather for F1, F2, F3, WEC, Formula E, IndyCar, MotoGP, F1 Academy, WRC, IMSA and NASCAR, in your time zone.",
+    description: "Session times and weather for F1, F2, F3, WEC, Formula E, IndyCar, MotoGP, F1 Academy, WRC, IMSA, NASCAR, GT World Challenge Europe, DTM and Super GT, in your time zone.",
     start_url: "/",
     scope: "/",
     display: "standalone",

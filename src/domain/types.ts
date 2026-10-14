@@ -12,6 +12,9 @@ export const SERIES_IDS = [
   "wrc",
   "imsa",
   "nascar",
+  "gtwc-europe",
+  "dtm",
+  "super-gt",
 ] as const;
 export type SeriesId = (typeof SERIES_IDS)[number];
 

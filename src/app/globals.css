@@ -186,6 +186,11 @@
      IMSA     #e21b23  imsa.com stylesheets (the logo red)
      NASCAR   #007ac2  nascar.com --series-1-branding-color (Cup); --nascar-primary / -secondary /
                        -tertiary-branding-color #007ac2 / #e4002b / #ffd659
+     GTWC Europe #e31e12  gt-world-challenge-europe.com --color--primary (-dark #9d1a07, -light #ff2014);
+                       the logo runs from the dark red to the red
+     DTM      #ffcc00  dtm.com app.css: the yellow of its buttons, highlights and track maps; the logo is
+                       pink #ff88bd on #1d1d1b (logo-svg fill)
+     Super GT #d70c18  supergt.net theme CSS and the 2026 series logo (the logo red)
 
    Tokens keep the official hue and only move lightness where a mode needs it:
      F2 light, F3 light, IndyCar light are darkened; F1 dark, FE dark, MotoGP dark are lightened.
@@ -194,6 +199,9 @@
      gradient (its red / orange would collide with F1, MotoGP and F3). F1 Academy's is its pink, not
      its purple, which is Formula E's. WRC's crimson and IMSA's red stay close to F1 and MotoGP: those
      are their brands. NASCAR's Cup blue is a shade off F2's; its yellow-red-blue bar tells it apart.
+     GTWC Europe's and Super GT's reds join them for the same reason; GTWC Europe's dark token is its own
+     -light red. DTM's solid accent is its site yellow, not its logo pink, which is close to F1 Academy's;
+     the pink leads its gradient.
 
    WCAG AA (4.5:1) checked for accent text on background (#fff / #0a0a0a), subtle (#fafafa / #111)
    and muted (#f5f5f5 / #171717), and for accent-foreground on accent (chips):
@@ -209,11 +217,14 @@
      wrc      #db0a40  5.09 / 4.87 / 4.66 · 5.09     #ff2a5c  5.41 / 5.16 / 4.90 · 5.37
      imsa     #d0161e  5.50 / 5.27 / 5.05 · 5.50     #f04048  5.22 / 4.97 / 4.72 · 5.18
      nascar   #0072b5  5.15 / 4.94 / 4.73 · 5.15     #2a9be0  6.47 / 6.17 / 5.86 · 6.33
+     gtwc-eu. #df170c  4.92 / 4.72 / 4.52 · 4.92     #ff2014  5.16 / 4.92 / 4.67 · 5.12
+     dtm      #8a6d00  4.92 / 4.71 / 4.51 · 4.92     #ffcc00 13.09 / 12.49 / 11.86 · 12.19
+     super-gt #d70c18  5.31 / 5.09 / 4.87 · 5.31     #f13632  5.01 / 4.78 / 4.54 · 4.98
 
    --series-gradient-stops / bg-series-gradient(-y): decorative only (active nav underline and
    dot, Series dots, the LIVE bar, the picker's hover line). It falls back to the solid accent;
-   IndyCar, MotoGP, F1 Academy and NASCAR use their official gradients. Never put text on it — the
-   light stops (#f2a83b, #faec25, #ffd659) fail contrast.
+   IndyCar, MotoGP, F1 Academy, NASCAR, GTWC Europe and DTM use their official gradients. Never put text on
+   it — the light stops (#f2a83b, #faec25, #ffd659, #ff88bd, #ffcc00) fail contrast.
    --------------------------------------------------------------------------- */
 :root {
   --series-accent: var(--primary);
@@ -275,6 +286,20 @@
   --series-accent-foreground: #ffffff;
   --series-gradient-stops: #ffd659 0%, #ffd659 33%, #e4002b 33%, #e4002b 67%, #007ac2 67%, #007ac2 100%;
 }
+[data-series="gtwc-europe"] {
+  --series-accent: #df170c;
+  --series-accent-foreground: #ffffff;
+  --series-gradient-stops: #9d1a07 0%, #e31e12 100%;
+}
+[data-series="dtm"] {
+  --series-accent: #8a6d00;
+  --series-accent-foreground: #ffffff;
+  --series-gradient-stops: #ff88bd 0%, #ffcc00 100%;
+}
+[data-series="super-gt"] {
+  --series-accent: #d70c18;
+  --series-accent-foreground: #ffffff;
+}
 
 .dark [data-series="f1"],
 .dark[data-series="f1"] {
@@ -330,6 +355,21 @@
 .dark[data-series="nascar"] {
   --series-accent: #2a9be0;
   --series-accent-foreground: #020f18;
+}
+.dark [data-series="gtwc-europe"],
+.dark[data-series="gtwc-europe"] {
+  --series-accent: #ff2014;
+  --series-accent-foreground: #180605;
+}
+.dark [data-series="dtm"],
+.dark[data-series="dtm"] {
+  --series-accent: #ffcc00;
+  --series-accent-foreground: #181402;
+}
+.dark [data-series="super-gt"],
+.dark[data-series="super-gt"] {
+  --series-accent: #f13632;
+  --series-accent-foreground: #180607;
 }
 
 /* ---------------------------------------------------------------------------

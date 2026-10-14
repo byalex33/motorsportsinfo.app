@@ -1,0 +1,333 @@
+{
+ "events": [
+  {
+   "name": "Hockenheimring",
+   "slug": "hockenheim-finale-2026",
+   "startTime": "2026-10-08T22:00:00+00:00",
+   "endTime": "2026-10-11T21:59:00+00:00",
+   "eventNumber": 8,
+   "eventCategory": "DTM 2026",
+   "special": false,
+   "racetrack": {
+    "name": "Hockenheimring"
+   },
+   "raceSeries": [
+    "DTM"
+   ],
+   "timetable": [
+    {
+     "start": "2026-10-09T07:00:00+00:00",
+     "end": "2026-10-09T07:55:00+00:00",
+     "headline": "ADAC GT4 Germany",
+     "label": "Free Practice 1",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-09T08:05:00+00:00",
+     "end": "2026-10-09T08:50:00+00:00",
+     "headline": "ADAC GT Masters",
+     "label": "Free Practice 1",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-09T09:00:00+00:00",
+     "end": "2026-10-09T09:55:00+00:00",
+     "headline": "Porsche Sixt Carrera Cup Germany",
+     "label": "Freies Training",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-09T10:05:00+00:00",
+     "end": "2026-10-09T11:00:00+00:00",
+     "headline": "DTM",
+     "label": "Free Practice 1",
+     "emphasized": null,
+     "raceSeries": "DTM"
+    },
+    {
+     "start": "2026-10-09T11:10:00+00:00",
+     "end": "2026-10-09T11:25:00+00:00",
+     "headline": "ADAC GT4 Germany",
+     "label": "Qualifying 1",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-09T12:00:00+00:00",
+     "end": "2026-10-09T12:25:00+00:00",
+     "headline": "BMW M2 Cup",
+     "label": "Free Practice 1",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-09T12:35:00+00:00",
+     "end": "2026-10-09T13:20:00+00:00",
+     "headline": "ADAC GT Masters",
+     "label": "Free Practice 2",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-09T13:30:00+00:00",
+     "end": "2026-10-09T14:15:00+00:00",
+     "headline": "DTM",
+     "label": "Free Practice 2",
+     "emphasized": null,
+     "raceSeries": "DTM"
+    },
+    {
+     "start": "2026-10-09T14:20:00+00:00",
+     "end": "2026-10-09T14:30:00+00:00",
+     "headline": "DTM",
+     "label": "Track-Safari",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-09T14:40:00+00:00",
+     "end": "2026-10-09T15:15:00+00:00",
+     "headline": "Porsche Sixt Carrera Cup Germany",
+     "label": "Qualifying",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-09T15:30:00+00:00",
+     "end": "2026-10-09T15:45:00+00:00",
+     "headline": "ADAC GT4 Germany",
+     "label": "Qualifying 2",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-09T15:55:00+00:00",
+     "end": "2026-10-09T16:10:00+00:00",
+     "headline": "ADAC GT4 Germany",
+     "label": "Qualifying 3",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-09T16:20:00+00:00",
+     "end": "2026-10-09T16:45:00+00:00",
+     "headline": "BMW M2 Cup",
+     "label": "Free Practice 2",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-10T07:00:00+00:00",
+     "end": "2026-10-10T07:20:00+00:00",
+     "headline": "ADAC GT Masters",
+     "label": "Qualifying 1",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-10T07:35:00+00:00",
+     "end": "2026-10-10T07:55:00+00:00",
+     "headline": "DTM",
+     "label": "Qualifying 1",
+     "emphasized": null,
+     "raceSeries": "DTM"
+    },
+    {
+     "start": "2026-10-10T08:10:00+00:00",
+     "end": "2026-10-10T08:25:00+00:00",
+     "headline": "BMW M2 Cup",
+     "label": "Qualifying",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-10T08:50:00+00:00",
+     "end": "2026-10-10T09:20:00+00:00",
+     "headline": "Porsche Sixt Carrera Cup Germany",
+     "label": "Race 1",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-10T09:40:00+00:00",
+     "end": "2026-10-10T10:30:00+00:00",
+     "headline": "ADAC GT4 Germany",
+     "label": "Race 1",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-10T10:40:00+00:00",
+     "end": "2026-10-10T11:00:00+00:00",
+     "headline": "BMW M2 Cup",
+     "label": "Autograph Session DTM Fanzone",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-10T11:30:00+00:00",
+     "end": "2026-10-10T12:30:00+00:00",
+     "headline": "DTM",
+     "label": "Race 1",
+     "emphasized": null,
+     "raceSeries": "DTM"
+    },
+    {
+     "start": "2026-10-10T12:55:00+00:00",
+     "end": "2026-10-10T13:15:00+00:00",
+     "headline": "ADAC GT4 Germany",
+     "label": "Autograph session DTM Fanzone",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-10T13:05:00+00:00",
+     "end": "2026-10-10T14:05:00+00:00",
+     "headline": "ADAC GT Masters",
+     "label": "Race 1",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-10T14:10:00+00:00",
+     "end": "2026-10-10T14:40:00+00:00",
+     "headline": "Meet the Drivers",
+     "label": "DTM Fanzone",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-10T14:30:00+00:00",
+     "end": "2026-10-10T14:55:00+00:00",
+     "headline": "BMW M2 Cup",
+     "label": "Race 1",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-10T15:20:00+00:00",
+     "end": "2026-10-10T16:20:00+00:00",
+     "headline": "ADAC GT4 Germany",
+     "label": "Race 2",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-10T16:30:00+00:00",
+     "end": "2026-10-10T17:30:00+00:00",
+     "headline": "Pitwalk",
+     "label": "Pitlane",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-10T17:00:00+00:00",
+     "end": "2026-10-10T18:00:00+00:00",
+     "headline": "DTM Powerstage presented by Pirelli",
+     "label": "THE STEREOLINES - Live Concert",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-10T18:15:00+00:00",
+     "end": "2026-10-10T19:30:00+00:00",
+     "headline": "DTM Powerstage presented by Pirelli",
+     "label": "Dick Brave - Live Concert",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-11T07:00:00+00:00",
+     "end": "2026-10-11T07:20:00+00:00",
+     "headline": "ADAC GT Masters",
+     "label": "Qualifying 2",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-11T07:30:00+00:00",
+     "end": "2026-10-11T07:50:00+00:00",
+     "headline": "DTM",
+     "label": "Qualifying 2",
+     "emphasized": null,
+     "raceSeries": "DTM"
+    },
+    {
+     "start": "2026-10-11T08:00:00+00:00",
+     "end": "2026-10-11T08:20:00+00:00",
+     "headline": "Porsche Sixt Carrera Cup",
+     "label": "Autograph session PSCCD Paddock",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-11T08:05:00+00:00",
+     "end": "2026-10-11T08:30:00+00:00",
+     "headline": "BMW M2 Cup",
+     "label": "Race 2",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-11T08:55:00+00:00",
+     "end": "2026-10-11T09:55:00+00:00",
+     "headline": "ADAC GT4 Germany",
+     "label": "Race 3",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-11T10:15:00+00:00",
+     "end": "2026-10-11T10:35:00+00:00",
+     "headline": "ADAC GT Masters",
+     "label": "Autograph Session DTM Fanzone",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-11T10:25:00+00:00",
+     "end": "2026-10-11T10:55:00+00:00",
+     "headline": "Porsche Sixt Carrera Cup Germany",
+     "label": "Race 2",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-11T11:20:00+00:00",
+     "end": "2026-10-11T12:05:00+00:00",
+     "headline": "Pitwalk",
+     "label": "Pitlane",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-11T12:30:00+00:00",
+     "end": "2026-10-11T13:30:00+00:00",
+     "headline": "ADAC GT Masters",
+     "label": "Race 2",
+     "emphasized": null,
+     "raceSeries": null
+    },
+    {
+     "start": "2026-10-11T14:30:00+00:00",
+     "end": "2026-10-11T15:30:00+00:00",
+     "headline": "DTM",
+     "label": "Race 2",
+     "emphasized": null,
+     "raceSeries": "DTM"
+    },
+    {
+     "start": "2026-10-11T15:45:00+00:00",
+     "end": "2026-10-11T16:45:00+00:00",
+     "headline": "DTM Champions Celebration",
+     "label": "Trackwalk Start/Ziel",
+     "emphasized": true,
+     "raceSeries": null
+    }
+   ]
+  }
+ ]
+}
