@@ -115,6 +115,33 @@ export const SERIES: Record<SeriesId, SeriesInfo> = {
     defaultReminderTypes: ["qualifying", "race"],
     hasRainRadar: false,
   },
+  "gtwc-europe": {
+    id: "gtwc-europe",
+    group: "other",
+    name: "GT World Challenge Europe",
+    shortName: "GTWC",
+    sessionTypes: ["practice", "qualifying", "race"],
+    defaultReminderTypes: ["qualifying", "race"],
+    hasRainRadar: false,
+  },
+  dtm: {
+    id: "dtm",
+    group: "other",
+    name: "Deutsche Tourenwagen Masters",
+    shortName: "DTM",
+    sessionTypes: ["practice", "qualifying", "race"],
+    defaultReminderTypes: ["qualifying", "race"],
+    hasRainRadar: false,
+  },
+  "super-gt": {
+    id: "super-gt",
+    group: "other",
+    name: "Super GT",
+    shortName: "Super GT",
+    sessionTypes: ["practice", "qualifying", "race"],
+    defaultReminderTypes: ["qualifying", "race"],
+    hasRainRadar: false,
+  },
 };
 
 /** The Series shown as links in the header, in SERIES_IDS order. */
@@ -183,6 +210,23 @@ export function defaultSessionMinutes(series: SeriesId, type: SessionType, sessi
     if (/\b600\b/.test(sessionName)) return 270;
     return /\b500\b/.test(sessionName) ? 210 : 180;
   }
+  // Names are followed by the Round name ("Main Race 24 Hours of Spa", "Qualifying 1 Barcelona").
+  if (series === "gtwc-europe") {
+    if (/warm/i.test(sessionName)) return 15;
+    if (type === "practice") return 60;
+    // Endurance Cup qualifying is one Session of three 15-minute parts; Sprint Cup's are 15 minutes each.
+    if (type === "qualifying") return /superpole/i.test(sessionName) ? 30 : /qualifying\s*\d|group/i.test(sessionName) ? 15 : 70;
+    // Endurance Cup races are "Main Race": the 24 Hours of Spa, six hours at Paul Ricard, three hours elsewhere.
+    if (/^main race/i.test(sessionName)) return /\b24 hours\b/i.test(sessionName) ? 1440 : /paul ricard/i.test(sessionName) ? 360 : 180;
+    return 60;
+  }
+  // DTM gives every end time; these only cover a Session listed without one.
+  if (series === "dtm") return { practice: 45, qualifying: 20, race: 60 }[type as string] ?? 45;
+  // Super GT gives end times for most Sessions; a race listed by laps ("82Laps") has none.
+  if (series === "super-gt") {
+    if (/warm/i.test(sessionName)) return 20;
+    return { practice: 90, qualifying: 30, race: 120 }[type as string] ?? 60;
+  }
   return 60;
 }
 
@@ -214,6 +258,12 @@ export function officialResultsUrl(series: SeriesId, season: number): string {
       return "https://www.imsa.com/weathertech/results/";
     case "nascar":
       return `https://www.nascar.com/nascar-cup-series/${season}/schedule/`;
+    case "gtwc-europe":
+      return "https://www.gt-world-challenge-europe.com/results";
+    case "dtm":
+      return "https://www.dtm.com/en/results";
+    case "super-gt":
+      return "https://supergt.net/en/driver_ranking";
   }
 }
 

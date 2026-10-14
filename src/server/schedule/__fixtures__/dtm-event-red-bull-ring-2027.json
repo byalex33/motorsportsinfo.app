@@ -1,0 +1,20 @@
+{
+ "events": [
+  {
+   "name": "Red Bull Ring by VKB-Bank",
+   "slug": "red-bull-ring-2027",
+   "startTime": "2027-04-22T22:01:00+00:00",
+   "endTime": "2027-04-25T21:59:00+00:00",
+   "eventNumber": 1,
+   "eventCategory": "DTM 2027",
+   "special": false,
+   "racetrack": {
+    "name": "Red Bull Ring"
+   },
+   "raceSeries": [
+    "DTM"
+   ],
+   "timetable": []
+  }
+ ]
+}

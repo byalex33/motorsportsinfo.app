@@ -42,7 +42,7 @@ export default function AboutPage() {
         </h1>
         <p className="enter-rise mt-5 max-w-2xl leading-relaxed text-pretty text-muted-foreground sm:text-lg" style={enterDelay(ENTER.lead)}>
           motorsportsinfo.app shows the Featured Round for F1, F2, F3, the WEC, Formula E, IndyCar and MotoGP, and for F1
-          Academy, the WRC, IMSA and NASCAR — the
+          Academy, the WRC, IMSA, NASCAR, GT World Challenge Europe, the DTM and Super GT — the
           Round in progress, or the next one — with every Session in your time or Track Time, a live countdown, the
           forecast at the Circuit for each Session and, for F1, a rain radar of the next two hours around Session time. It is free, has no ads and no
           accounts.
@@ -111,6 +111,18 @@ export default function AboutPage() {
               </li>
               <li>
                 <strong className="font-medium text-foreground">NASCAR schedule:</strong> the Cup Series schedule published by NASCAR.
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">GT World Challenge Europe schedule:</strong> the event timetables
+                published on the GT World Challenge Europe website. Session ends are estimated.
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">DTM schedule:</strong> the event timetables published on the DTM
+                website.
+              </li>
+              <li>
+                <strong className="font-medium text-foreground">Super GT schedule:</strong> the race timetables published on the
+                Super GT website, with Rounds named by their official number.
               </li>
               <li>
                 <strong className="font-medium text-foreground">FIA documents:</strong>{" "}

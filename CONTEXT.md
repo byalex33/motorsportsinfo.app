@@ -1,17 +1,17 @@
 # motorsportsinfo.app
 
-A go-to page for motorsport fans to find out when each session runs and what the weather will be, across F1, F2, F3, WEC, Formula E, IndyCar and MotoGP, plus F1 Academy, WRC, IMSA and NASCAR.
+A go-to page for motorsport fans to find out when each session runs and what the weather will be, across F1, F2, F3, WEC, Formula E, IndyCar and MotoGP, plus F1 Academy, WRC, IMSA, NASCAR, GT World Challenge Europe, DTM and Super GT.
 
 ## Language
 
 ### Calendar
 
 **Series**:
-A championship the site covers: F1, F2, F3, WEC, Formula E (FE), IndyCar, MotoGP (the premier class only), F1 Academy, WRC, IMSA (the WeatherTech SportsCar Championship only) or NASCAR (the Cup Series only). The header links F1, WEC, IndyCar, MotoGP and NASCAR; the Other Series (F2, F3, FE, F1 Academy, WRC and IMSA) sit in its Other menu.
+A championship the site covers: F1, F2, F3, WEC, Formula E (FE), IndyCar, MotoGP (the premier class only), F1 Academy, WRC, IMSA (the WeatherTech SportsCar Championship only), NASCAR (the Cup Series only), GT World Challenge Europe (GTWC: the Sprint and Endurance Cups together), DTM or Super GT. The header links F1, WEC, IndyCar, MotoGP and NASCAR; the Other Series (F2, F3, FE, F1 Academy, WRC, IMSA, GTWC, DTM and Super GT) sit in its Other menu.
 _Avoid_: Category, championship, sport
 
 **Round**:
-One scheduled meeting of a single Series at a Circuit, such as the F1 Bahrain Grand Prix, F2 Round 1 or a WRC rally. Rounds from different Series at the same Circuit on the same dates are still separate Rounds. NASCAR's exhibition races (the Clash, the All-Star Race) are Rounds but are not numbered; the Daytona Duels are qualifying Sessions of the Daytona 500.
+One scheduled meeting of a single Series at a Circuit, such as the F1 Bahrain Grand Prix, F2 Round 1 or a WRC rally. Rounds from different Series at the same Circuit on the same dates are still separate Rounds. NASCAR's exhibition races (the Clash, the All-Star Race) are Rounds but are not numbered; the Daytona Duels are qualifying Sessions of the Daytona 500. Super GT Rounds are named by their official number ("Round 3"), which they keep when moved; GT World Challenge Europe's test days are not Rounds.
 _Avoid_: Event, weekend, race, Grand Prix (as a generic term)
 
 **Featured Round**:
@@ -19,7 +19,7 @@ The one Round a Series page shows. It is the Round in progress, or else the next
 _Avoid_: Current round, next race, upcoming event
 
 **Special Event**:
-A one-off Round outside the covered Series that the site features for a limited time, such as Max Verstappen's GT World Challenge Europe race at Portimão. It is entered by hand, has its own page (/special/…) with Sessions and forecasts, and is announced in a strip under the header until 2 hours after its final Session ends. Its Sessions have no Session Type, and it has no Session Reminders, calendar feed or Session Results.
+A one-off Round the site features for a limited time, usually outside the covered Series, such as Max Verstappen's GT World Challenge Europe race at Portimão (featured before GT World Challenge Europe was covered). It is entered by hand, has its own page (/special/…) with Sessions and forecasts, and is announced in a strip under the header until 2 hours after its final Session ends. Its Sessions have no Session Type, and it has no Session Reminders, calendar feed or Session Results.
 _Avoid_: One-off, guest race, bonus event
 
 **Session**:
@@ -38,6 +38,9 @@ The category a Session belongs to within its Series, used for choosing which Ses
 - WRC: Shakedown, Stages (one Session per day of special stages, "Day 1 (SS1–SS6)", ending an estimated 75 minutes after its last stage starts), Power Stage
 - IMSA: Practice (including Warm-up), Qualifying, Race
 - NASCAR: Practice, Qualifying (including the Daytona Duels), Race
+- GT World Challenge Europe: Practice (Free Practice, Night Practice, Warm-up), Qualifying (Qualifying 1–4, the Sprint Cup's qualifying groups, Superpole), Race (Race 1 and Race 2 in the Sprint Cup, the Main Race in the Endurance Cup)
+- DTM: Practice, Qualifying (Qualifying 1 and 2), Race (Race 1 and 2)
+- Super GT: Practice (including Warm-up), Qualifying (Q1, Q2), Race
 
 _Avoid_: Session kind, session name
 

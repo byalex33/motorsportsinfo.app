@@ -5,7 +5,7 @@ export const SITE_URL = "https://motorsportsinfo.app";
 export const SITE_NAME = "motorsportsinfo.app";
 export const SITE_LOCALE = "en_GB";
 export const SITE_DESCRIPTION =
-  "Session times and weather for F1, F2, F3, WEC, Formula E, IndyCar, MotoGP, F1 Academy, WRC, IMSA and NASCAR — in your time zone or Track Time, with live countdowns and rain radar.";
+  "Session times and weather for F1, F2, F3, WEC, Formula E, IndyCar, MotoGP, F1 Academy, WRC, IMSA, NASCAR, GT World Challenge Europe, DTM and Super GT — in your time zone or Track Time, with live countdowns and rain radar.";
 /** The square app icon, used as the Organization logo. */
 export const SITE_LOGO_PATH = "/icons/icon-512.png";
 /** The public source repository. */

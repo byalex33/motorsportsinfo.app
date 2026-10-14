@@ -1,8 +1,9 @@
 // Hand-maintained list of every Circuit used by F1, F2, F3, WEC, Formula E, IndyCar, MotoGP, F1 Academy,
-// IMSA and NASCAR in 2026, plus published 2027 Rounds, and each WRC rally's service park. Time zones are
-// derived from lat/lon (never hand-typed). Add aliases for each source's naming: OpenF1 circuit_short_name /
-// location, Jolpica circuitId / locality, F2/F3 page slug / circuitShortName, sportstimes location (F2, F3,
-// FE, F1 Academy) or Round name (IndyCar), WEC race name, IMSA calendar location, NASCAR track_name. MotoGP
+// IMSA, NASCAR, GT World Challenge Europe, DTM and Super GT in 2026, plus published 2027 Rounds, and each WRC
+// rally's service park. Time zones are derived from lat/lon (never hand-typed). Add aliases for each source's
+// naming: OpenF1 circuit_short_name / location, Jolpica circuitId / locality, F2/F3 page slug /
+// circuitShortName, sportstimes location (F2, F3, FE, F1 Academy) or Round name (IndyCar), WEC race name, IMSA
+// calendar location, NASCAR track_name, GTWC event name, DTM racetrack name, Super GT Round label. MotoGP
 // is matched by coordinates (nearestCircuit) and WRC rallies by name in sources/wrc.ts. A Round whose
 // Circuit can't be matched is flagged and skipped.
 import tzlookup from "@photostructure/tz-lookup";
@@ -913,6 +914,95 @@ const ENTRIES: CircuitEntry[] = [
     lat: 57.2047,
     lon: -2.1902,
     aliases: [],
+  },
+  // GT World Challenge Europe, DTM and Super GT circuits not used by the Series above.
+  {
+    id: "paul-ricard",
+    name: "Circuit Paul Ricard",
+    location: "Le Castellet, France",
+    lat: 43.2506,
+    lon: 5.7917,
+    aliases: ["Paul Ricard", "Le Castellet"],
+  },
+  {
+    id: "brands-hatch",
+    name: "Brands Hatch",
+    location: "West Kingsdown, United Kingdom",
+    lat: 51.3569,
+    lon: 0.2631,
+    aliases: ["Brands Hatch"],
+  },
+  {
+    id: "magny-cours",
+    name: "Circuit de Nevers Magny-Cours",
+    location: "Magny-Cours, France",
+    lat: 46.8642,
+    lon: 3.1636,
+    aliases: ["Magny-Cours", "Magny Cours"],
+  },
+  {
+    id: "nurburgring",
+    name: "Nürburgring",
+    location: "Nürburg, Germany",
+    lat: 50.3356,
+    lon: 6.9475,
+    aliases: ["Nürburgring", "Nuerburgring"],
+  },
+  {
+    id: "hockenheim",
+    name: "Hockenheimring",
+    location: "Hockenheim, Germany",
+    lat: 49.3278,
+    lon: 8.5656,
+    aliases: ["Hockenheim", "Hockenheimring"],
+  },
+  {
+    id: "norisring",
+    name: "Norisring",
+    location: "Nuremberg, Germany",
+    lat: 49.4322,
+    lon: 11.1236,
+    aliases: ["Norisring"],
+  },
+  {
+    id: "lausitzring",
+    name: "DEKRA Lausitzring",
+    location: "Klettwitz, Germany",
+    lat: 51.5336,
+    lon: 13.9264,
+    aliases: ["Lausitzring", "Klettwitz"],
+  },
+  {
+    id: "oschersleben",
+    name: "Motorsport Arena Oschersleben",
+    location: "Oschersleben, Germany",
+    lat: 52.027,
+    lon: 11.28,
+    aliases: ["Oschersleben"],
+  },
+  {
+    id: "okayama",
+    name: "Okayama International Circuit",
+    location: "Mimasaka, Japan",
+    lat: 34.915,
+    lon: 134.221,
+    aliases: ["Okayama"],
+  },
+  {
+    id: "sugo",
+    name: "Sportsland SUGO",
+    location: "Murata, Japan",
+    lat: 38.1414,
+    lon: 140.7772,
+    aliases: ["SUGO"],
+  },
+  {
+    id: "autopolis",
+    name: "Autopolis",
+    location: "Hita, Japan",
+    lat: 33.0372,
+    lon: 130.9708,
+    aliases: ["Autopolis"],
   },
 ];
 

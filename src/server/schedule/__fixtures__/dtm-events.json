@@ -1,0 +1,364 @@
+{
+ "events": [
+  {
+   "name": "Motorsport Arena Oschersleben",
+   "slug": "oschersleben-2025",
+   "startTime": "2025-04-25T06:00:00+00:00",
+   "endTime": "2025-04-27T16:00:00+00:00",
+   "eventNumber": 1,
+   "eventCategory": "DTM 2025",
+   "special": false,
+   "racetrack": {
+    "name": "Motorsport Arena Oschersleben"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Dekra Lausitzring",
+   "slug": "lausitzring-2025",
+   "startTime": "2025-05-23T06:00:00+00:00",
+   "endTime": "2025-05-25T18:00:00+00:00",
+   "eventNumber": 2,
+   "eventCategory": "DTM 2025",
+   "special": false,
+   "racetrack": {
+    "name": "DEKRA Lausitzring Sprint"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Circuit Zandvoort",
+   "slug": "zandvoort-2025",
+   "startTime": "2025-06-06T06:00:00+00:00",
+   "endTime": "2025-06-08T18:00:00+00:00",
+   "eventNumber": 3,
+   "eventCategory": "DTM 2025",
+   "special": false,
+   "racetrack": {
+    "name": "Circuit Zandvoort"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Norisring",
+   "slug": "norisring-2025",
+   "startTime": "2025-07-04T06:00:00+00:00",
+   "endTime": "2025-07-06T18:00:00+00:00",
+   "eventNumber": 4,
+   "eventCategory": "DTM 2025",
+   "special": false,
+   "racetrack": {
+    "name": "Norisring"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Nürburgring",
+   "slug": "nuerburgring-2025",
+   "startTime": "2025-08-08T06:00:00+00:00",
+   "endTime": "2025-08-10T18:00:00+00:00",
+   "eventNumber": 5,
+   "eventCategory": "DTM 2025",
+   "special": false,
+   "racetrack": {
+    "name": "Nürburgring Sprint"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Sachsenring",
+   "slug": "sachsenring-2025",
+   "startTime": "2025-08-22T06:00:00+00:00",
+   "endTime": "2025-08-24T18:00:00+00:00",
+   "eventNumber": 6,
+   "eventCategory": "DTM 2025",
+   "special": false,
+   "racetrack": {
+    "name": "Sachsenring"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Red Bull Ring by VKB-Bank",
+   "slug": "red-bull-ring-2025",
+   "startTime": "2025-09-12T06:00:00+00:00",
+   "endTime": "2025-09-14T18:00:00+00:00",
+   "eventNumber": 7,
+   "eventCategory": "DTM 2025",
+   "special": false,
+   "racetrack": {
+    "name": "Red Bull Ring"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Hockenheimring",
+   "slug": "hockenheim-finale-2025",
+   "startTime": "2025-10-03T06:00:00+00:00",
+   "endTime": "2025-10-05T18:00:00+00:00",
+   "eventNumber": 8,
+   "eventCategory": "DTM 2025",
+   "special": false,
+   "racetrack": {
+    "name": "Hockenheimring"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Red Bull Ring by VKB-Bank",
+   "slug": "red-bull-ring-2026",
+   "startTime": "2026-04-23T22:00:00+00:00",
+   "endTime": "2026-04-26T21:59:00+00:00",
+   "eventNumber": 1,
+   "eventCategory": "DTM 2026",
+   "special": false,
+   "racetrack": {
+    "name": "Red Bull Ring"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Circuit Zandvoort",
+   "slug": "zandvoort-2026",
+   "startTime": "2026-05-22T06:00:00+00:00",
+   "endTime": "2026-05-24T18:00:00+00:00",
+   "eventNumber": 2,
+   "eventCategory": "DTM 2026",
+   "special": false,
+   "racetrack": {
+    "name": "Circuit Zandvoort"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Dekra Lausitzring",
+   "slug": "lausitzring-2026",
+   "startTime": "2026-06-19T06:00:00+00:00",
+   "endTime": "2026-06-21T21:59:00+00:00",
+   "eventNumber": 3,
+   "eventCategory": "DTM 2026",
+   "special": false,
+   "racetrack": {
+    "name": "DEKRA Lausitzring Sprint"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Norisring",
+   "slug": "norisring-2026",
+   "startTime": "2026-07-02T22:00:00+00:00",
+   "endTime": "2026-07-05T21:59:00+00:00",
+   "eventNumber": 4,
+   "eventCategory": "DTM 2026",
+   "special": false,
+   "racetrack": {
+    "name": "Norisring"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Motorsport Arena Oschersleben",
+   "slug": "oschersleben-2026",
+   "startTime": "2026-07-23T22:00:00+00:00",
+   "endTime": "2026-07-26T21:59:00+00:00",
+   "eventNumber": 5,
+   "eventCategory": "DTM 2026",
+   "special": false,
+   "racetrack": {
+    "name": "Motorsport Arena Oschersleben"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Nürburgring",
+   "slug": "nuerburgring-2026",
+   "startTime": "2026-08-14T06:00:00+00:00",
+   "endTime": "2026-08-16T21:59:00+00:00",
+   "eventNumber": 6,
+   "eventCategory": "DTM 2026",
+   "special": false,
+   "racetrack": {
+    "name": "Nürburgring Sprint"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Sachsenring",
+   "slug": "sachsenring-2026",
+   "startTime": "2026-09-10T22:00:00+00:00",
+   "endTime": "2026-09-13T21:59:00+00:00",
+   "eventNumber": 7,
+   "eventCategory": "DTM 2026",
+   "special": false,
+   "racetrack": {
+    "name": "Sachsenring"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Hockenheimring",
+   "slug": "hockenheim-finale-2026",
+   "startTime": "2026-10-08T22:00:00+00:00",
+   "endTime": "2026-10-11T21:59:00+00:00",
+   "eventNumber": 8,
+   "eventCategory": "DTM 2026",
+   "special": false,
+   "racetrack": {
+    "name": "Hockenheimring"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Red Bull Ring by VKB-Bank",
+   "slug": "red-bull-ring-2027",
+   "startTime": "2027-04-22T22:01:00+00:00",
+   "endTime": "2027-04-25T21:59:00+00:00",
+   "eventNumber": 1,
+   "eventCategory": "DTM 2027",
+   "special": false,
+   "racetrack": {
+    "name": "Red Bull Ring"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Motorsport Arena Oschersleben",
+   "slug": "oschersleben-2027",
+   "startTime": "2027-05-06T22:01:00+00:00",
+   "endTime": "2027-05-09T21:59:00+00:00",
+   "eventNumber": 2,
+   "eventCategory": "DTM 2027",
+   "special": false,
+   "racetrack": {
+    "name": "Motorsport Arena Oschersleben"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Dekra Lausitzring",
+   "slug": "lausitzring-2027",
+   "startTime": "2027-06-17T22:01:00+00:00",
+   "endTime": "2027-06-20T21:59:00+00:00",
+   "eventNumber": 3,
+   "eventCategory": "DTM 2027",
+   "special": false,
+   "racetrack": {
+    "name": "DEKRA Lausitzring Sprint"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Norisring",
+   "slug": "norisring-2027",
+   "startTime": "2027-07-01T22:01:00+00:00",
+   "endTime": "2027-07-04T21:59:00+00:00",
+   "eventNumber": 4,
+   "eventCategory": "DTM 2027",
+   "special": false,
+   "racetrack": {
+    "name": "Norisring"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Circuit Zandvoort",
+   "slug": "zandvoort-2027",
+   "startTime": "2027-08-05T22:01:00+00:00",
+   "endTime": "2027-08-08T21:59:00+00:00",
+   "eventNumber": 5,
+   "eventCategory": "DTM 2027",
+   "special": false,
+   "racetrack": {
+    "name": "Circuit Zandvoort"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Nürburgring",
+   "slug": "nuerburgring-2027",
+   "startTime": "2027-08-19T22:01:00+00:00",
+   "endTime": "2027-08-22T21:59:00+00:00",
+   "eventNumber": 6,
+   "eventCategory": "DTM 2027",
+   "special": false,
+   "racetrack": {
+    "name": "Nürburgring Sprint"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Sachsenring",
+   "slug": "sachsenring-2027",
+   "startTime": "2027-09-23T22:01:00+00:00",
+   "endTime": "2027-09-26T21:59:00+00:00",
+   "eventNumber": 7,
+   "eventCategory": "DTM 2027",
+   "special": false,
+   "racetrack": {
+    "name": "Sachsenring"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  },
+  {
+   "name": "Hockenheimring",
+   "slug": "hockenheim-finale-2027",
+   "startTime": "2027-10-07T22:01:00+00:00",
+   "endTime": "2027-10-10T21:59:00+00:00",
+   "eventNumber": 8,
+   "eventCategory": "DTM 2027",
+   "special": false,
+   "racetrack": {
+    "name": "Hockenheimring"
+   },
+   "raceSeries": [
+    "DTM"
+   ]
+  }
+ ]
+}
