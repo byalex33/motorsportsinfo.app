@@ -135,6 +135,7 @@ export async function syncSeries(db: Db, series: SeriesId, options: SyncOptions 
     : decideCheckDue({
         now,
         lastCheckedAt: state.check?.lastCheckedAt ?? null,
+        lastSucceededAt: state.check?.lastSucceededAt ?? null,
         rounds: withCircuits(state.published),
         hasPendingChanges: state.pending.length > 0,
       });
