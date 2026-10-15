@@ -1,5 +1,6 @@
 // GT World Challenge Europe: the official site, gt-world-challenge-europe.com (SRO), which answers ordinary
-// requests. Its calendar page lists the current season's events, each linking an event page
+// requests. Its calendar page lists one season's events (the current one until SRO moves it on to next
+// season, which can happen before 1 January), each linking an event page
 // (/event/<id>/<slug>) whose title carries the dates ("Barcelona, Spain, 1 - 4 October 2026 | …") and whose
 // timetable lists every Session per day with its local and GMT start. No end times are given, so every
 // Session end is estimated. Test days (listed without a "Round N") are not Rounds; paid tests, Bronze tests,
@@ -147,12 +148,18 @@ export function parseGtwcEventPage(html: string, event: GtwcEventLink, url: stri
   };
 }
 
-/** The calendar page lists one season; `year` is read from it and an absent season is an empty list. */
+/** The calendar page, read once per check: it lists one season, which switches to the next some time before 1 January. */
+export async function fetchGtwcCalendar(ctx: SourceContext): Promise<GtwcEventLink[]> {
+  return parseGtwcCalendar(await getPage(ctx, `${SITE}/calendar`));
+}
+
+/** `year`'s Rounds from the calendar's event pages; a season the calendar does not list is an empty list. */
 export async function fetchGtwcSeason(
   ctx: SourceContext,
+  calendar: GtwcEventLink[],
   year: number,
 ): Promise<{ rounds: RawRound[]; complete: boolean; warnings: string[] }> {
-  const events = parseGtwcCalendar(await getPage(ctx, `${SITE}/calendar`)).filter((e) => e.season === year);
+  const events = calendar.filter((e) => e.season === year);
   const rounds: RawRound[] = [];
   const warnings: string[] = [];
   for (const event of events) {
