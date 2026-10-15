@@ -87,11 +87,16 @@ export function parseDtmEvent(event: DtmEvent, timetable: DtmTimetableEntry[], s
   };
 }
 
+/** The event list, read once per check: it covers every season. */
+export async function fetchDtmEvents(ctx: SourceContext): Promise<DtmEvent[]> {
+  return (await getJson<{ events: DtmEvent[] }>(ctx, `${API}?query=events&lang=en`)).events;
+}
+
 export async function fetchDtmSeason(
   ctx: SourceContext,
+  events: DtmEvent[],
   year: number,
 ): Promise<{ rounds: RawRound[]; complete: boolean; warnings: string[] }> {
-  const { events } = await getJson<{ events: DtmEvent[] }>(ctx, `${API}?query=events&lang=en`);
   const rounds: RawRound[] = [];
   const warnings: string[] = [];
   const season = dtmSeasonEvents(events, year);
