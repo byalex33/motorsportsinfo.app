@@ -1,4 +1,5 @@
-// Every minute (vercel.ts): due Session Reminders, unsent Schedule Change pushes and Document Alerts. Reads the database only.
+// Every minute (vercel.ts): due Session Reminders, unsent Schedule Change pushes and Document Alerts, and at 07:00 UTC
+// the owner's sync alert (OWNER_PUSH_ENDPOINT). Reads the database only.
 import { getDb } from "@/db/client";
 import { getVapidConfig } from "@/server/alerts/push";
 import { runAlerts } from "@/server/alerts/run";

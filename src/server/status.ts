@@ -1,5 +1,5 @@
-// Health of the schedule sync, for an uptime monitor (GET /api/status): open Schedule Flags and each
-// Series' last source check. The sync writes these; nothing else reads them.
+// Health of the schedule sync, for an uptime monitor (GET /api/status) and the owner's daily sync alert
+// (src/server/alerts/owner.ts): open Schedule Flags and each Series' last source check. The sync writes these.
 import { asc, isNull } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { scheduleFlags, sourceChecks } from "@/db/schema";

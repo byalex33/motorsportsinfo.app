@@ -70,19 +70,14 @@ const WAITING_DOCUMENT = [
   null,
 ];
 
-/** Subscriptions following F1 Races with a 15-minute lead, so each is due a Session Reminder for DUE_RACE. */
+/** A subscription following F1 Races with a 15-minute lead, so it is due a Session Reminder for DUE_RACE. */
+function raceFollower(i: number, endpoint = `https://fcm.googleapis.com/fcm/send/device-${i}`): unknown[] {
+  const id = `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`;
+  return [id, endpoint, "p256dh", "auth", 15, { f1: ["race"] }, {}, "Europe/London", 0];
+}
+
 function raceFollowers(count: number): unknown[][] {
-  return Array.from({ length: count }, (_, i) => [
-    `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
-    `https://fcm.googleapis.com/fcm/send/device-${i}`,
-    "p256dh",
-    "auth",
-    15,
-    { f1: ["race"] },
-    {},
-    "Europe/London",
-    0,
-  ]);
+  return Array.from({ length: count }, (_, i) => raceFollower(i));
 }
 
 describe("runAlerts", () => {
@@ -96,6 +91,7 @@ describe("runAlerts", () => {
       changes: { processed: 0, pushes: 0, sent: 0 },
       documents: { processed: 0, pushes: 0, sent: 0 },
       subscriptionsRemoved: 0,
+      ownerAlert: null,
       deadlineReached: false,
     });
   });
@@ -166,5 +162,47 @@ describe("runAlerts deadline", () => {
     expect(reminderClaims()).toBe(3);
     expect(result.reminders).toEqual({ due: followers, claimed: followers, sent: followers });
     expect(result.deadlineReached).toBe(false);
+  });
+});
+
+describe("runAlerts owner alert", () => {
+  const OWNER = "https://fcm.googleapis.com/fcm/send/owner";
+  // No source_checks rows: no Series has ever synced, so the sync is unhealthy.
+  const owner = () => fakeDb({ subscriptions: [raceFollower(0, OWNER)] });
+  const statusReads = (statements: string[]) => statements.filter((s) => /from "schedule_flags"/.test(s)).length;
+
+  it("pushes the owner once at 07:00 UTC when the sync is unhealthy", async () => {
+    const { db, statements } = owner();
+    const sent: { endpoint: string; tag: string }[] = [];
+    const result = await runAlerts(db, vapid, new Date("2026-10-11T07:00:00Z"), {
+      ownerEndpoint: OWNER,
+      send: async (push) => {
+        sent.push({ endpoint: push.subscription.endpoint, tag: push.payload.tag });
+        return "sent";
+      },
+    });
+    expect(statusReads(statements)).toBe(1);
+    expect(sent).toEqual([{ endpoint: OWNER, tag: "owner:sync-status" }]);
+    expect(result.ownerAlert).toBe("sent");
+  });
+
+  it("does nothing at other times", async () => {
+    const { db, statements } = owner();
+    const result = await runAlerts(db, vapid, new Date("2026-10-11T07:01:00Z"), {
+      ownerEndpoint: OWNER,
+      send: async () => "sent",
+    });
+    expect(statusReads(statements)).toBe(0);
+    expect(result.ownerAlert).toBeNull();
+  });
+
+  it("does nothing without an owner endpoint", async () => {
+    const { db, statements } = owner();
+    const result = await runAlerts(db, vapid, new Date("2026-10-11T07:00:00Z"), {
+      ownerEndpoint: null,
+      send: async () => "sent",
+    });
+    expect(statusReads(statements)).toBe(0);
+    expect(result.ownerAlert).toBeNull();
   });
 });

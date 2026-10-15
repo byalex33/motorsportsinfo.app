@@ -1,11 +1,13 @@
-// The alerts cron: sends due Session Reminders, unsent Schedule Change pushes and Document Alerts.
-// Reads the database only — never the schedule sources or fia.com.
+// The alerts cron: sends due Session Reminders, unsent Schedule Change pushes and Document Alerts, and once a
+// day the owner's sync alert. Reads the database only — never the schedule sources or fia.com.
 import { and, eq, gt, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { fiaDocuments, pushSubscriptions, remindersSent, rounds, scheduleChanges, sessions } from "@/db/schema";
 import { REMINDER_LEAD_MINUTES } from "@/domain/series";
+import { getSyncStatus } from "@/server/status";
 import { planChangePushes, type ScheduleChangeRow } from "./changes";
 import { planDocumentPushes, type DocumentAlertRow } from "./document-alerts";
+import { OWNER_ALERT_TTL_SECONDS, getOwnerPushEndpoint, isOwnerAlertDue, ownerAlertPayload } from "./owner";
 import { MAX_PUSH_FAILURES, PUSH_CONCURRENCY, mapWithConcurrency, sendPush, type PushOutcome, type VapidConfig } from "./push";
 import { reminderKey, selectDueReminders } from "./reminders";
 import type { AlertSession, AlertSubscription, OutgoingPush } from "./types";
@@ -32,6 +34,8 @@ export interface AlertsRunResult {
   changes: { processed: number; pushes: number; sent: number };
   documents: { processed: number; pushes: number; sent: number };
   subscriptionsRemoved: number;
+  /** The owner's daily sync alert, when one was sent this run. */
+  ownerAlert: PushOutcome | null;
   /** True when the run stopped claiming work at its deadline, leaving the rest for the next run. */
   deadlineReached: boolean;
 }
@@ -45,6 +49,8 @@ export interface AlertsRunOptions {
   clock?: () => number;
   /** Sends one push. Default: Web Push with the VAPID keys. */
   send?: SendFn;
+  /** The owner's push endpoint for the daily sync alert. Default: OWNER_PUSH_ENDPOINT; none turns it off. */
+  ownerEndpoint?: string | null;
 }
 
 /** Whether the run may still claim work. Records the first refusal, so the result can report it. */
@@ -71,20 +77,20 @@ function chunk<T>(items: readonly T[], size: number): T[][] {
   return out;
 }
 
+const subscriptionColumns = {
+  id: pushSubscriptions.id,
+  endpoint: pushSubscriptions.endpoint,
+  p256dh: pushSubscriptions.p256dh,
+  auth: pushSubscriptions.auth,
+  leadMinutes: pushSubscriptions.leadMinutes,
+  follows: pushSubscriptions.follows,
+  documentAlerts: pushSubscriptions.documentAlerts,
+  timeZone: pushSubscriptions.timeZone,
+  failureCount: pushSubscriptions.failureCount,
+};
+
 async function loadSubscriptions(db: Db): Promise<AlertSubscription[]> {
-  return db
-    .select({
-      id: pushSubscriptions.id,
-      endpoint: pushSubscriptions.endpoint,
-      p256dh: pushSubscriptions.p256dh,
-      auth: pushSubscriptions.auth,
-      leadMinutes: pushSubscriptions.leadMinutes,
-      follows: pushSubscriptions.follows,
-      documentAlerts: pushSubscriptions.documentAlerts,
-      timeZone: pushSubscriptions.timeZone,
-      failureCount: pushSubscriptions.failureCount,
-    })
-    .from(pushSubscriptions);
+  return db.select(subscriptionColumns).from(pushSubscriptions);
 }
 
 type LoadSubscriptions = () => Promise<AlertSubscription[]>;
@@ -238,6 +244,22 @@ async function runDocuments(db: Db, subs: LoadSubscriptions, now: Date, send: Se
   return { processed: claimedUrls.size, results: await sendAll(pushes, send) };
 }
 
+/** At 07:00 UTC, one push to the owner's own subscription if the schedule sync is unhealthy. */
+async function runOwnerAlert(db: Db, endpoint: string | null, now: Date, send: SendFn, time: Budget) {
+  if (!endpoint || !isOwnerAlertDue(now) || !time.hasTime()) return [];
+  const payload = ownerAlertPayload(await getSyncStatus(db, now));
+  if (!payload) return [];
+  const [subscription] = await db
+    .select(subscriptionColumns)
+    .from(pushSubscriptions)
+    .where(eq(pushSubscriptions.endpoint, endpoint));
+  if (!subscription) {
+    console.warn("[alerts] OWNER_PUSH_ENDPOINT matches no push subscription");
+    return [];
+  }
+  return sendAll([{ subscription, payload, ttlSeconds: OWNER_ALERT_TTL_SECONDS }], send);
+}
+
 /** Deletes gone subscriptions, counts failures (deleting after MAX_PUSH_FAILURES), resets the count on success. */
 async function recordOutcomes(db: Db, results: { push: OutgoingPush; outcome: PushOutcome }[]): Promise<number> {
   const gone = new Set<string>();
@@ -294,7 +316,9 @@ export async function runAlerts(
   const reminders = await runReminders(db, subs, now, send, time);
   const changes = await runChanges(db, subs, now, send, time);
   const documents = await runDocuments(db, subs, now, send, time);
-  const removed = await recordOutcomes(db, [...reminders.results, ...changes.results, ...documents.results]);
+  const ownerEndpoint = options.ownerEndpoint === undefined ? getOwnerPushEndpoint() : options.ownerEndpoint;
+  const owner = await runOwnerAlert(db, ownerEndpoint, now, send, time);
+  const removed = await recordOutcomes(db, [...reminders.results, ...changes.results, ...documents.results, ...owner]);
 
   // Hourly housekeeping: old reminder keys and documents are never needed again.
   if (now.getUTCMinutes() === 0) {
@@ -312,6 +336,7 @@ export async function runAlerts(
     changes: { processed: changes.processed, pushes: changes.results.length, sent: sentCount(changes.results) },
     documents: { processed: documents.processed, pushes: documents.results.length, sent: sentCount(documents.results) },
     subscriptionsRemoved: removed,
+    ownerAlert: owner[0]?.outcome ?? null,
     deadlineReached: time.reached,
   };
 }
