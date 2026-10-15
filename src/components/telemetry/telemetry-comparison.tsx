@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { RotateCcwIcon } from "lucide-react";
+import { canonicalTelemetryQuery, DATA_QUERY_KEYS } from "@/app/[series]/telemetry/[session]/card";
 import { Button } from "@/components/ui/button";
 import type { LapComparison, TelemetryDriver, TelemetryLap } from "@/domain/types";
 import { formatLapTime } from "@/lib/lap-time";
@@ -54,11 +55,8 @@ interface TelemetryComparisonProps {
  */
 export function TelemetryComparison({ path, roundName, roundSlug, sessionName }: TelemetryComparisonProps) {
   const query = useSearchParams();
-  const pair = new URLSearchParams();
-  for (const key of ["a", "b"]) {
-    const code = query.get(key);
-    if (code) pair.set(key, code);
-  }
+  // The data route's canonical query, which it serves without a redirect.
+  const pair = canonicalTelemetryQuery(Object.fromEntries(query), DATA_QUERY_KEYS);
   const { data, pending, failed, retry } = useComparisonData(`${path}/data${pair.size ? `?${pair}` : ""}`);
 
   if (!data) {
