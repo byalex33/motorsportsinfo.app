@@ -9,8 +9,9 @@ const OPENFREEMAP = "https://tiles.openfreemap.org"; // radar base map: styles, 
 const RAINVIEWER_API = "https://api.rainviewer.com"; // past radar frame list, when the forecast is unavailable
 const RAINVIEWER_TILES = "https://tilecache.rainviewer.com"; // past radar frames
 
-// Report-only for now: violations are logged in the browser console and nothing is blocked. Enforce it
-// (rename the header to Content-Security-Policy) once a week of real use shows no unexpected reports.
+// Report-only for now: nothing is blocked. Browsers post each violation to /api/csp-report, which logs it as
+// one line in Vercel's runtime logs (search "[csp]"). Enforce it (rename the header to
+// Content-Security-Policy) once a week of real use shows no unexpected reports.
 // 'unsafe-inline' scripts: Next's inline RSC payload and next-themes' no-flash script; no nonces, so
 // pages stay static. 'unsafe-eval' only in development, where React needs it.
 const contentSecurityPolicy = [
@@ -26,10 +27,12 @@ const contentSecurityPolicy = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
+  "report-uri /api/csp-report",
 ].join("; ");
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  poweredByHeader: false,
   partialPrefetching: true,
   turbopack: {
     rules: {
