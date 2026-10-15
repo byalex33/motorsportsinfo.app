@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CheckIcon, CopyIcon, DownloadIcon, SendIcon, Share2Icon } from "lucide-react";
+import { canonicalTelemetryQuery, IMAGE_QUERY_KEYS } from "@/app/[series]/telemetry/[session]/card";
 import { Button } from "@/components/ui/button";
 import { useHydrated } from "@/lib/client-stores";
 
@@ -44,7 +45,8 @@ export function ShareComparison({ imagePath, a, b, text, fileName }: ShareCompar
     url.searchParams.set("b", b);
     return url;
   };
-  const imageUrl = () => `${imagePath}${shareUrl().search}`;
+  // The image's canonical query (pair, colours, channel), which the image route serves without a redirect.
+  const imageUrl = () => `${imagePath}?${canonicalTelemetryQuery(Object.fromEntries(shareUrl().searchParams), IMAGE_QUERY_KEYS)}`;
   const fetchImage = async () => {
     const res = await fetch(imageUrl());
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

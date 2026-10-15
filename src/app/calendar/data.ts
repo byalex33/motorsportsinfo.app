@@ -1,4 +1,4 @@
-import { cacheLife, cacheTag } from "next/cache";
+import { cacheLife, cacheTag, io } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { circuitCountry } from "@/data/circuits";
 import { getDb } from "@/db/client";
@@ -93,10 +93,20 @@ function toCalendarRound({ round, roundNumber, circuit, sessions }: UpcomingRoun
 const allCancelled = (sessions: Session[]) => sessions.length > 0 && sessions.every((s) => s.status === "cancelled");
 
 /**
- * The full calendar, cached like the Series pages (~5 minutes) and tagged with every Series' schedule, so
- * the schedule sync refreshes it straight away.
+ * The full calendar. With a database it is prerendered from the cached read below. Without one (local
+ * dev, database-less builds) every Series is a live scrape, and all 14 take longer than a prerender lets
+ * one cache entry fill, so the calendar renders at request time instead.
  */
 export async function getCalendarPageData(): Promise<CalendarPageData> {
+  if (!getDb()) await io();
+  return readCalendarPageData();
+}
+
+/**
+ * Cached like the Series pages (~5 minutes) and tagged with every Series' schedule, so the schedule sync
+ * refreshes it straight away.
+ */
+async function readCalendarPageData(): Promise<CalendarPageData> {
   "use cache";
   cacheLife({ stale: 60, revalidate: 300, expire: 86_400 });
   cacheTag(...SERIES_IDS.map((id) => scheduleTag(id)));

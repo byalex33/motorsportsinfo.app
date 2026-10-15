@@ -1,10 +1,11 @@
-// NASCAR's schedule feed. The fixture is the 2026 Cup Series list, trimmed to the fields the parser reads.
+// NASCAR's schedule feed. The fixture is the 2026 Cup Series list (the per-series feed), trimmed to the fields
+// the parser reads.
 import { describe, expect, it } from "vitest";
 import { normaliseRounds } from "../normalise";
 import { fixtureJson } from "../test-utils";
-import { cleanNascarRaceName, parseNascarSeason, type NascarRace, type NascarSeason } from "./nascar";
+import { cleanNascarRaceName, nascarUrl, parseNascarSeason, type NascarRace, type NascarSeason } from "./nascar";
 
-const load = () => fixtureJson<NascarSeason>("nascar-2026.json");
+const load = () => fixtureJson<NascarRace[]>("nascar-2026.json");
 
 function normalise(data: NascarSeason = load()) {
   const parsed = parseNascarSeason(data, 2026);
@@ -52,11 +53,28 @@ describe("NASCAR Cup Series 2026", () => {
   });
 
   it("lists a race without a weekend schedule as Times TBC on its date", () => {
-    const data = load();
-    const races = data.series_1!.map((r): NascarRace => (r.race_id === 5601 ? { ...r, schedule: [] } : r));
-    const homestead = normalise({ series_1: races }).rounds.find((r) => r.round.id === "nascar-2026-homestead")!;
+    const races = load().map((r): NascarRace => (r.race_id === 5601 ? { ...r, schedule: [] } : r));
+    const homestead = normalise(races).rounds.find((r) => r.round.id === "nascar-2026-homestead")!;
     expect(homestead.round).toMatchObject({ sessionTimesConfirmed: false, startDate: "2026-11-08", endDate: "2026-11-08" });
     expect(homestead.sessions).toEqual([]);
+  });
+});
+
+describe("NASCAR feed shapes", () => {
+  it("reads the per-series feed", () => {
+    expect(nascarUrl(2026)).toBe("https://cf.nascar.com/cacher/2026/1/race_list_basic.json");
+  });
+
+  it("reads the year-level file's shape the same way, Cup Series only", () => {
+    const races = load();
+    const other = { ...races[0], race_id: 1, series_id: 2, race_name: "United Rentals 300" };
+    const parsed = normalise({ series_1: races, series_2: [other] });
+    expect(parsed.rounds).toEqual(normalise(races).rounds);
+    expect(normalise({ series_1: [...races, other] }).rounds).toHaveLength(38);
+  });
+
+  it("finds no Rounds in an empty year-level file", () => {
+    expect(normalise({ series_1: [], series_2: [], series_3: [] }).rounds).toEqual([]);
   });
 });
 

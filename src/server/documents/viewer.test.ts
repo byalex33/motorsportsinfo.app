@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { checkFiaDocument, FIA_DOCUMENT_FOLDER, fiaDocumentFile, fiaDocumentFileFromSlug, fiaDocumentSource, serveFiaDocument } from "./viewer";
+import { capBytes, checkFiaDocument, FIA_DOCUMENT_FOLDER, fiaDocumentFile, fiaDocumentFileFromSlug, fiaDocumentSource, serveFiaDocument } from "./viewer";
 
 const FILE = "2026_singapore_grand_prix_-_provisional_sprint_starting_grid.pdf";
 const SOURCE = FIA_DOCUMENT_FOLDER + FILE;
+/** Every file is one the site has linked to. */
+const known = async () => true;
 
 describe("fiaDocumentFile", () => {
   it("reads the file name of a PDF in the FIA's decision-document folder", () => {
@@ -57,7 +59,7 @@ describe("serveFiaDocument", () => {
       "Content-Length": "10",
       "Content-Disposition": "attachment; filename=2026 Singapore Grand Prix - Provisional Sprint Starting Grid.pdf",
     });
-    const res = await serveFiaDocument(FILE, fetcher);
+    const res = await serveFiaDocument(FILE, known, fetcher);
     expect(fetcher).toHaveBeenCalledWith(SOURCE, expect.anything());
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("application/pdf");
@@ -70,23 +72,23 @@ describe("serveFiaDocument", () => {
   });
 
   it("gives a non-ASCII name an ASCII fallback", async () => {
-    const res = await serveFiaDocument(FILE, pdf({ "Content-Disposition": "attachment; filename=São Paulo.pdf" }));
+    const res = await serveFiaDocument(FILE, known, pdf({ "Content-Disposition": "attachment; filename=São Paulo.pdf" }));
     expect(res.headers.get("Content-Disposition")).toBe(`inline; filename="S_o Paulo.pdf"; filename*=UTF-8''S%C3%A3o%20Paulo.pdf`);
   });
 
   it("falls back to the file name without a usable download name", async () => {
-    const res = await serveFiaDocument(FILE, pdf());
+    const res = await serveFiaDocument(FILE, known, pdf());
     expect(res.headers.get("Content-Disposition")).toContain(`filename="${FILE}"`);
   });
 
   it("returns 404 for a bad file name without fetching", async () => {
     const fetcher = pdf();
-    expect((await serveFiaDocument("../../etc/passwd.pdf", fetcher)).status).toBe(404);
+    expect((await serveFiaDocument("../../etc/passwd.pdf", known, fetcher)).status).toBe(404);
     expect(fetcher).not.toHaveBeenCalled();
   });
 
   it("returns 404 when the FIA has no such file", async () => {
-    expect((await serveFiaDocument(FILE, pdf({}, 404))).status).toBe(404);
+    expect((await serveFiaDocument(FILE, known, pdf({}, 404))).status).toBe(404);
   });
 
   it.each([
@@ -96,10 +98,51 @@ describe("serveFiaDocument", () => {
     ["a network failure", vi.fn(async () => Promise.reject(new Error("ECONNRESET")))],
   ])("sends the viewer to fia.com on %s", async (_, fetcher) => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const res = await serveFiaDocument(FILE, fetcher);
+    const res = await serveFiaDocument(FILE, known, fetcher);
     warn.mockRestore();
     expect(res.status).toBe(302);
     expect(res.headers.get("Location")).toBe(SOURCE);
+  });
+
+  it("returns 404 for a file the site doesn't know, without asking fia.com", async () => {
+    const fetcher = pdf();
+    const isKnown = vi.fn(async () => false);
+    expect((await serveFiaDocument("made_up_name.pdf", isKnown, fetcher)).status).toBe(404);
+    expect(isKnown).toHaveBeenCalledWith("made_up_name.pdf");
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("cuts off a PDF without Content-Length once it passes 25 MB", async () => {
+    const chunk = new Uint8Array(1024 * 1024);
+    let sent = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        sent++;
+        controller.enqueue(chunk);
+      },
+    });
+    const res = await serveFiaDocument(FILE, known, vi.fn(async () => new Response(body, { headers: { "Content-Type": "application/pdf" } })));
+    expect(res.status).toBe(200);
+    await expect(res.arrayBuffer()).rejects.toThrow(/over/);
+    expect(sent).toBeLessThan(30);
+  });
+});
+
+describe("capBytes", () => {
+  const stream = (...chunks: number[]) =>
+    new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const size of chunks) controller.enqueue(new Uint8Array(size));
+        controller.close();
+      },
+    });
+
+  it("passes a body up to the cap through unchanged", async () => {
+    expect((await new Response(capBytes(stream(4, 6), 10)).arrayBuffer()).byteLength).toBe(10);
+  });
+
+  it("errors once the body passes the cap", async () => {
+    await expect(new Response(capBytes(stream(4, 6, 1), 10)).arrayBuffer()).rejects.toThrow(/over 10 bytes/);
   });
 });
 

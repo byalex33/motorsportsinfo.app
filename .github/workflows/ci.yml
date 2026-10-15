@@ -1,5 +1,7 @@
-# Typecheck, lint and tests on every pull request and every push to main. Vercel builds the previews
-# but doesn't run these. No secrets: the tests don't touch the network or the database.
+# Typecheck, lint, tests and the production build on every pull request and every push to main. Vercel
+# builds the previews but doesn't run these. No secrets: the tests don't touch the network or the
+# database, and the build runs without a database, the way a contributor's checkout does (each Series
+# is read live from its sources).
 name: CI
 
 on:
@@ -29,3 +31,25 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    # Without a database the build scrapes every Series live, so it takes a few minutes.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Next's build cache: a new entry whenever packages or sources change, restored from the last one
+      # with the same packages.
+      - uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-
+      - run: npm run build

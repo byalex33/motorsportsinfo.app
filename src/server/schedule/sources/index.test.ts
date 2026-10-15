@@ -5,8 +5,11 @@ import { fetchSeriesSchedule, SourceFailure } from "./index";
 
 const NOW = new Date("2026-10-09T02:00:00Z");
 
-/** A fake fetch serving fixtures by URL; anything else is a 404. Records requests. */
-function fakeContext(routes: Record<string, string | number>) {
+const GTWC = "https://www.gt-world-challenge-europe.com";
+const DTM = "https://api.dtm.com/data";
+
+/** A fake fetch serving fixtures (or `{ body }`) by URL; anything else is a 404. Records requests. */
+function fakeContext(routes: Record<string, string | number | { body: string }>) {
   const requests: { url: string; userAgent: string | null }[] = [];
   const ctx: SourceContext = {
     sleep: async () => {},
@@ -15,7 +18,7 @@ function fakeContext(routes: Record<string, string | number>) {
       const route = routes[url];
       if (typeof route === "number") return new Response("error", { status: route });
       if (route === undefined) return new Response("not found", { status: 404 });
-      return new Response(fixture(route), { status: 200 });
+      return new Response(typeof route === "string" ? fixture(route) : route.body, { status: 200 });
     },
   };
   return { ctx, requests };
@@ -99,6 +102,17 @@ describe("fetchSeriesSchedule", () => {
     await expect(fetchSeriesSchedule("motogp", NOW, ctx)).rejects.toBeInstanceOf(SourceFailure);
   });
 
+  it("reads NASCAR from the per-series feed", async () => {
+    const { ctx, requests } = fakeContext({ "https://cf.nascar.com/cacher/2026/1/race_list_basic.json": "nascar-2026.json" });
+    const schedule = await fetchSeriesSchedule("nascar", NOW, ctx);
+    expect(schedule).toMatchObject({ source: "nascar", isFallback: false, completeSeasons: [2026], problems: [] });
+    expect(schedule.rounds).toHaveLength(38);
+    expect(requests.map((r) => r.url)).toEqual([
+      "https://cf.nascar.com/cacher/2026/1/race_list_basic.json",
+      "https://cf.nascar.com/cacher/2027/1/race_list_basic.json",
+    ]);
+  });
+
   it("reads WEC race pages for this season and next season's published Rounds", async () => {
     const { ctx } = fakeContext({
       "https://www.fiawec.com/en/season/2026": "wec-season-2026.html",
@@ -110,5 +124,46 @@ describe("fetchSeriesSchedule", () => {
     expect(schedule.source).toBe("fiawec");
     expect(schedule.rounds.map((r) => r.round.id)).toEqual(["wec-2026-le-mans", "wec-2026-catalunya", "wec-2027-lusail"]);
     expect(schedule.completeSeasons).toEqual([]);
+  });
+
+  it("reads GT World Challenge Europe's calendar page once for both seasons", async () => {
+    const { ctx, requests } = fakeContext({
+      [`${GTWC}/calendar`]: "gtwc-calendar-2026.html",
+      [`${GTWC}/event/254/barcelona`]: "gtwc-event-barcelona-2026.html",
+      [`${GTWC}/event/255/portimao`]: "gtwc-event-portimao-2026.html",
+    });
+    const schedule = await fetchSeriesSchedule("gtwc-europe", NOW, ctx);
+    expect(schedule).toMatchObject({ source: "gt-world-challenge-europe.com", completeSeasons: [], problems: [] });
+    expect(schedule.rounds.map((r) => r.round.id)).toEqual(["gtwc-europe-2026-catalunya", "gtwc-europe-2026-portimao"]);
+    expect(requests.filter((r) => r.url === `${GTWC}/calendar`)).toHaveLength(1);
+  });
+
+  it("reads DTM's event list once for both seasons", async () => {
+    const { ctx, requests } = fakeContext({
+      [`${DTM}?query=events&lang=en`]: "dtm-events.json",
+      [`${DTM}?query=eventDetails&slug=hockenheim-finale-2026&lang=en`]: "dtm-event-hockenheim-2026.json",
+      [`${DTM}?query=eventDetails&slug=red-bull-ring-2027&lang=en`]: "dtm-event-red-bull-ring-2027.json",
+    });
+    const schedule = await fetchSeriesSchedule("dtm", NOW, ctx);
+    expect(schedule).toMatchObject({ source: "dtm.com", completeSeasons: [], problems: [] });
+    expect(schedule.rounds.map((r) => r.round.id)).toEqual(["dtm-2026-hockenheim", "dtm-2027-red-bull-ring"]);
+    expect(requests.filter((r) => r.url.includes("query=events&"))).toHaveLength(1);
+  });
+
+  it("keeps GT World Challenge Europe syncing when the calendar moves on to next season before 1 January", async () => {
+    const { ctx } = fakeContext({
+      [`${GTWC}/calendar`]: { body: fixture("gtwc-calendar-2026.html").replaceAll("2026", "2027") },
+      [`${GTWC}/event/254/barcelona`]: "gtwc-event-barcelona-2026.html",
+      [`${GTWC}/event/255/portimao`]: "gtwc-event-portimao-2026.html",
+    });
+    const schedule = await fetchSeriesSchedule("gtwc-europe", NOW, ctx);
+    expect(schedule).toMatchObject({ source: "gt-world-challenge-europe.com", isFallback: false, completeSeasons: [], problems: [] });
+    expect(schedule.rounds.map((r) => r.round.id)).toEqual(["gtwc-europe-2027-catalunya", "gtwc-europe-2027-portimao"]);
+    expect(schedule.warnings[0]).toBe("No 2026 Rounds listed any more; reading 2027 only");
+  });
+
+  it("fails GT World Challenge Europe when the calendar lists neither season", async () => {
+    const { ctx } = fakeContext({ [`${GTWC}/calendar`]: { body: fixture("gtwc-calendar-2026.html").replaceAll("2026", "2025") } });
+    await expect(fetchSeriesSchedule("gtwc-europe", NOW, ctx)).rejects.toThrow("No Rounds for 2026");
   });
 });

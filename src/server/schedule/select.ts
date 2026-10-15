@@ -112,11 +112,6 @@ export function selectUpcomingRounds(rounds: RoundWithContext[], now: Date): Upc
   }));
 }
 
-/** All Sessions (including cancelled) of unfinished Rounds, ordered by startsAt. */
-export function selectUpcomingSessions(rounds: RoundWithContext[], now: Date): SessionWithContext[] {
-  return sessionsOf(unfinishedRounds(rounds, now));
-}
-
 /** How long a finished Round stays in calendar feeds, so subscribers' calendars keep its events. */
 export const CALENDAR_HISTORY_DAYS = 60;
 

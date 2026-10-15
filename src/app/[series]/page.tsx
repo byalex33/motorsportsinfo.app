@@ -71,7 +71,9 @@ function calendarAlternate(series: SeriesId): string | null {
 
 export async function generateMetadata({ params }: PageProps<"/[series]">): Promise<Metadata> {
   const { series } = await params;
-  if (!isSeriesId(series)) return {};
+  // notFound() here as well as in the page: with ensureStatic, a 404 whose metadata resolved normally keeps
+  // the root layout's title instead of not-found.tsx's "Page not found".
+  if (!isSeriesId(series)) notFound();
   const { featured } = await getSeriesPageData(series);
   const { title, description } = seriesSeo(series, featured);
   const calendar = calendarAlternate(series);

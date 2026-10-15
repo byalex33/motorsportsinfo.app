@@ -5,6 +5,7 @@ import { ImageResponse } from "next/og";
 import type { LapComparison } from "@/domain/types";
 import { formatLapTime } from "@/lib/lap-time";
 import { CHANNEL_LABELS, type TelemetryChannel } from "@/lib/telemetry-channels";
+import { canonicalTelemetryRedirect, IMAGE_QUERY_KEYS } from "../card";
 import { resolveTelemetry } from "../comparison";
 
 const W = 1200;
@@ -15,6 +16,9 @@ const MUTED = "#a1a1a1";
 const GRID = "#262626";
 
 export async function GET(request: Request, ctx: RouteContext<"/[series]/telemetry/[session]/image">) {
+  // Any other spelling of the query goes to the canonical one first, so it is drawn and cached once.
+  const redirect = canonicalTelemetryRedirect(request, IMAGE_QUERY_KEYS);
+  if (redirect) return redirect;
   const { series, session: slug } = await ctx.params;
   const query = Object.fromEntries(new URL(request.url).searchParams);
   const view = await resolveTelemetry(series, slug, query);

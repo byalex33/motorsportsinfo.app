@@ -1,5 +1,5 @@
 // Push subscription endpoints for Session Reminders and Schedule Change pushes.
-//   POST   { subscription, follows, leadMinutes, timeZone }  → save (upsert by endpoint)
+//   POST   { subscription, follows, leadMinutes, timeZone }  → save (upsert by endpoint); 503 when full (MAX_SUBSCRIPTIONS)
 //   DELETE { endpoint }                                       → turn off
 //   PATCH  { oldEndpoint, subscription }                      → browser replaced the subscription (from the service worker)
 import type { z } from "zod";
@@ -43,7 +43,9 @@ export async function POST(request: Request) {
   if (input instanceof Response) return input;
   const db = getDb();
   if (!db) return noDatabase();
-  await upsertSubscription(db, input);
+  if ((await upsertSubscription(db, input)) === "full") {
+    return json({ error: "Reminders are full right now: no new devices can sign up. Please try again later." }, 503);
+  }
   return json({ ok: true });
 }
 

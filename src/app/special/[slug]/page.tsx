@@ -23,7 +23,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps<"/special/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const data = await getSpecialEventPageData(slug);
-  if (!data) return {};
+  if (!data) notFound(); // for not-found.tsx's title (see src/app/[series]/page.tsx)
   const { event } = data;
   return pageMetadata({
     title: `${event.name} – session times & weather`,

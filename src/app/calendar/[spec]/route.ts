@@ -7,8 +7,9 @@ import { parseCalendarSegment } from "@/server/alerts/selection";
 const CACHE_CONTROL = "public, max-age=900, s-maxage=900, stale-while-revalidate=3600";
 
 export async function GET(_request: Request, ctx: RouteContext<"/calendar/[spec]">) {
+  // Already percent-decoded by the router; decoding again would throw on a literal "%".
   const { spec } = await ctx.params;
-  const follows = parseCalendarSegment(decodeURIComponent(spec));
+  const follows = parseCalendarSegment(spec);
   if (!follows) {
     return new Response("Unknown calendar feed. Build a new link at https://motorsportsinfo.app/alerts\n", {
       status: 404,

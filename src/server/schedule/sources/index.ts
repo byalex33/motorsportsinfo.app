@@ -4,9 +4,9 @@ import { normaliseRounds } from "../normalise";
 import type { RawRound, SourceSchedule } from "../types";
 import { fetchFiaFeederSeason, type FeederSeries } from "./fia-feeder";
 import { fillTbcRounds } from "./fill-tbc";
-import { fetchDtmSeason } from "./dtm";
+import { fetchDtmEvents, fetchDtmSeason } from "./dtm";
 import { defaultContext, errorMessage, type SourceContext } from "./http";
-import { fetchGtwcSeason } from "./gtwc";
+import { fetchGtwcCalendar, fetchGtwcSeason } from "./gtwc";
 import { fetchImsaSeason } from "./imsa";
 import { fetchJolpicaSeason } from "./jolpica";
 import { fetchNascarSeason } from "./nascar";
@@ -27,26 +27,72 @@ interface SourceDef {
   load: (ctx: SourceContext, year: number) => Promise<Loaded>;
 }
 
+/** One season as a loader reads it. */
+interface Season {
+  rounds: RawRound[];
+  complete?: boolean;
+  warnings?: string[];
+}
+
+/** `year` (required: throws if nothing is listed) with `year + 1` (null when not published). */
+function combine(year: number, current: Season, next: Season | null): Loaded {
+  if (current.rounds.length === 0) throw new Error(`No Rounds for ${year}`);
+  const result: Loaded = {
+    rounds: [...current.rounds],
+    completeSeasons: current.complete === false ? [] : [year],
+    warnings: [...(current.warnings ?? [])],
+  };
+  if (next) {
+    result.rounds.push(...next.rounds);
+    result.warnings.push(...(next.warnings ?? []));
+    if (next.rounds.length > 0 && next.complete !== false) result.completeSeasons.push(year + 1);
+  }
+  return result;
+}
+
 /** Loads `year` (required: throws on failure or nothing listed) and `year + 1` (best effort). */
-function perSeason(load: (ctx: SourceContext, year: number) => Promise<{ rounds: RawRound[]; complete?: boolean; warnings?: string[] }>) {
+function perSeason(load: (ctx: SourceContext, year: number) => Promise<Season>) {
   return async (ctx: SourceContext, year: number): Promise<Loaded> => {
     const current = await load(ctx, year);
     if (current.rounds.length === 0) throw new Error(`No Rounds for ${year}`);
-    const result: Loaded = {
-      rounds: [...current.rounds],
-      completeSeasons: current.complete === false ? [] : [year],
-      warnings: [...(current.warnings ?? [])],
-    };
+    let next: Season | null = null;
     try {
       await ctx.sleep(400);
-      const next = await load(ctx, year + 1);
-      result.rounds.push(...next.rounds);
-      result.warnings.push(...(next.warnings ?? []));
-      if (next.rounds.length > 0 && next.complete !== false) result.completeSeasons.push(year + 1);
+      next = await load(ctx, year + 1);
     } catch {
       // Next season not published yet (404/500 or empty) — normal for most of the year.
     }
-    return result;
+    return combine(year, current, next);
+  };
+}
+
+/**
+ * Like perSeason, for a source whose one index (a calendar page, an event list) lists the seasons: the index
+ * is fetched once per check and both seasons are read from it. An index that lists `year + 1` but no longer
+ * `year` has moved on before 1 January: `year + 1` is kept, with a warning, and `year` is not complete, so
+ * its Rounds stay as published.
+ */
+function fromIndex<T>(
+  fetchIndex: (ctx: SourceContext) => Promise<T>,
+  load: (ctx: SourceContext, index: T, year: number) => Promise<Season>,
+) {
+  return async (ctx: SourceContext, year: number): Promise<Loaded> => {
+    const index = await fetchIndex(ctx);
+    const current = await load(ctx, index, year);
+    let next: Season;
+    try {
+      next = await load(ctx, index, year + 1);
+    } catch (error) {
+      if (current.rounds.length === 0) throw error;
+      next = { rounds: [], warnings: [`${year + 1}: ${errorMessage(error)}`] };
+    }
+    if (current.rounds.length === 0 && next.rounds.length > 0) {
+      return {
+        ...combine(year + 1, next, null),
+        warnings: [`No ${year} Rounds listed any more; reading ${year + 1} only`, ...(next.warnings ?? [])],
+      };
+    }
+    return combine(year, current, next);
   };
 }
 
@@ -95,8 +141,8 @@ export const SOURCES: Record<SeriesId, { primary: SourceDef; fallback?: SourceDe
   wrc: { primary: { name: "wrc.com", load: perSeason(fetchWrcSeason) } },
   imsa: { primary: { name: "imsa-ecal", load: perSeason(fetchImsaSeason) } },
   nascar: { primary: { name: "nascar", load: perSeason(fetchNascarSeason) } },
-  "gtwc-europe": { primary: { name: "gt-world-challenge-europe.com", load: perSeason(fetchGtwcSeason) } },
-  dtm: { primary: { name: "dtm.com", load: perSeason(fetchDtmSeason) } },
+  "gtwc-europe": { primary: { name: "gt-world-challenge-europe.com", load: fromIndex(fetchGtwcCalendar, fetchGtwcSeason) } },
+  dtm: { primary: { name: "dtm.com", load: fromIndex(fetchDtmEvents, fetchDtmSeason) } },
   "super-gt": { primary: { name: "supergt.net", load: perSeason(fetchSuperGtSeason) } },
 };
 
