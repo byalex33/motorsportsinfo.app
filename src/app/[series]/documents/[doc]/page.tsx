@@ -73,7 +73,8 @@ export async function generateMetadata({ params }: PageProps<"/[series]/document
   const found = await findDocument(params);
   // The FIA publishes these; search engines should find them on fia.com, not here.
   const robots = { index: false, follow: true };
-  if (found?.kind !== "page") return { robots };
+  if (!found) notFound(); // for not-found.tsx's title (see src/app/[series]/page.tsx)
+  if (found.kind !== "page") return { robots };
   // The tab, history and a shared link's preview card show the title before anyone chooses to read it,
   // so car numbers stay hidden there, as in the list. The page itself shows the full title.
   const title = hideCarNumbers(found.doc?.title ?? titleFromFile(found.file));

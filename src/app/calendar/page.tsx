@@ -17,7 +17,7 @@ export const metadata = pageMetadata({
   path: "/calendar",
 });
 
-/** The cards, prerendered from cached data like the Series pages. */
+/** The cards, prerendered from cached data like the Series pages (at request time without a database). */
 async function Calendar() {
   const { rounds, unavailable, renderedAt } = await getCalendarPageData();
   return (
