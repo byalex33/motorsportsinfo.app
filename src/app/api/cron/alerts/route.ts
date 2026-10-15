@@ -4,6 +4,7 @@ import { getVapidConfig } from "@/server/alerts/push";
 import { runAlerts } from "@/server/alerts/run";
 import { isCronRequest } from "@/server/cron";
 
+// runAlerts stops claiming work RUN_BUDGET_MS (45 s) in, so what it claimed can still be sent within this.
 export const maxDuration = 60;
 
 export async function GET(request: Request) {

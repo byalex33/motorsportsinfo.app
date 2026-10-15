@@ -1,10 +1,28 @@
 // Database writes for push subscriptions (subscribe / unsubscribe / browser rotation).
-import { eq, sql } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { pushSubscriptions } from "@/db/schema";
 import type { SubscribeInput } from "./validation";
 
-export async function upsertSubscription(db: Db, input: SubscribeInput): Promise<void> {
+/**
+ * push_subscriptions holds at most this many rows. The alerts cron reads them all each busy minute, so a
+ * flood of made-up endpoints must not grow it without bound. Existing devices can always update.
+ */
+export const MAX_SUBSCRIPTIONS = 50_000;
+
+/** "full" when the endpoint is new and the table already holds MAX_SUBSCRIPTIONS rows. */
+export async function upsertSubscription(db: Db, input: SubscribeInput): Promise<"saved" | "full"> {
+  const [{ total }] = await db.select({ total: count() }).from(pushSubscriptions);
+  if (total >= MAX_SUBSCRIPTIONS) {
+    const [existing] = await db
+      .select({ id: pushSubscriptions.id })
+      .from(pushSubscriptions)
+      .where(eq(pushSubscriptions.endpoint, input.subscription.endpoint));
+    if (!existing) {
+      console.warn(`[alerts] push_subscriptions is full (${total} rows): refused a new subscription`);
+      return "full";
+    }
+  }
   const values = {
     endpoint: input.subscription.endpoint,
     p256dh: input.subscription.keys.p256dh,
@@ -21,6 +39,7 @@ export async function upsertSubscription(db: Db, input: SubscribeInput): Promise
       target: pushSubscriptions.endpoint,
       set: { ...values, failureCount: 0, updatedAt: sql`now()` },
     });
+  return "saved";
 }
 
 export async function deleteSubscription(db: Db, endpoint: string): Promise<void> {

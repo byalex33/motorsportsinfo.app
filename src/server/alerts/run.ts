@@ -16,18 +16,54 @@ const MAX_LEAD_MINUTES = Math.max(...REMINDER_LEAD_MINUTES);
 const REMINDER_RETENTION_DAYS = 7;
 /** fia_documents rows are kept this long after first being seen, then pruned. */
 const DOCUMENT_RETENTION_DAYS = 30;
+/**
+ * Stop claiming new work this long after the run starts. The function may run for 60 s (route.ts),
+ * so a chunk already claimed still has time to send; anything unclaimed waits for the next minute.
+ */
+export const RUN_BUDGET_MS = 45_000;
+/** Session Reminders claimed and sent together, so a run out of time has lost nothing it claimed. */
+export const REMINDER_CHUNK = 100;
 const CHANGES_PER_RUN = 200;
 const DOCUMENTS_PER_RUN = 200;
 const INSERT_CHUNK = 500;
 
 export interface AlertsRunResult {
-  reminders: { due: number; sent: number };
+  reminders: { due: number; claimed: number; sent: number };
   changes: { processed: number; pushes: number; sent: number };
   documents: { processed: number; pushes: number; sent: number };
   subscriptionsRemoved: number;
+  /** True when the run stopped claiming work at its deadline, leaving the rest for the next run. */
+  deadlineReached: boolean;
 }
 
 type SendFn = (push: OutgoingPush) => Promise<PushOutcome>;
+
+export interface AlertsRunOptions {
+  /** Epoch ms after which no new work is claimed. Default: RUN_BUDGET_MS after the run starts. */
+  deadline?: number;
+  /** The wall clock the deadline is checked against (tests pass a fake). Default: Date.now. */
+  clock?: () => number;
+  /** Sends one push. Default: Web Push with the VAPID keys. */
+  send?: SendFn;
+}
+
+/** Whether the run may still claim work. Records the first refusal, so the result can report it. */
+interface Budget {
+  hasTime(): boolean;
+  reached: boolean;
+}
+
+function budget(deadline: number, clock: () => number): Budget {
+  const b: Budget = {
+    reached: false,
+    hasTime() {
+      if (clock() < deadline) return true;
+      b.reached = true;
+      return false;
+    },
+  };
+  return b;
+}
 
 function chunk<T>(items: readonly T[], size: number): T[][] {
   const out: T[][] = [];
@@ -118,16 +154,27 @@ async function claimChanges(db: Db, ids: readonly number[], now: Date): Promise<
   return new Set(rows.map((r) => r.id));
 }
 
-async function runReminders(db: Db, subs: LoadSubscriptions, now: Date, send: SendFn) {
+/**
+ * Claims and sends due reminders a chunk at a time, and claims no new chunk once out of time: a reminder is
+ * only claimed when it is about to be sent, so one left over is still due (within the catch-up window) next run.
+ */
+async function runReminders(db: Db, subs: LoadSubscriptions, now: Date, send: SendFn, time: Budget) {
   const reminderSessions = await loadReminderSessions(db, now);
-  if (reminderSessions.length === 0) return { due: 0, results: [] };
+  if (reminderSessions.length === 0) return { due: 0, claimed: 0, results: [] };
   const due = selectDueReminders(await subs(), reminderSessions, now);
-  if (due.length === 0) return { due: 0, results: [] };
-  const fresh = await claimReminders(db, due);
-  return { due: due.length, results: await sendAll(fresh, send) };
+  let claimed = 0;
+  const results: { push: OutgoingPush; outcome: PushOutcome }[] = [];
+  for (const part of chunk(due, REMINDER_CHUNK)) {
+    if (!time.hasTime()) break;
+    const fresh = await claimReminders(db, part);
+    claimed += fresh.length;
+    results.push(...(await sendAll(fresh, send)));
+  }
+  return { due: due.length, claimed, results };
 }
 
-async function runChanges(db: Db, subs: LoadSubscriptions, now: Date, send: SendFn) {
+async function runChanges(db: Db, subs: LoadSubscriptions, now: Date, send: SendFn, time: Budget) {
+  if (!time.hasTime()) return { processed: 0, results: [] };
   const rows: ScheduleChangeRow[] = await db
     .select({
       id: scheduleChanges.id,
@@ -153,12 +200,14 @@ async function runChanges(db: Db, subs: LoadSubscriptions, now: Date, send: Send
   // Loaded before claiming, so a failed read leaves the changes for the next run.
   const subscriptions = await subs();
 
+  if (!time.hasTime()) return { processed: 0, results: [] };
   const claimed = await claimChanges(db, rows.map((r) => r.id), now);
   const plan = planChangePushes(rows.filter((r) => claimed.has(r.id)), sessionsById, subscriptions, now);
   return { processed: claimed.size, results: await sendAll(plan.pushes, send) };
 }
 
-async function runDocuments(db: Db, subs: LoadSubscriptions, now: Date, send: SendFn) {
+async function runDocuments(db: Db, subs: LoadSubscriptions, now: Date, send: SendFn, time: Budget) {
+  if (!time.hasTime()) return { processed: 0, results: [] };
   const rows: DocumentAlertRow[] = await db
     .select({
       url: fiaDocuments.url,
@@ -176,6 +225,7 @@ async function runDocuments(db: Db, subs: LoadSubscriptions, now: Date, send: Se
     .limit(DOCUMENTS_PER_RUN);
   if (rows.length === 0) return { processed: 0, results: [] };
   const subscriptions = await subs();
+  if (!time.hasTime()) return { processed: 0, results: [] };
 
   // Claimed by setting notifiedAt, so overlapping runs never push a document twice.
   const claimed = await db
@@ -230,13 +280,20 @@ async function recordOutcomes(db: Db, results: { push: OutgoingPush; outcome: Pu
   return removed;
 }
 
-export async function runAlerts(db: Db, vapid: VapidConfig, now: Date = new Date()): Promise<AlertsRunResult> {
-  const send: SendFn = (push) => sendPush(push, vapid);
+export async function runAlerts(
+  db: Db,
+  vapid: VapidConfig,
+  now: Date = new Date(),
+  options: AlertsRunOptions = {},
+): Promise<AlertsRunResult> {
+  const clock = options.clock ?? Date.now;
+  const time = budget(options.deadline ?? clock() + RUN_BUDGET_MS, clock);
+  const send: SendFn = options.send ?? ((push) => sendPush(push, vapid));
   const subs = lazySubscriptions(db);
 
-  const reminders = await runReminders(db, subs, now, send);
-  const changes = await runChanges(db, subs, now, send);
-  const documents = await runDocuments(db, subs, now, send);
+  const reminders = await runReminders(db, subs, now, send, time);
+  const changes = await runChanges(db, subs, now, send, time);
+  const documents = await runDocuments(db, subs, now, send, time);
   const removed = await recordOutcomes(db, [...reminders.results, ...changes.results, ...documents.results]);
 
   // Hourly housekeeping: old reminder keys and documents are never needed again.
@@ -251,9 +308,10 @@ export async function runAlerts(db: Db, vapid: VapidConfig, now: Date = new Date
 
   const sentCount = (rs: { outcome: PushOutcome }[]) => rs.filter((r) => r.outcome === "sent").length;
   return {
-    reminders: { due: reminders.due, sent: sentCount(reminders.results) },
+    reminders: { due: reminders.due, claimed: reminders.claimed, sent: sentCount(reminders.results) },
     changes: { processed: changes.processed, pushes: changes.results.length, sent: sentCount(changes.results) },
     documents: { processed: documents.processed, pushes: documents.results.length, sent: sentCount(documents.results) },
     subscriptionsRemoved: removed,
+    deadlineReached: time.reached,
   };
 }
