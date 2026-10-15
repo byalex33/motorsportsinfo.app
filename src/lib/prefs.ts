@@ -5,11 +5,16 @@
 //   msi.units  → JSON { "temp": "c" | "f", "wind": "kmh" | "mph" }
 //   msi.oss-note → "dismissed" once the open-source note is closed (not part of the alerts contract)
 //   msi.announcement → the id of the last Special Event announcement closed (not part of the alerts contract)
+//   msi.alerts → JSON { "follows": { [SeriesId]: SessionType[] }, "leadMinutes": 15 | 60 | 1440,
+//                "documentAlerts": { [FiaDocumentSeries]: "stewards" | "all" } }, the Alerts page's choices
 // Every storage access is wrapped in try/catch; without storage the choice lives in memory for the visit.
 import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { REMINDER_LEAD_MINUTES, type ReminderLeadMinutes } from "@/domain/series";
 import type { SeriesId } from "@/domain/types";
 import { isSeriesId } from "@/lib/series-id";
 import { isValidTimeZone } from "@/lib/time-format";
+import { normalizeDocumentAlerts, type DocumentAlerts } from "@/server/alerts/document-alerts";
+import { normalizeFollows, type Follows } from "@/server/alerts/selection";
 
 export const PREF_KEYS = {
   series: "msi.series",
@@ -17,6 +22,7 @@ export const PREF_KEYS = {
   units: "msi.units",
   openSourceNote: "msi.oss-note",
   announcement: "msi.announcement",
+  alerts: "msi.alerts",
 } as const;
 
 export type PrefKey = (typeof PREF_KEYS)[keyof typeof PREF_KEYS];
@@ -35,6 +41,13 @@ export interface UnitsPref {
 }
 
 export const DEFAULT_TIME_PREF: TimePref = { mode: "viewer" };
+
+/** The Alerts page's choices: ticked Session Types, Session Reminder lead time and Document Alerts. */
+export interface SavedAlerts {
+  follows: Follows;
+  leadMinutes: ReminderLeadMinutes;
+  documentAlerts: DocumentAlerts;
+}
 
 // ---------------------------------------------------------------------------
 // Parsing (pure)
@@ -69,6 +82,22 @@ export function parseUnitsPref(raw: string | null | undefined): UnitsPref | null
   const { temp, wind } = value as { temp?: unknown; wind?: unknown };
   if ((temp === "c" || temp === "f") && (wind === "kmh" || wind === "mph")) return { temp, wind };
   return null;
+}
+
+/** Null when nothing usable is stored, so the Alerts page falls back to its defaults. Junk inside is dropped. */
+export function parseSavedAlerts(raw: string | null | undefined): SavedAlerts | null {
+  const value = parseJson(raw);
+  if (!value || typeof value !== "object") return null;
+  const { follows, leadMinutes, documentAlerts } = value as { follows?: unknown; leadMinutes?: unknown; documentAlerts?: unknown };
+  if (!follows || typeof follows !== "object") return null;
+  return {
+    follows: normalizeFollows(follows as Record<string, string[]>),
+    leadMinutes: (REMINDER_LEAD_MINUTES as readonly unknown[]).includes(leadMinutes)
+      ? (leadMinutes as ReminderLeadMinutes)
+      : REMINDER_LEAD_MINUTES[0],
+    // Saved before Document Alerts existed: none chosen.
+    documentAlerts: normalizeDocumentAlerts(documentAlerts),
+  };
 }
 
 const FAHRENHEIT_REGIONS = new Set(["US", "LR", "MM", "BS", "BZ", "KY", "PW", "FM", "MH"]);
@@ -216,4 +245,16 @@ export function useDismissedAnnouncement(): PrefState<string | null> {
     writePref(PREF_KEYS.announcement, next ?? "");
   }, []);
   return { value: raw || null, ready: raw !== undefined, set };
+}
+
+/** What the Alerts page saved on this device; null when nothing was saved, and while hydrating. */
+export function useSavedAlertsPref(): PrefState<SavedAlerts | null> {
+  const raw = useStoredString(PREF_KEYS.alerts);
+  const value = useMemo(() => parseSavedAlerts(raw), [raw]);
+  const set = useCallback((next: SavedAlerts | null) => {
+    if (!next) return;
+    const { follows, leadMinutes, documentAlerts } = next;
+    writePref(PREF_KEYS.alerts, JSON.stringify({ follows, leadMinutes, documentAlerts }));
+  }, []);
+  return { value, ready: raw !== undefined, set };
 }
