@@ -11,8 +11,6 @@ import type { SeriesId } from "@/domain/types";
 import { isSeriesId } from "@/lib/series-id";
 import { isValidTimeZone } from "@/lib/time-format";
 
-export { isSeriesId };
-
 export const PREF_KEYS = {
   series: "msi.series",
   time: "msi.time",

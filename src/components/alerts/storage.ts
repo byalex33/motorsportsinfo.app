@@ -3,7 +3,8 @@ import { useSyncExternalStore } from "react";
 import { REMINDER_LEAD_MINUTES, type ReminderLeadMinutes } from "@/domain/series";
 import type { SeriesId } from "@/domain/types";
 import { normalizeDocumentAlerts, type DocumentAlerts } from "@/server/alerts/document-alerts";
-import { isSeriesId, normalizeFollows, type Follows } from "@/server/alerts/selection";
+import { isSeriesId } from "@/lib/series-id";
+import { normalizeFollows, type Follows } from "@/server/alerts/selection";
 
 /** The Series the viewer last browsed (written by the Series pages). */
 export const SERIES_STORAGE_KEY = "msi.series";
