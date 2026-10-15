@@ -2,7 +2,7 @@
 // attachment", so a link to it always downloads. /documents/<file>.pdf fetches the same PDF and relays
 // it unchanged with an inline disposition, for the viewer page (/<series>/documents/<slug>) to render.
 // Only files in the FIA's decision-document folder are fetched: the host and folder are fixed here,
-// the file name is checked.
+// the file name is checked, and only a file the site has linked to is asked for.
 import { BROWSER_USER_AGENT, type Fetcher } from "@/server/schedule/sources/http";
 
 export const FIA_DOCUMENT_FOLDER = "https://www.fia.com/system/files/decision-document/";
@@ -102,10 +102,30 @@ const notFound = () =>
 /** Sends the viewer to fia.com when we cannot relay the file: they still get it, as a download. */
 const toFia = (source: string) => new Response(null, { status: 302, headers: { Location: source, "Cache-Control": "no-store" } });
 
-/** Relays one FIA Document PDF for viewing in the browser. */
-export async function serveFiaDocument(file: string, fetcher: Fetcher = fetch): Promise<Response> {
+/**
+ * Passes a PDF through, erroring once it passes `max` bytes: Content-Length is checked first, but a
+ * response without one would otherwise be relayed whatever its size.
+ */
+export function capBytes(body: ReadableStream<Uint8Array>, max = MAX_BYTES): ReadableStream<Uint8Array> {
+  let seen = 0;
+  return body.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        seen += chunk.byteLength;
+        if (seen > max) controller.error(new Error(`FIA document over ${max} bytes`));
+        else controller.enqueue(chunk);
+      },
+    }),
+  );
+}
+
+/**
+ * Relays one FIA Document PDF for viewing in the browser. Only a file `isKnown` vouches for (see
+ * isKnownDocumentFile) is fetched; any other name is a 404 without asking fia.com.
+ */
+export async function serveFiaDocument(file: string, isKnown: (file: string) => Promise<boolean>, fetcher: Fetcher = fetch): Promise<Response> {
   const source = fiaDocumentSource(file);
-  if (!source) return notFound();
+  if (!source || !(await isKnown(file))) return notFound();
 
   let upstream: Response;
   try {
@@ -139,5 +159,5 @@ export async function serveFiaDocument(file: string, fetcher: Fetcher = fetch): 
     "X-Robots-Tag": "noindex",
   });
   if (length > 0) headers.set("Content-Length", String(length));
-  return new Response(upstream.body, { headers });
+  return new Response(capBytes(upstream.body), { headers });
 }
