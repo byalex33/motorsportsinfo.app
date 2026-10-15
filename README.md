@@ -136,7 +136,7 @@ flowchart LR
   DB --> ICS[".ics calendar feed"]
 ```
 
-- **`/api/cron/sync`** runs every 5 minutes and decides per Series whether a source check is due: daily, every 2 hours during a Round, and 30 minutes before a Session. During an F1, F2 or F3 Round it also records new FIA Documents.
+- **`/api/cron/sync`** runs every 5 minutes and decides per Series whether a source check is due: daily, every 2 hours during a Round, and 30 minutes before a Session, each counted from the last successful check. A failed check is retried after 10 minutes, then 30, then hourly until one succeeds. During an F1, F2 or F3 Round it also records new FIA Documents.
 - **`/api/cron/alerts`** runs every minute and sends due Session Reminders, Schedule Change pushes and Document Alerts. It reads the database only.
 - Both crons are declared in [`vercel.ts`](vercel.ts) and require `Authorization: Bearer $CRON_SECRET`. To force a check by hand, call `/api/cron/sync?series=f1&force=1` with that header.
 - Without a database the site fetches the sources live, memoised for 15 minutes, so local development still renders real data.
@@ -158,10 +158,13 @@ Open http://localhost:3000. That's enough to browse every Series with real data.
 | Variable | What it's for |
 |---|---|
 | `DATABASE_URL` | Neon Postgres. Leave unset to read sources live without a database. |
-| `CRON_SECRET` | Bearer token that protects `/api/cron/*`. |
+| `DATABASE_URL_UNPOOLED` | Neon's direct connection, used only by `drizzle-kit` for migrations. Falls back to `DATABASE_URL`. |
+| `CRON_SECRET` | Bearer token that protects `/api/cron/*` and `/api/status`. |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web Push. Generate keys with `npx web-push generate-vapid-keys`. |
+| `OWNER_PUSH_ENDPOINT` | Optional. Your own device's push endpoint: at 07:00 UTC the alerts cron pushes it once if the schedule sync is unhealthy (as `/api/status` would answer 503). |
 | `RAINBOW_API_KEY` | Rainbow.ai forecast radar tiles. Unset: the radar shows RainViewer's past 2 hours. |
 | `RAINBOW_MONTHLY_TILE_CAP` | Forecast tiles fetched per month before the radar falls back to the past radar. Default 30000. |
+| `IMSA_CALENDAR_URL` | IMSA's ECAL calendar feed, subscribed to the WeatherTech SportsCar Championship only. Unset: the IMSA page shows "Schedule coming soon". |
 
 ### Scripts
 
