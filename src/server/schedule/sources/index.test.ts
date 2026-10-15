@@ -99,6 +99,17 @@ describe("fetchSeriesSchedule", () => {
     await expect(fetchSeriesSchedule("motogp", NOW, ctx)).rejects.toBeInstanceOf(SourceFailure);
   });
 
+  it("reads NASCAR from the per-series feed", async () => {
+    const { ctx, requests } = fakeContext({ "https://cf.nascar.com/cacher/2026/1/race_list_basic.json": "nascar-2026.json" });
+    const schedule = await fetchSeriesSchedule("nascar", NOW, ctx);
+    expect(schedule).toMatchObject({ source: "nascar", isFallback: false, completeSeasons: [2026], problems: [] });
+    expect(schedule.rounds).toHaveLength(38);
+    expect(requests.map((r) => r.url)).toEqual([
+      "https://cf.nascar.com/cacher/2026/1/race_list_basic.json",
+      "https://cf.nascar.com/cacher/2027/1/race_list_basic.json",
+    ]);
+  });
+
   it("reads WEC race pages for this season and next season's published Rounds", async () => {
     const { ctx } = fakeContext({
       "https://www.fiawec.com/en/season/2026": "wec-season-2026.html",

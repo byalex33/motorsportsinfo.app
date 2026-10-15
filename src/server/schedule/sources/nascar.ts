@@ -1,5 +1,7 @@
-// NASCAR Cup Series: NASCAR's own public schedule feed (cf.nascar.com/cacher/<year>/race_list_basic.json),
-// the one nascar.com's schedule pages read. `series_1` is the Cup Series. Each race lists its weekend as
+// NASCAR Cup Series: NASCAR's own public schedule feed (cf.nascar.com/cacher/<year>/1/race_list_basic.json,
+// series 1 being the Cup Series), the one nascar.com's schedule pages read: a plain list of races. The parser
+// also takes the older year-level file's shape (…/<year>/race_list_basic.json, Cup races under `series_1`),
+// which NASCAR has at times served empty. Each race lists its weekend as
 // `schedule` entries with UTC start times and a `run_type`: 1 practice, 2 qualifying, 3 race, 0 off-track
 // (garage hours, driver meetings), which is dropped. No end times, so every Session end is estimated.
 // - The Daytona Duels are listed as their own races ("Qualifying Race 1"); they decide the Daytona 500 grid,
@@ -30,7 +32,8 @@ export interface NascarRace {
   schedule?: NascarScheduleItem[] | null;
 }
 
-export type NascarSeason = Partial<Record<`series_${number}`, NascarRace[]>>;
+/** The per-series feed's list of races, or the year-level file's races grouped by series. */
+export type NascarSeason = NascarRace[] | Partial<Record<`series_${number}`, NascarRace[]>>;
 
 const RUN_TYPES: Record<number, SessionType> = { 1: "practice", 2: "qualifying", 3: "race" };
 
@@ -73,7 +76,9 @@ function isQualifyingOnly(sessions: RawSession[]): boolean {
 
 export function parseNascarSeason(data: NascarSeason, season: number): { rounds: RawRound[]; warnings: string[] } {
   const warnings: string[] = [];
-  const races = [...(data.series_1 ?? [])].sort((a, b) => a.date_scheduled.localeCompare(b.date_scheduled));
+  const races = (Array.isArray(data) ? data : (data.series_1 ?? []))
+    .filter((race) => race.series_id === 1)
+    .sort((a, b) => a.date_scheduled.localeCompare(b.date_scheduled));
   const entries = races.map((race) => ({ race, sessions: onTrack(race) }));
 
   // Fold the Duels into the next race at the same track.
@@ -109,7 +114,7 @@ export function parseNascarSeason(data: NascarSeason, season: number): { rounds:
 }
 
 export function nascarUrl(year: number): string {
-  return `https://cf.nascar.com/cacher/${year}/race_list_basic.json`;
+  return `https://cf.nascar.com/cacher/${year}/1/race_list_basic.json`;
 }
 
 export async function fetchNascarSeason(ctx: SourceContext, year: number): Promise<{ rounds: RawRound[]; warnings: string[] }> {
