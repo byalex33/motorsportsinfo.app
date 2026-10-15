@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CloudMoon, CloudSun, Moon, Sun } from "lucide-react";
 import { UNKNOWN_CONDITION, WMO_CONDITIONS, weatherCondition } from "./weather-codes";
-import { compassName, compassShort, formatForecastDate, formatTemperature, formatWindSpeed } from "./units";
+import { compassName, formatForecastDate, formatTemperature, formatWindSpeed } from "./units";
 
 // All codes Open-Meteo documents for weather_code (https://open-meteo.com/en/docs, "WMO Weather interpretation codes").
 const DOCUMENTED_WMO_CODES = [
@@ -49,8 +49,7 @@ describe("units", () => {
     expect(compassName(0)).toBe("north");
     expect(compassName(222)).toBe("south-west");
     expect(compassName(359)).toBe("north");
-    expect(compassShort(90)).toBe("E");
-    expect(compassShort(-45)).toBe("NW");
+    expect(compassName(-45)).toBe("north-west");
   });
 
   it("formats the not-yet date in the viewer's time zone", () => {

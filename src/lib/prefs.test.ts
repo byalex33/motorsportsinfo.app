@@ -3,6 +3,7 @@ import {
   DEFAULT_TIME_PREF,
   PREF_KEYS,
   defaultUnitsForLocale,
+  parseSavedAlerts,
   parseSeriesPref,
   parseTimePref,
   parseUnitsPref,
@@ -12,7 +13,7 @@ import {
 
 describe("storage keys (shared contract with alerts)", () => {
   it("are stable", () => {
-    expect(PREF_KEYS).toEqual({ series: "msi.series", time: "msi.time", units: "msi.units", openSourceNote: "msi.oss-note", announcement: "msi.announcement" });
+    expect(PREF_KEYS).toEqual({ series: "msi.series", time: "msi.time", units: "msi.units", openSourceNote: "msi.oss-note", announcement: "msi.announcement", alerts: "msi.alerts" });
   });
 });
 
@@ -48,6 +49,30 @@ describe("parseUnitsPref", () => {
     for (const raw of [null, "", "{oops", "true", '{"temp":"k","wind":"kmh"}', '{"temp":"c"}', '{"temp":"c","wind":"knots"}']) {
       expect(parseUnitsPref(raw)).toBeNull();
     }
+  });
+});
+
+describe("parseSavedAlerts", () => {
+  it("reads saved ticks and lead time, normalizing junk", () => {
+    expect(parseSavedAlerts(JSON.stringify({ follows: { f1: ["race", "nope"], x: ["race"] }, leadMinutes: 60 }))).toEqual({
+      follows: { f1: ["race"] },
+      leadMinutes: 60,
+      documentAlerts: {},
+    });
+  });
+  it("reads saved Document Alerts, dropping unknown Series and levels", () => {
+    const raw = JSON.stringify({ follows: {}, leadMinutes: 15, documentAlerts: { f1: "all", wec: "all", f2: "x" } });
+    expect(parseSavedAlerts(raw)?.documentAlerts).toEqual({ f1: "all" });
+  });
+  it("falls back to 15 minutes for an unknown lead time", () => {
+    expect(parseSavedAlerts(JSON.stringify({ follows: {}, leadMinutes: 7 }))?.leadMinutes).toBe(15);
+  });
+  it("returns null for missing or malformed data", () => {
+    expect(parseSavedAlerts(null)).toBeNull();
+    expect(parseSavedAlerts(undefined)).toBeNull();
+    expect(parseSavedAlerts("not json")).toBeNull();
+    expect(parseSavedAlerts("null")).toBeNull();
+    expect(parseSavedAlerts(JSON.stringify({ leadMinutes: 15 }))).toBeNull();
   });
 });
 

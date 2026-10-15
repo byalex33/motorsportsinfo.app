@@ -19,10 +19,13 @@ export function AnnouncementBanner({ announcements }: { announcements: SpecialEv
   const now = useNow(60_000);
   const dismissed = useDismissedAnnouncement();
   const pathname = usePathname();
-  const [closing, setClosing] = useState(false);
+  // The id being closed, not a flag: the banner stays mounted across navigations, so a later Special Event must
+  // not inherit the previous one's exit animation (and be stored as dismissed when it ends).
+  const [closingId, setClosingId] = useState<string | null>(null);
 
   const current = now === null ? undefined : announcements.find((a) => Date.parse(a.until) > now);
   if (!current || !dismissed.ready || dismissed.value === current.id || pathname === current.href) return null;
+  const closing = closingId === current.id;
 
   return (
     <div
@@ -57,7 +60,7 @@ export function AnnouncementBanner({ announcements }: { announcements: SpecialEv
           </Link>
           <button
             type="button"
-            onClick={() => setClosing(true)}
+            onClick={() => setClosingId(current.id)}
             aria-label="Dismiss announcement"
             className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-series-accent/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >

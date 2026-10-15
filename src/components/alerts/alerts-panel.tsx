@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { ReminderLeadMinutes } from "@/domain/series";
+import { useState } from "react";
+import { REMINDER_LEAD_MINUTES, type ReminderLeadMinutes } from "@/domain/series";
 import type { DocumentAlertLevel, FiaDocumentSeries, SeriesId, SessionType } from "@/domain/types";
 import { ENTER, staggerDelay } from "@/lib/motion";
+import { useSavedAlertsPref, useSeriesPref } from "@/lib/prefs";
 import { setDocumentAlert, type DocumentAlerts } from "@/server/alerts/document-alerts";
 import { defaultFollows, toggleFollow, type Follows } from "@/server/alerts/selection";
 import { AlertsSection } from "./alerts-section";
@@ -11,27 +12,18 @@ import { CalendarFeedCard } from "./calendar-feed-card";
 import { DocumentAlertsSection } from "./document-alerts-section";
 import { RemindersCard } from "./reminders-card";
 import { SelectionGrid } from "./selection-grid";
-import {
-  ALERTS_STORAGE_KEY,
-  SERIES_STORAGE_KEY,
-  parseRememberedSeries,
-  parseSavedAlerts,
-  useStoredString,
-  writeSavedAlerts,
-} from "./storage";
 
 /** The Alerts page body: one shared selection driving Session Reminders and the calendar feed, plus Document Alerts. */
 export function AlertsPanel() {
-  const storedAlertsRaw = useStoredString(ALERTS_STORAGE_KEY);
-  const storedAlerts = useMemo(() => parseSavedAlerts(storedAlertsRaw), [storedAlertsRaw]);
-  const rememberedSeries = parseRememberedSeries(useStoredString(SERIES_STORAGE_KEY));
+  const { value: storedAlerts, set: writeSavedAlerts } = useSavedAlertsPref();
+  const rememberedSeries = useSeriesPref().value;
   // Choices made on this visit; until then, what this device saved before, else the defaults.
   const [followsOverride, setFollowsOverride] = useState<Follows | null>(null);
   const [leadOverride, setLeadOverride] = useState<ReminderLeadMinutes | null>(null);
   const [documentAlertsOverride, setDocumentAlertsOverride] = useState<DocumentAlerts | null>(null);
 
   const follows = followsOverride ?? storedAlerts?.follows ?? defaultFollows(rememberedSeries);
-  const leadMinutes = leadOverride ?? storedAlerts?.leadMinutes ?? 15;
+  const leadMinutes = leadOverride ?? storedAlerts?.leadMinutes ?? REMINDER_LEAD_MINUTES[0];
   const documentAlerts = documentAlertsOverride ?? storedAlerts?.documentAlerts ?? {};
 
   function toggle(series: SeriesId, type: SessionType, on: boolean) {

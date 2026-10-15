@@ -11,7 +11,7 @@ import { getDb } from "@/db/client";
 import type { Circuit, FeaturedRoundResult, Round, SeriesId, Session } from "@/domain/types";
 import { loadPublishedSchedule, loadRoundUpdatedAt } from "./db-read";
 import { getLiveSchedule } from "./live";
-import { selectCalendarSessions, selectFeaturedRound, selectUpcomingRounds, selectUpcomingSessions, withCircuits, type UpcomingRound } from "./select";
+import { selectCalendarSessions, selectFeaturedRound, selectUpcomingRounds, withCircuits, type UpcomingRound } from "./select";
 import type { RoundWithContext } from "./types";
 
 export { scheduleTag } from "./tags";
@@ -48,13 +48,11 @@ export interface SessionWithContext {
   circuit: Circuit;
 }
 
-/** Sessions (including cancelled) for the given Series whose Round has not finished, ordered by startsAt. Used by calendar feeds and alerts. */
-export async function listUpcomingSessions(series: SeriesId[], now?: Date): Promise<SessionWithContext[]> {
-  const perSeries = await Promise.all(series.map((id) => loadRounds(id)));
-  return selectUpcomingSessions(perSeries.flat(), await resolveNow(now));
-}
-
-/** Like listUpcomingSessions, but also keeps Rounds that finished in the last 60 days. Calendar apps delete events that drop out of a feed. */
+/**
+ * Sessions (including cancelled) for the given Series whose Round hasn't finished or finished in the last
+ * 60 days, ordered by startsAt. Used by calendar feeds (calendar apps delete events that drop out of a
+ * feed) and the FIA Document sync.
+ */
 export async function listCalendarSessions(series: SeriesId[], now?: Date): Promise<SessionWithContext[]> {
   const perSeries = await Promise.all(series.map((id) => loadRounds(id)));
   return selectCalendarSessions(perSeries.flat(), await resolveNow(now));

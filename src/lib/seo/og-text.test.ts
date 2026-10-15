@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatUtc, ogAlt, seriesOgText } from "./og-text";
+import { formatUtc, seriesOgText } from "./og-text";
 import { singapore, singaporeRound, singaporeSessions } from "./test-fixtures";
 
 const featured = { kind: "round" as const, round: singaporeRound, roundNumber: 18, circuit: singapore, sessions: singaporeSessions };
@@ -49,14 +49,8 @@ describe("seriesOgText", () => {
   });
 });
 
-describe("formatUtc and ogAlt", () => {
+describe("formatUtc", () => {
   it("formats without a locale", () => {
     expect(formatUtc("2026-11-22T04:05:00Z")).toBe("Sun 22 Nov, 04:05 UTC");
-  });
-
-  it("joins the card's lines", () => {
-    expect(ogAlt({ eyebrow: "F1 · 2026", title: "Season complete", meta: null, status: "2027 schedule coming soon" })).toBe(
-      "F1 · 2026 — Season complete — 2027 schedule coming soon",
-    );
   });
 });

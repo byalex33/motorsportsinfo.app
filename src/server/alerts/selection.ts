@@ -25,10 +25,6 @@ const CODE_TO_TYPE = new Map<string, SessionType>(
   Object.entries(SESSION_TYPE_CODES).map(([type, code]) => [code, type as SessionType]),
 );
 
-export function isSeriesId(value: unknown): value is SeriesId {
-  return typeof value === "string" && (SERIES_IDS as readonly string[]).includes(value);
-}
-
 /** Keeps only valid Series and their valid Session Types, deduped, in the Series' own order. Drops empty Series. */
 export function normalizeFollows(input: Partial<Record<string, readonly string[]>>): Follows {
   const out: Follows = {};
