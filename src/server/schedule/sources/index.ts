@@ -68,7 +68,9 @@ function perSeason(load: (ctx: SourceContext, year: number) => Promise<Season>) 
 
 /**
  * Like perSeason, for a source whose one index (a calendar page, an event list) lists the seasons: the index
- * is fetched once per check and both seasons are read from it.
+ * is fetched once per check and both seasons are read from it. An index that lists `year + 1` but no longer
+ * `year` has moved on before 1 January: `year + 1` is kept, with a warning, and `year` is not complete, so
+ * its Rounds stay as published.
  */
 function fromIndex<T>(
   fetchIndex: (ctx: SourceContext) => Promise<T>,
@@ -83,6 +85,12 @@ function fromIndex<T>(
     } catch (error) {
       if (current.rounds.length === 0) throw error;
       next = { rounds: [], warnings: [`${year + 1}: ${errorMessage(error)}`] };
+    }
+    if (current.rounds.length === 0 && next.rounds.length > 0) {
+      return {
+        ...combine(year + 1, next, null),
+        warnings: [`No ${year} Rounds listed any more; reading ${year + 1} only`, ...(next.warnings ?? [])],
+      };
     }
     return combine(year, current, next);
   };

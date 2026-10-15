@@ -150,6 +150,18 @@ describe("fetchSeriesSchedule", () => {
     expect(requests.filter((r) => r.url.includes("query=events&"))).toHaveLength(1);
   });
 
+  it("keeps GT World Challenge Europe syncing when the calendar moves on to next season before 1 January", async () => {
+    const { ctx } = fakeContext({
+      [`${GTWC}/calendar`]: { body: fixture("gtwc-calendar-2026.html").replaceAll("2026", "2027") },
+      [`${GTWC}/event/254/barcelona`]: "gtwc-event-barcelona-2026.html",
+      [`${GTWC}/event/255/portimao`]: "gtwc-event-portimao-2026.html",
+    });
+    const schedule = await fetchSeriesSchedule("gtwc-europe", NOW, ctx);
+    expect(schedule).toMatchObject({ source: "gt-world-challenge-europe.com", isFallback: false, completeSeasons: [], problems: [] });
+    expect(schedule.rounds.map((r) => r.round.id)).toEqual(["gtwc-europe-2027-catalunya", "gtwc-europe-2027-portimao"]);
+    expect(schedule.warnings[0]).toBe("No 2026 Rounds listed any more; reading 2027 only");
+  });
+
   it("fails GT World Challenge Europe when the calendar lists neither season", async () => {
     const { ctx } = fakeContext({ [`${GTWC}/calendar`]: { body: fixture("gtwc-calendar-2026.html").replaceAll("2026", "2025") } });
     await expect(fetchSeriesSchedule("gtwc-europe", NOW, ctx)).rejects.toThrow("No Rounds for 2026");
