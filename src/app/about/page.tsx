@@ -178,15 +178,19 @@ export default function AboutPage() {
                 <strong className="font-medium text-foreground">No accounts.</strong> There is nothing to sign up for.
               </li>
               <li>
-                <strong className="font-medium text-foreground">Your preferences stay on your device.</strong> Your last Series, time zone choice, units and
-                theme are kept in your browser&apos;s local storage, not on our side. Analytics counts some of these
-                choices when you make them (see below), but never which time zone you picked.
+                <strong className="font-medium text-foreground">Your preferences stay on your device.</strong> Your last Series, time zone choice, units,
+                theme, the choices you make on the Alerts page and the notices you have closed are kept in your
+                browser&apos;s local storage, and the Session Results you reveal are remembered only for that tab. None
+                of it is kept on our side, apart from what push notifications need. Analytics counts some of
+                these choices when you make them (see below), but never which time zone you picked.
               </li>
               <li>
                 <strong className="font-medium text-foreground">Push notifications</strong> are optional. If you turn them on, we store an anonymous browser push
-                endpoint together with the Series, Session Types, reminder lead time and FIA document alerts you chose —
-                nothing else. You can
-                remove it at any time from{" "}
+                endpoint and the keys that encrypt messages to it; the Series, Session Types, reminder lead time and FIA
+                document alerts you chose; and your device&apos;s time zone, so the times in each notification are in
+                your local time. Alongside it we keep when it was saved, how many sends to it have failed in a row (so a
+                dead one is removed), and which Session Reminders it has been sent, for a week, so none arrives twice.
+                Nothing else. You can remove it at any time from{" "}
                 <Link href="/alerts" className={a}>
                   Alerts
                 </Link>
