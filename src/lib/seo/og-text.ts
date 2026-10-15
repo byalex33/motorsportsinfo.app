@@ -59,8 +59,3 @@ export function seriesOgText(series: SeriesId, featured: FeaturedRoundResult | {
   if (st.kind === "upcoming") return { eyebrow, title, meta, status: `Next: ${st.session.name} · ${formatUtc(st.session.startsAt)}` };
   return { eyebrow, title, meta, status: "Round complete" };
 }
-
-/** Alt text for the image: the same facts in one line. */
-export function ogAlt(text: OgText): string {
-  return [text.eyebrow, text.title, text.meta, text.status].filter(Boolean).join(" — ");
-}

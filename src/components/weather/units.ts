@@ -14,7 +14,6 @@ export function formatWindSpeed(kmh: number, unit: WindUnit): string {
 }
 
 const COMPASS = ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"];
-const COMPASS_SHORT = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
 function compassIndex(degrees: number): number {
   return Math.round((((degrees % 360) + 360) % 360) / 45) % 8;
@@ -23,10 +22,6 @@ function compassIndex(degrees: number): number {
 /** Meteorological wind direction (where the wind comes from) as words, e.g. "south-west". */
 export function compassName(degrees: number): string {
   return COMPASS[compassIndex(degrees)];
-}
-
-export function compassShort(degrees: number): string {
-  return COMPASS_SHORT[compassIndex(degrees)];
 }
 
 /** "12 Oct" in the given time zone; falls back to UTC if the zone is invalid. */

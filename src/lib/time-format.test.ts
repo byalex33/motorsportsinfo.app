@@ -4,7 +4,6 @@ import {
   dayKey,
   filterTimeZones,
   formatClock,
-  formatIsoDate,
   formatRoundDates,
   formatSessionDay,
   formatTimeRange,
@@ -54,9 +53,6 @@ describe("Round dates", () => {
     expect(formatRoundDates("2026-10-30", "2026-11-01")).toBe("30 Oct – 1 Nov 2026");
     expect(formatRoundDates("2026-12-31", "2027-01-02")).toBe("31 Dec 2026 – 2 Jan 2027");
     expect(formatRoundDates("2026-06-13", "2026-06-13")).toBe("13 Jun 2026");
-  });
-  it("formats a single Track Time date", () => {
-    expect(formatIsoDate("2026-11-20")).toBe("Fri 20 Nov");
   });
 });
 

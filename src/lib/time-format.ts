@@ -139,11 +139,3 @@ export function formatRoundDates(startDate: string, endDate: string): string {
   if (sm !== em) return `${S} – ${E}`;
   return `${sd}–${E}`;
 }
-
-/** Locale-independent "Fri 20 Nov" for a Track Time date (YYYY-MM-DD). */
-export function formatIsoDate(date: string): string {
-  const [y, m, d] = date.split("-").map(Number);
-  if (!y || !m || !d) return date;
-  const weekday = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
-  return `${weekday} ${d} ${MONTHS[m - 1]}`;
-}

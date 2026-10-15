@@ -110,21 +110,6 @@ export function emptyPlan(): SchedulePlan {
   };
 }
 
-export function planHasWrites(plan: SchedulePlan): boolean {
-  return (
-    plan.roundInserts.length +
-      plan.roundUpdates.length +
-      plan.sessionInserts.length +
-      plan.sessionUpdates.length +
-      plan.pendingUpserts.length +
-      plan.pendingDeletes.length +
-      plan.changes.length +
-      plan.flags.length +
-      plan.resolvedFlagIds.length >
-    0
-  );
-}
-
 /** True when the plan changes what viewers see (so pages must be revalidated). */
 export function planChangesPublished(plan: SchedulePlan): boolean {
   return plan.roundInserts.length + plan.roundUpdates.length + plan.sessionInserts.length + plan.sessionUpdates.length > 0;
