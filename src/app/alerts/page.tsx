@@ -1,7 +1,9 @@
 import { AlertsPanel } from "@/components/alerts/alerts-panel";
+import { JsonLd } from "@/components/json-ld";
 import { PageTransition } from "@/components/motion/page-transition";
 import { RevealWords } from "@/components/motion/reveal-words";
 import { ENTER, enterDelay } from "@/lib/motion";
+import { pageBreadcrumbJsonLd } from "@/lib/seo/json-ld";
 import { pageMetadata } from "@/lib/seo/metadata";
 
 export const metadata = pageMetadata({
@@ -15,6 +17,7 @@ export default function AlertsPage() {
   return (
     <PageTransition>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-10 pb-20 sm:px-6 sm:pt-16">
+        <JsonLd data={pageBreadcrumbJsonLd("Alerts", "/alerts")} />
         <header className="mb-12 sm:mb-16">
           <p className="eyebrow enter-rise flex items-center gap-2 text-muted-foreground" style={enterDelay(ENTER.eyebrow)}>
             <span aria-hidden className="size-1.5 rounded-full bg-primary" />

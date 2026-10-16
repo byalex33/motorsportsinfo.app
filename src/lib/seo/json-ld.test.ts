@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   homeJsonLd,
+  pageBreadcrumbJsonLd,
+  roundBreadcrumbJsonLd,
   roundEventName,
   roundJsonLd,
+  roundListJsonLd,
   roundShortName,
   serializeJsonLd,
   seriesBreadcrumbJsonLd,
@@ -16,7 +19,8 @@ const base = {
   circuit: singapore,
   sessions: singaporeSessions,
   description: "Formula 1 Singapore Grand Prix session times.",
-  imageUrl: "https://motorsportsinfo.app/f1/opengraph-image",
+  pageUrl: "https://motorsportsinfo.app/f1/2026/singapore-grand-prix",
+  imageUrl: "https://motorsportsinfo.app/f1/2026/singapore-grand-prix/opengraph-image",
 };
 
 const subEvents = (event: JsonLdObject) => event.subEvent as JsonLdObject[];
@@ -28,8 +32,9 @@ describe("roundJsonLd", () => {
       "@context": "https://schema.org",
       "@type": "SportsEvent",
       name: "F1 Singapore Grand Prix 2026",
-      url: "https://motorsportsinfo.app/f1",
-      image: ["https://motorsportsinfo.app/f1/opengraph-image"],
+      "@id": "https://motorsportsinfo.app/f1/2026/singapore-grand-prix#f1-2026-singapore",
+      url: "https://motorsportsinfo.app/f1/2026/singapore-grand-prix",
+      image: ["https://motorsportsinfo.app/f1/2026/singapore-grand-prix/opengraph-image"],
       eventStatus: "https://schema.org/EventScheduled",
       eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
       organizer: { "@type": "SportsOrganization", name: "Formula 1" },
@@ -96,13 +101,33 @@ describe("homeJsonLd and breadcrumbs", () => {
     const graph = homeJsonLd()["@graph"] as JsonLdObject[];
     expect(graph.map((n) => n["@type"])).toEqual(["WebSite", "Organization"]);
     expect(graph[0]).toMatchObject({ name: "motorsportsinfo.app", url: "https://motorsportsinfo.app/" });
-    expect(graph[1]).toMatchObject({ logo: { url: "https://motorsportsinfo.app/icons/icon-512.png" } });
+    expect(graph[1]).toMatchObject({
+      logo: { url: "https://motorsportsinfo.app/icons/icon-512.png" },
+      sameAs: ["https://github.com/byalex33/motorsportsinfo.app"],
+    });
   });
 
-  it("lists Home › Series", () => {
+  it("lists Home › Series › Round, and a top-level page", () => {
     expect(seriesBreadcrumbJsonLd("motogp").itemListElement).toEqual([
       { "@type": "ListItem", position: 1, name: "Home", item: "https://motorsportsinfo.app/" },
       { "@type": "ListItem", position: 2, name: "MotoGP", item: "https://motorsportsinfo.app/motogp" },
+    ]);
+    expect(roundBreadcrumbJsonLd("f1", "Singapore Grand Prix 2026", "/f1/2026/singapore-grand-prix").itemListElement).toHaveLength(3);
+    expect(pageBreadcrumbJsonLd("Calendar", "/calendar").itemListElement).toEqual([
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://motorsportsinfo.app/" },
+      { "@type": "ListItem", position: 2, name: "Calendar", item: "https://motorsportsinfo.app/calendar" },
+    ]);
+  });
+
+  it("lists Round pages by their own URLs", () => {
+    const list = roundListJsonLd("Upcoming Rounds", [{ name: "F1 Singapore Grand Prix", path: "/f1/2026/singapore-grand-prix" }]);
+    expect(list.itemListElement).toEqual([
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "F1 Singapore Grand Prix",
+        url: "https://motorsportsinfo.app/f1/2026/singapore-grand-prix",
+      },
     ]);
   });
 });

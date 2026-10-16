@@ -27,8 +27,43 @@ export async function loadPublishedSchedule(series: SeriesId): Promise<RoundWith
   return groupSessions(roundRows, sessionRows);
 }
 
+function latestIso(values: (Date | string | null | undefined)[]): string | null {
+  const times = values.filter((value) => value != null).map((value) => new Date(value).getTime()).filter((time) => Number.isFinite(time));
+  return times.length > 0 ? new Date(Math.max(...times)).toISOString() : null;
+}
+
 /**
- * When the published Round or any of its Sessions last changed (the sync only writes real changes),
+ * When each published Round of a Series last changed (the Round or any of its Sessions), keyed by Round
+ * id. One read for the sitemap. Empty without a database.
+ */
+export async function loadScheduleUpdatedAt(series: SeriesId): Promise<Record<string, string>> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(scheduleTag(series));
+
+  const db = getDb();
+  if (!db) return {};
+  const roundRows = await db.select({ id: rounds.id, at: rounds.updatedAt }).from(rounds).where(eq(rounds.series, series));
+  const ids = roundRows.map((row) => row.id);
+  const sessionRows =
+    ids.length > 0
+      ? await db
+          .select({ roundId: sessions.roundId, at: max(sessions.updatedAt) })
+          .from(sessions)
+          .where(inArray(sessions.roundId, ids))
+          .groupBy(sessions.roundId)
+      : [];
+  const sessionAt = new Map(sessionRows.map((row) => [row.roundId, row.at]));
+  const out: Record<string, string> = {};
+  for (const row of roundRows) {
+    const at = latestIso([row.at, sessionAt.get(row.id)]);
+    if (at) out[row.id] = at;
+  }
+  return out;
+}
+
+/**
+ * When one published Round or any of its Sessions last changed (the sync only writes real changes),
  * as ISO UTC. Null without a database or when the Round is not in it.
  */
 export async function loadRoundUpdatedAt(series: SeriesId, roundId: string): Promise<string | null> {

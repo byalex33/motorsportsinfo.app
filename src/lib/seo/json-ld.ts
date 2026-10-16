@@ -1,8 +1,8 @@
 // Schema.org structured data (JSON-LD) for the pages. Pure builders; <JsonLd> renders them server-side.
 // Only facts the site actually has: no offers, performers or images that don't exist.
 import { SERIES } from "@/domain/series";
-import type { Circuit, Round, SeriesId, Session } from "@/domain/types";
-import { absoluteUrl, SITE_DESCRIPTION, SITE_LOGO_PATH, SITE_NAME, SITE_URL } from "@/lib/site";
+import type { Circuit, Round, SeriesId, Session, SpecialEvent } from "@/domain/types";
+import { absoluteUrl, REPO_URL, SITE_DESCRIPTION, SITE_LOGO_PATH, SITE_NAME, SITE_URL } from "@/lib/site";
 import { isoWithOffset } from "@/lib/track-time";
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
@@ -42,6 +42,7 @@ export function homeJsonLd(): JsonLdObject {
         name: SITE_NAME,
         url: absoluteUrl("/"),
         logo: { "@type": "ImageObject", url: absoluteUrl(SITE_LOGO_PATH), width: 512, height: 512 },
+        sameAs: [REPO_URL],
       },
     ],
   };
@@ -49,13 +50,54 @@ export function homeJsonLd(): JsonLdObject {
 
 /** Home › F1 */
 export function seriesBreadcrumbJsonLd(series: SeriesId): JsonLdObject {
+  return breadcrumbJsonLd([
+    { name: "Home", path: "/" },
+    { name: SERIES[series].shortName, path: `/${series}` },
+  ]);
+}
+
+/** Home › F1 › United States Grand Prix 2026 */
+export function roundBreadcrumbJsonLd(series: SeriesId, roundName: string, path: string): JsonLdObject {
+  return breadcrumbJsonLd([
+    { name: "Home", path: "/" },
+    { name: SERIES[series].shortName, path: `/${series}` },
+    { name: roundName, path },
+  ]);
+}
+
+/** Home › Calendar, and the same shape for About and Alerts. */
+export function pageBreadcrumbJsonLd(name: string, path: string): JsonLdObject {
+  return breadcrumbJsonLd([
+    { name: "Home", path: "/" },
+    { name, path },
+  ]);
+}
+
+function breadcrumbJsonLd(items: { name: string; path: string }[]): JsonLdObject {
   return {
     "@context": SCHEMA,
     "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: absoluteUrl("/") },
-      { "@type": "ListItem", position: 2, name: SERIES[series].shortName, item: absoluteUrl(`/${series}`) },
-    ],
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: absoluteUrl(item.path),
+    })),
+  };
+}
+
+/** The calendar (or a Series' season) as links, so the Rounds' own pages are the ones a crawler lists. */
+export function roundListJsonLd(name: string, items: { name: string; path: string }[]): JsonLdObject {
+  return {
+    "@context": SCHEMA,
+    "@type": "ItemList",
+    name,
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      url: absoluteUrl(item.path),
+    })),
   };
 }
 
@@ -125,9 +167,11 @@ export interface RoundJsonLdInput {
   round: Round;
   circuit: Circuit;
   sessions: Session[];
-  /** The Series page's meta description. */
+  /** The Series page's, or the Round page's, meta description. */
   description: string;
-  /** Absolute URL of the Series' Open Graph image. */
+  /** Absolute URL of this Round's own page. The Series page points here too, so the event has one URL. */
+  pageUrl: string;
+  /** Absolute URL of the page's Open Graph image. */
   imageUrl: string;
 }
 
@@ -135,9 +179,8 @@ export interface RoundJsonLdInput {
  * The Featured Round as a SportsEvent with each Session as a sub-event. Session times only when they
  * are confirmed (TBC times are placeholders); the Round then uses its Track Time dates.
  */
-export function roundJsonLd({ series, round, circuit, sessions, description, imageUrl }: RoundJsonLdInput): JsonLdObject {
+export function roundJsonLd({ series, round, circuit, sessions, description, pageUrl, imageUrl }: RoundJsonLdInput): JsonLdObject {
   const info = SERIES[series];
-  const url = absoluteUrl(`/${series}`);
   const location = place(circuit);
   const organizer: JsonLdObject = { "@type": "SportsOrganization", name: info.name };
   const withTimes = round.sessionTimesConfirmed && sessions.length > 0;
@@ -151,10 +194,10 @@ export function roundJsonLd({ series, round, circuit, sessions, description, ima
   const event: JsonLdObject = {
     "@context": SCHEMA,
     "@type": "SportsEvent",
-    "@id": `${url}#${round.id}`,
+    "@id": `${pageUrl}#${round.id}`,
     name: roundEventName(series, round, circuit),
     description,
-    url,
+    url: pageUrl,
     image: [imageUrl],
     sport: SPORT[series],
     startDate: first ? isoWithOffset(first.startsAt, circuit.timeZone) : round.startDate,
@@ -169,7 +212,7 @@ export function roundJsonLd({ series, round, circuit, sessions, description, ima
     event.subEvent = sessions.map((s) => ({
       "@type": "SportsEvent",
       name: `${baseName} – ${s.name}`,
-      url,
+      url: pageUrl,
       sport: SPORT[series],
       startDate: isoWithOffset(s.startsAt, circuit.timeZone),
       endDate: isoWithOffset(s.endsAt, circuit.timeZone),
@@ -180,4 +223,43 @@ export function roundJsonLd({ series, round, circuit, sessions, description, ima
     }));
   }
   return event;
+}
+
+/** A Special Event page: the same SportsEvent shape, without a Series. */
+export function specialEventJsonLd(event: SpecialEvent, description: string, imageUrl: string): JsonLdObject {
+  const url = absoluteUrl(`/special/${event.slug}`);
+  const location = place(event.circuit);
+  const organizer: JsonLdObject = { "@type": "Organization", name: event.championship };
+  const live = event.sessions.filter((session) => session.status !== "cancelled");
+  const allCancelled = event.sessions.length > 0 && live.length === 0;
+  const timed = live.length > 0 ? live : event.sessions;
+  const first = timed.reduce<(typeof timed)[number] | null>((earliest, session) => (!earliest || session.startsAt < earliest.startsAt ? session : earliest), null);
+  const last = timed.reduce<(typeof timed)[number] | null>((latest, session) => (!latest || session.endsAt > latest.endsAt ? session : latest), null);
+
+  return {
+    "@context": SCHEMA,
+    "@type": "SportsEvent",
+    "@id": `${url}#event`,
+    name: event.name,
+    description,
+    url,
+    image: [imageUrl],
+    startDate: first ? isoWithOffset(first.startsAt, event.circuit.timeZone) : event.startDate,
+    endDate: last ? isoWithOffset(last.endsAt, event.circuit.timeZone) : event.endDate,
+    eventStatus: status(allCancelled),
+    eventAttendanceMode: `${SCHEMA}/OfflineEventAttendanceMode`,
+    location,
+    organizer,
+    subEvent: event.sessions.map((session) => ({
+      "@type": "SportsEvent",
+      name: `${event.name} – ${session.name}`,
+      url,
+      startDate: isoWithOffset(session.startsAt, event.circuit.timeZone),
+      endDate: isoWithOffset(session.endsAt, event.circuit.timeZone),
+      eventStatus: status(session.status === "cancelled"),
+      eventAttendanceMode: `${SCHEMA}/OfflineEventAttendanceMode`,
+      location,
+      organizer,
+    })),
+  };
 }
