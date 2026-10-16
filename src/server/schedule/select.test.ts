@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { featuredUntil, roundOpensAt, selectCalendarSessions, selectFeaturedRound, selectUpcomingRounds } from "./select";
+import { featuredUntil, roundOpensAt, selectCalendarSessions, selectFeaturedRound, selectScheduleRounds, selectUpcomingRounds } from "./select";
 import { makeRound, makeSession, withContext } from "./test-utils";
 
 // Singapore (UTC+8): Fri 9 – Sun 11 Oct 2026, Race 12:00–14:00 UTC on Sunday.
@@ -26,6 +26,13 @@ describe("round windows", () => {
   it("uses the end of the last day for a Round without Session times", () => {
     // Bahrain is UTC+3: 15 Mar 00:00 local = 14 Mar 21:00 UTC, plus 2 h grace.
     expect(featuredUntil(next2027).toISOString()).toBe("2027-03-14T23:00:00.000Z");
+  });
+});
+
+describe("selectScheduleRounds", () => {
+  it("keeps finished Rounds and orders them by season, then start", () => {
+    const ids = selectScheduleRounds([us, next2027, sg]).map((round) => round.round.id);
+    expect(ids).toEqual([sgRound.id, usRound.id, next2027Round.id]);
   });
 });
 

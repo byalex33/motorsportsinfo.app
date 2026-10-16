@@ -1,24 +1,21 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { PageTransition } from "@/components/motion/page-transition";
-import { RadarSlot } from "@/components/round/radar-slot";
-import { RememberSeries } from "@/components/round/remember-series";
-import { RoundCountdown } from "@/components/round/round-countdown";
-import { RoundDocuments } from "@/components/round/round-documents";
-import { RoundHero, ScheduleUnavailableHero, SeasonCompleteHero } from "@/components/round/round-hero";
-import { RoundSessions } from "@/components/round/round-sessions";
-import { PageStamp } from "@/components/service-worker";
-import { officialResultsUrl, SERIES } from "@/domain/series";
-import { SERIES_IDS, type SeriesId } from "@/domain/types";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { JsonLd } from "@/components/json-ld";
-import { calendarFeedPath } from "@/server/alerts/selection";
-import { roundDisplayName, roundEventName, roundJsonLd, seriesBreadcrumbJsonLd } from "@/lib/seo/json-ld";
+import { PageTransition } from "@/components/motion/page-transition";
+import { RememberSeries } from "@/components/round/remember-series";
+import { RoundDetail } from "@/components/round/round-detail";
+import { ScheduleUnavailableHero, SeasonCompleteHero } from "@/components/round/round-hero";
+import { SeasonRounds } from "@/components/round/season-rounds";
+import { PageStamp } from "@/components/service-worker";
+import { SERIES } from "@/domain/series";
+import { SERIES_IDS, type SeriesId } from "@/domain/types";
+import { roundDisplayName, roundEventName, roundJsonLd, roundListJsonLd, seriesBreadcrumbJsonLd } from "@/lib/seo/json-ld";
 import { pageMetadata } from "@/lib/seo/metadata";
 import { absoluteUrl } from "@/lib/site";
-import { DATA_CREDITS } from "@/lib/data-credits";
-import { trackTimeTexts } from "@/lib/track-time";
 import { isSeriesId } from "@/lib/series-id";
 import { formatRoundDates } from "@/lib/time-format";
+import { calendarFeedPath } from "@/server/alerts/selection";
 import { getSeriesPageData, type SeriesFeatured } from "./data";
 
 // The Series pages are fully static: prerendered from generateStaticParams with cached data (~5 min
@@ -90,10 +87,16 @@ export default async function SeriesPage({ params }: PageProps<"/[series]">) {
   const { series } = await params;
   if (!isSeriesId(series)) notFound();
 
-  const { featured, forecasts, results, documents, renderedAt } = await getSeriesPageData(series);
-  const trackTimes = featured.kind === "round" ? trackTimeTexts(featured.sessions, featured.circuit.timeZone) : {};
-  const structuredData =
-    featured.kind === "round"
+  const { featured, seasonRounds, forecasts, results, documents, renderedAt } = await getSeriesPageData(series);
+  const featuredLink = featured.kind === "round" ? seasonRounds.find((round) => round.id === featured.round.id) : undefined;
+  // The SportsEvent's URL is the Round page, which stays put when the next Round becomes featured.
+  const eventPath = featuredLink?.path ?? `/${series}`;
+  const roundLinks = seasonRounds.map((round) => ({
+    name: `${SERIES[series].shortName} ${round.name} (${round.dates})`,
+    path: round.path,
+  }));
+  const structuredData = [
+    ...(featured.kind === "round"
       ? [
           roundJsonLd({
             series,
@@ -101,11 +104,14 @@ export default async function SeriesPage({ params }: PageProps<"/[series]">) {
             circuit: featured.circuit,
             sessions: featured.sessions,
             description: seriesSeo(series, featured).description,
-            imageUrl: absoluteUrl(`/${series}/opengraph-image`),
+            pageUrl: absoluteUrl(eventPath),
+            imageUrl: absoluteUrl(`${eventPath}/opengraph-image`),
           }),
-          seriesBreadcrumbJsonLd(series),
         ]
-      : [seriesBreadcrumbJsonLd(series)];
+      : []),
+    seriesBreadcrumbJsonLd(series),
+    ...(roundLinks.length > 0 ? [roundListJsonLd(`${SERIES[series].shortName} Rounds`, roundLinks)] : []),
+  ];
 
   return (
     <PageTransition>
@@ -119,38 +125,20 @@ export default async function SeriesPage({ params }: PageProps<"/[series]">) {
         ) : featured.kind === "season-complete" ? (
           <SeasonCompleteHero series={series} season={featured.season} />
         ) : (
-          <>
-            <RoundHero
-              round={featured.round}
-              roundNumber={featured.roundNumber}
-              circuit={featured.circuit}
-              countdown={
-                featured.round.sessionTimesConfirmed && featured.sessions.length > 0 ? (
-                  <RoundCountdown
-                    sessions={featured.sessions}
-                    circuitTimeZone={featured.circuit.timeZone}
-                    trackTimes={trackTimes}
-                    renderedAt={renderedAt}
-                  />
-                ) : null
-              }
-            />
-            {SERIES[series].hasRainRadar && featured.round.sessionTimesConfirmed && (
-              <RadarSlot circuit={featured.circuit} sessions={featured.sessions} />
-            )}
-            <RoundSessions
-              credit={DATA_CREDITS[series]}
-              sessions={featured.sessions}
-              forecasts={forecasts}
-              results={results}
-              resultsUrl={officialResultsUrl(series, featured.round.season)}
-              timesConfirmed={featured.round.sessionTimesConfirmed}
-              circuitTimeZone={featured.circuit.timeZone}
-              trackTimes={trackTimes}
-            />
-            {documents && <RoundDocuments series={series} documents={documents} circuitTimeZone={featured.circuit.timeZone} />}
-          </>
+          <RoundDetail
+            series={series}
+            round={featured.round}
+            roundNumber={featured.roundNumber}
+            circuit={featured.circuit}
+            sessions={featured.sessions}
+            forecasts={forecasts}
+            results={results}
+            documents={documents}
+            renderedAt={renderedAt}
+            preamble={<Breadcrumbs items={[{ name: "Home", href: "/" }, { name: SERIES[series].shortName }]} />}
+          />
         )}
+        <SeasonRounds series={series} rounds={seasonRounds} />
       </main>
     </PageTransition>
   );

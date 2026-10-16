@@ -39,7 +39,8 @@ export async function GET(request: NextRequest) {
     if (!r.published) continue;
     // Schedules must be correct on the next view (e.g. after a Schedule Change push), so no stale window.
     revalidateTag(scheduleTag(r.series), { expire: 0 });
-    revalidatePath(`/${r.series}`);
+    // "layout" covers the Series page and each Round page under /<series>/<season>/<round>.
+    revalidatePath(`/${r.series}`, "layout");
   }
   if (results.some((r) => r.published)) revalidatePath("/calendar");
 
@@ -52,7 +53,10 @@ export async function GET(request: NextRequest) {
     if (d.status !== "ok" || d.added === 0) continue;
     // The document a push opens should already be on the Series page and in the viewer.
     revalidateTag(fiaDocumentsTag(d.series), { expire: 0 });
-    revalidatePath(`/${d.series}`);
+    revalidatePath(`/${d.series}`, "layout");
+  }
+  if (results.some((r) => r.published) || documents.some((d) => d.status === "ok" && d.added > 0)) {
+    revalidatePath("/sitemap.xml");
   }
 
   const failed = results.some((r) => r.status === "failed");

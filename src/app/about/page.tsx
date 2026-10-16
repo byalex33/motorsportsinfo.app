@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { JsonLd } from "@/components/json-ld";
 import { PageTransition } from "@/components/motion/page-transition";
 import { RevealWords } from "@/components/motion/reveal-words";
 import { ENTER, enterDelay, staggerDelay } from "@/lib/motion";
+import { pageBreadcrumbJsonLd } from "@/lib/seo/json-ld";
 import { pageMetadata } from "@/lib/seo/metadata";
 
 export const metadata = pageMetadata({
@@ -33,6 +35,7 @@ export default function AboutPage() {
   return (
     <PageTransition>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-10 pb-20 sm:px-6 sm:pt-16">
+        <JsonLd data={pageBreadcrumbJsonLd("About", "/about")} />
         <p className="eyebrow enter-rise flex items-center gap-2 text-muted-foreground" style={enterDelay(ENTER.eyebrow)}>
           <span aria-hidden className="size-1.5 rounded-full bg-primary" />
           About

@@ -9,9 +9,9 @@
 import { io } from "next/cache";
 import { getDb } from "@/db/client";
 import type { Circuit, FeaturedRoundResult, Round, SeriesId, Session } from "@/domain/types";
-import { loadPublishedSchedule, loadRoundUpdatedAt } from "./db-read";
+import { loadPublishedSchedule, loadRoundUpdatedAt, loadScheduleUpdatedAt } from "./db-read";
 import { getLiveSchedule } from "./live";
-import { selectCalendarSessions, selectFeaturedRound, selectUpcomingRounds, withCircuits, type UpcomingRound } from "./select";
+import { selectCalendarSessions, selectFeaturedRound, selectScheduleRounds, selectUpcomingRounds, withCircuits, type UpcomingRound } from "./select";
 import type { RoundWithContext } from "./types";
 
 export { scheduleTag } from "./tags";
@@ -42,6 +42,11 @@ export async function listUpcomingRounds(series: SeriesId, now?: Date): Promise<
   return selectUpcomingRounds(rounds, await resolveNow(now));
 }
 
+/** Every Round the schedule loaded for the Series, finished ones included, in calendar order. */
+export async function listScheduleRounds(series: SeriesId): Promise<UpcomingRound[]> {
+  return selectScheduleRounds(await loadRounds(series));
+}
+
 export interface SessionWithContext {
   session: Session;
   round: Round;
@@ -64,4 +69,12 @@ export async function listCalendarSessions(series: SeriesId[], now?: Date): Prom
  */
 export async function getRoundUpdatedAt(series: SeriesId, roundId: string): Promise<string | null> {
   return loadRoundUpdatedAt(series, roundId);
+}
+
+/**
+ * When each of a Series' published Rounds last changed (the Round or any of its Sessions), keyed by
+ * Round id, as ISO UTC. Empty without a database. Used for sitemap lastmod, one read per Series.
+ */
+export async function getScheduleUpdatedAt(series: SeriesId): Promise<Record<string, string>> {
+  return loadScheduleUpdatedAt(series);
 }

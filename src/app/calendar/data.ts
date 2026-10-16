@@ -5,9 +5,10 @@ import { getDb } from "@/db/client";
 import { SERIES_IDS, type SeriesId, type Session } from "@/domain/types";
 import { circuitCountryCode, type CountryCode } from "@/lib/country-code";
 import { roundShortName } from "@/lib/seo/json-ld";
+import { indexRoundPages } from "@/lib/seo/round-page";
 import { formatRoundDates } from "@/lib/time-format";
 import { trackTimeText } from "@/lib/track-time";
-import { listUpcomingRounds, scheduleTag, type UpcomingRound } from "@/server/schedule";
+import { listScheduleRounds, listUpcomingRounds, scheduleTag, type UpcomingRound } from "@/server/schedule";
 
 export type CalendarSession = Pick<Session, "id" | "name" | "type" | "startsAt" | "endsAt" | "status">;
 
@@ -46,6 +47,8 @@ export interface CalendarRound {
   cancelled: boolean;
   /** The Series' Featured Round, the one its Series page shows. */
   featured: boolean;
+  /** The Round's own page, `/f1/2026/united-states-grand-prix`. */
+  path: string;
   /** An F1 sprint weekend: the Round has a Sprint that isn't cancelled. Other Series race a Sprint every Round. */
   sprint: boolean;
   /** Ordered by start; cancelled Sessions included. */
@@ -61,7 +64,7 @@ export interface CalendarPageData {
   renderedAt: string;
 }
 
-function toCalendarRound({ round, roundNumber, circuit, sessions }: UpcomingRound, featured: boolean): CalendarRound {
+function toCalendarRound({ round, roundNumber, circuit, sessions }: UpcomingRound, featured: boolean, path: string): CalendarRound {
   const timed = round.sessionTimesConfirmed ? sessions : [];
   const trackTimes: Record<string, CalendarTrackTime> = {};
   for (const s of timed) {
@@ -84,6 +87,7 @@ function toCalendarRound({ round, roundNumber, circuit, sessions }: UpcomingRoun
     timesConfirmed: round.sessionTimesConfirmed,
     cancelled: allCancelled(sessions),
     featured,
+    path,
     sprint: round.series === "f1" && timed.some((s) => s.type === "sprint" && s.status !== "cancelled"),
     sessions: timed.map(({ id, name, type, startsAt, endsAt, status }) => ({ id, name, type, startsAt, endsAt, status })),
     trackTimes,
@@ -116,10 +120,14 @@ async function readCalendarPageData(): Promise<CalendarPageData> {
   // One Series at a time, as on the home page: a "use cache" scope must not await another scope's fetch.
   for (const series of SERIES_IDS) {
     try {
+      const paths = new Map(indexRoundPages(await listScheduleRounds(series)).map((round) => [round.round.id, round.path]));
       const upcoming = await listUpcomingRounds(series);
       // The Featured Round: the first unfinished Round not wholly cancelled (as selectFeaturedRound).
       const featured = upcoming.find((r) => !allCancelled(r.sessions));
-      rounds.push(...upcoming.map((r) => toCalendarRound(r, r === featured)));
+      for (const round of upcoming) {
+        const path = paths.get(round.round.id);
+        if (path) rounds.push(toCalendarRound(round, round === featured, path));
+      }
     } catch (error) {
       unstable_rethrow(error);
       // Same rule as the Series pages: with a database a failed read throws so the last good page stays.

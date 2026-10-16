@@ -47,12 +47,15 @@ export function RoundHero({
   roundNumber,
   circuit,
   countdown,
+  lead,
 }: {
   round: Round;
   /** null for a Round the Series doesn't number: the season is shown instead. */
   roundNumber: number | null;
   circuit: Circuit;
   countdown: ReactNode;
+  /** A sentence under the title. Round pages use it so the timetable is in the HTML, not only the title. */
+  lead?: string;
 }) {
   // F2 and F3 Rounds are already named "Round 13", and NASCAR's exhibition races aren't numbered: the label
   // then shows the season instead.
@@ -65,6 +68,11 @@ export function RoundHero({
       <h1 className="mt-4 max-w-4xl text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
         <RevealWords text={round.name} />
       </h1>
+      {lead && (
+        <p className="enter-rise mt-5 max-w-2xl leading-relaxed text-pretty text-muted-foreground" style={enterDelay(ENTER.lead)}>
+          {lead}
+        </p>
+      )}
       <dl className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
         <MetaItem icon={RouteIcon} label="Circuit" style={enterDelay(ENTER.meta)}>
           <span className="font-medium text-foreground">{circuit.name}</span>

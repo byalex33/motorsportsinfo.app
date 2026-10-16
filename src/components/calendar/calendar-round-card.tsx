@@ -45,7 +45,15 @@ export function CalendarRoundCard({ round, now }: { round: CalendarRound; now: n
             {round.cancelled && <span className="chip bg-destructive/10 text-destructive">Cancelled</span>}
           </p>
           <h3 id={`${round.id}-name`} className="mt-1 text-base leading-snug font-semibold tracking-tight text-balance">
-            {round.name}
+            {/* The name is the anchor; the ::after covers the card. prefetch stays off: a calendar
+                full of Round pages would otherwise render each one as it scrolls into view. */}
+            <Link
+              href={round.path}
+              prefetch={false}
+              className="rounded-sm outline-none after:absolute after:inset-0 after:rounded-xl focus-visible:after:ring-2 focus-visible:after:ring-ring"
+            >
+              {round.name}
+            </Link>
           </h3>
           <p className="mt-1 flex items-start gap-1.5 text-sm text-muted-foreground">
             <MapPinIcon aria-hidden className="mt-0.5 size-3.5 shrink-0" />
@@ -103,15 +111,6 @@ export function CalendarRoundCard({ round, now }: { round: CalendarRound; now: n
         )}
       </div>
 
-      {/* The Series page shows only its Featured Round, so only that card links there. */}
-      {round.featured && (
-        <Link
-          href={`/${round.series}`}
-          prefetch
-          aria-label={`${info.shortName} ${round.name}: Sessions and weather`}
-          className="absolute inset-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      )}
     </article>
   );
 }

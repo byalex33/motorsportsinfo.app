@@ -102,14 +102,28 @@ export interface UpcomingRound {
   sessions: Session[];
 }
 
-/** Every Round that hasn't finished (featured-grace rule), in calendar order. */
-export function selectUpcomingRounds(rounds: RoundWithContext[], now: Date): UpcomingRound[] {
-  return unfinishedRounds(rounds, now).map((r) => ({
+function toUpcoming(r: RoundWithContext, rounds: RoundWithContext[]): UpcomingRound {
+  return {
     round: r.round,
     roundNumber: roundNumber(r, rounds),
     circuit: r.circuit,
     sessions: [...r.sessions].sort(byStart),
-  }));
+  };
+}
+
+/** Every Round that hasn't finished (featured-grace rule), in calendar order. */
+export function selectUpcomingRounds(rounds: RoundWithContext[], now: Date): UpcomingRound[] {
+  return unfinishedRounds(rounds, now).map((r) => toUpcoming(r, rounds));
+}
+
+/**
+ * Every Round the schedule loaded (finished ones included), in calendar order. Round pages and the
+ * sitemap index these; the calendar itself still shows only selectUpcomingRounds.
+ */
+export function selectScheduleRounds(rounds: RoundWithContext[]): UpcomingRound[] {
+  return [...rounds]
+    .sort((a, b) => a.round.season - b.round.season || firstInstant(a) - firstInstant(b) || a.round.id.localeCompare(b.round.id))
+    .map((r) => toUpcoming(r, rounds));
 }
 
 /** How long a finished Round stays in calendar feeds, so subscribers' calendars keep its events. */
