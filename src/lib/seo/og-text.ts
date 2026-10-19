@@ -55,6 +55,7 @@ export function seriesOgText(series: SeriesId, featured: FeaturedRoundResult | {
   if (sessions.length === 0) return { eyebrow, title, meta, status: null };
 
   const st = getRoundStatus(sessions, now);
+  if (st.kind === "cancelled") return { eyebrow, title, meta, status: "Cancelled" };
   if (st.kind === "live") return { eyebrow, title, meta, status: `Live: ${st.session.name}` };
   if (st.kind === "upcoming") return { eyebrow, title, meta, status: `Next: ${st.session.name} · ${formatUtc(st.session.startsAt)}` };
   return { eyebrow, title, meta, status: "Round complete" };

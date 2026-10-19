@@ -2,6 +2,7 @@
 // No Next.js imports here so the logic is testable and runnable outside the framework.
 import { z } from "zod";
 import type { ForecastResult } from "@/domain/types";
+import { UPSTREAM_ATTEMPT_MS, withDeadline } from "@/server/deadline";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -94,16 +95,33 @@ export function parseOpenMeteoResponse(body: unknown): HourlyForecast {
 
 /** Open-Meteo sheds load with 429/503 when many Circuits are fetched at once (e.g. a build's prerender). */
 export const RETRY_DELAY_MS = 750;
+/** One attempt. Two of these plus the retry gap stay well inside a prerender's cache-fill limit. */
+export const FORECAST_ATTEMPT_MS = UPSTREAM_ATTEMPT_MS;
 
 class RetryableError extends Error {}
 
 async function fetchOnce(lat: number, lon: number, init?: RequestInit): Promise<HourlyForecast> {
   let res: Response;
   try {
-    res = await fetch(openMeteoUrl(lat, lon), { signal: AbortSignal.timeout(10_000), ...init });
+    // `cache: "no-store"` on purpose. `next: { revalidate }` would let Next foreground-revalidate a
+    // stale response for this `use cache` caller and drop the abort signal, so a hung Open-Meteo
+    // holds the prerender until it bails out. The parsed forecast is cached by `use cache` instead.
+    // The deadline covers the body too: fetch resolving only means the headers arrived.
+    const rest = { ...(init ?? {}) } as RequestInit & { next?: unknown };
+    delete rest.next;
+    delete rest.signal;
+    res = await withDeadline(
+      fetch(openMeteoUrl(lat, lon), {
+        ...rest,
+        cache: "no-store",
+        signal: AbortSignal.timeout(FORECAST_ATTEMPT_MS),
+      }),
+      FORECAST_ATTEMPT_MS,
+      "Open-Meteo",
+    );
   } catch (error) {
-    // A 10-second timeout is not worth waiting out twice.
-    if (error instanceof Error && error.name === "TimeoutError") throw error;
+    // A timed-out attempt is not worth waiting out twice.
+    if (error instanceof Error && (error.name === "TimeoutError" || error.name === "DeadlineError")) throw error;
     throw new RetryableError("Open-Meteo request failed", { cause: error });
   }
   if (!res.ok) {
@@ -111,7 +129,8 @@ async function fetchOnce(lat: number, lon: number, init?: RequestInit): Promise<
     const message = `Open-Meteo responded ${res.status}`;
     throw res.status === 429 || res.status >= 500 ? new RetryableError(message) : new Error(message);
   }
-  return parseOpenMeteoResponse(await res.json());
+  const body = await withDeadline(res.json(), FORECAST_ATTEMPT_MS, "Open-Meteo");
+  return parseOpenMeteoResponse(body);
 }
 
 /**

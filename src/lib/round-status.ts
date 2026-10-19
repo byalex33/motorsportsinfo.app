@@ -5,7 +5,13 @@ import type { Session, TimedSession } from "@/domain/types";
 export type RoundStatus<S extends TimedSession = Session> =
   | { kind: "live"; session: S }
   | { kind: "upcoming"; session: S }
-  | { kind: "finished" };
+  | { kind: "finished" }
+  | { kind: "cancelled" };
+
+/** True when the Round was called off: it has Sessions and every one of them is cancelled. */
+export function everySessionCancelled(sessions: readonly { status: string }[] | undefined): boolean {
+  return !!sessions && sessions.length > 0 && sessions.every((session) => session.status === "cancelled");
+}
 
 export type SessionPhase = "cancelled" | "finished" | "live" | "upcoming";
 
@@ -24,6 +30,7 @@ export function sessionPhase(session: TimedSession, now: number): SessionPhase {
  * otherwise the next Session to start. Cancelled Sessions are ignored.
  */
 export function getRoundStatus<S extends TimedSession>(sessions: S[], now: number): RoundStatus<S> {
+  if (everySessionCancelled(sessions)) return { kind: "cancelled" };
   const active = sessions
     .filter((s) => s.status !== "cancelled")
     .slice()

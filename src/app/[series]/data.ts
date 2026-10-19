@@ -4,6 +4,7 @@ import { getDb } from "@/db/client";
 import type { Circuit, FeaturedRoundResult, ForecastResult, Round, RoundDocumentsResult, SeriesId, Session } from "@/domain/types";
 import { roundShortName } from "@/lib/seo/json-ld";
 import { indexRoundPages } from "@/lib/seo/round-page";
+import { everySessionCancelled } from "@/lib/round-status";
 import { formatRoundDates } from "@/lib/time-format";
 import { getRoundDocuments } from "@/server/documents";
 import { getSessionResults } from "@/server/results";
@@ -24,6 +25,8 @@ export interface SeasonRoundLink {
   path: string;
   /** The Round this Series page is showing. */
   featured: boolean;
+  /** Every Session was cancelled. The page says so and is noindex. */
+  cancelled: boolean;
 }
 
 export interface SeriesPageData {
@@ -98,6 +101,7 @@ export async function getSeriesPageData(series: SeriesId): Promise<SeriesPageDat
       dates: formatRoundDates(round.round.startDate, round.round.endDate),
       path: round.path,
       featured: round.round.id === featuredId,
+      cancelled: everySessionCancelled(round.sessions),
     }));
   } catch (error) {
     unstable_rethrow(error);

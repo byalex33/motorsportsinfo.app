@@ -33,6 +33,7 @@ export function SeasonRounds({ series, rounds }: { series: SeriesId; rounds: Sea
                   >
                     <span className="min-w-0">
                       <span className={cn("font-medium", round.featured && "text-foreground")}>{round.name}</span>
+                      {round.cancelled && <span className="chip ml-2 bg-destructive/10 text-destructive">Cancelled</span>}
                       {round.featured && (
                         <span className="chip ml-2 bg-series-accent/15 text-series-accent ring-1 ring-series-accent/30">Featured</span>
                       )}

@@ -3,6 +3,7 @@ import { cacheLife } from "next/cache";
 import { SERIES_IDS, type SeriesId } from "@/domain/types";
 import { seriesLastModified } from "@/lib/seo/last-modified";
 import { indexRoundPages } from "@/lib/seo/round-page";
+import { everySessionCancelled } from "@/lib/round-status";
 import { absoluteUrl } from "@/lib/site";
 import { getRoundUpdatedAt, getScheduleUpdatedAt, listScheduleRounds, listSpecialEvents } from "@/server/schedule";
 import { getSeriesPageData } from "./[series]/data";
@@ -37,18 +38,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     })),
   );
-  // Every Round the schedule loaded (this season, last season and next, when published). lastmod is the
-  // Round's own published change, not the render time.
+  // Every Round the schedule loaded (this season, last season and next, when published), except a Round
+  // whose every Session was cancelled: that page is noindex. lastmod is the Round's own published change.
   const rounds = (
     await Promise.all(
       SERIES_IDS.map(async (id) => {
         const [schedule, updated] = await Promise.all([listScheduleRounds(id), getScheduleUpdatedAt(id)]);
-        return indexRoundPages(schedule).map((round) => ({
-          url: absoluteUrl(round.path),
-          lastModified: updated[round.round.id] ? new Date(updated[round.round.id]) : built,
-          changeFrequency: "daily" as const,
-          priority: 0.8,
-        }));
+        return indexRoundPages(schedule)
+          .filter((round) => !everySessionCancelled(round.sessions))
+          .map((round) => ({
+            url: absoluteUrl(round.path),
+            lastModified: updated[round.round.id] ? new Date(updated[round.round.id]) : built,
+            changeFrequency: "daily" as const,
+            priority: 0.8,
+          }));
       }),
     )
   ).flat();
