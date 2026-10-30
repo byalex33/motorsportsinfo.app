@@ -1,11 +1,15 @@
 // Schedule sync: per Series, decide whether a check is due, read the sources, apply Schedule
 // Overrides, diff against the published state and write the plan. Called by /api/cron/sync.
+// Whether a check is due is first decided from the remote cache, so the runs with nothing to do (most of
+// them) never wake the database.
 import { and, eq, inArray, isNull, like } from "drizzle-orm";
-import type { Db } from "@/db/client";
+import { cacheLife, cacheTag, revalidateTag } from "next/cache";
+import { getDb, type Db } from "@/db/client";
 import { pendingSessionChanges, rounds, scheduleChanges, scheduleFlags, sessions, sourceChecks } from "@/db/schema";
 import { SCHEDULE_OVERRIDES, type ScheduleOverride } from "@/data/overrides";
 import type { SeriesId } from "@/domain/types";
 import { decideCheckDue, type CheckDecision } from "./check-due";
+import { loadPublishedSchedule } from "./db-read";
 import { groupSessions, roundToRow, sessionToRow } from "./db-rows";
 import { diffSchedule, planChangesPublished, type PendingChange, type SchedulePlan } from "./diff";
 import { isIdOfSeries, seriesIdLikePattern } from "./normalise";
@@ -13,6 +17,7 @@ import { applyOverrides } from "./overrides";
 import { withCircuits } from "./select";
 import { fetchSeriesSchedule } from "./sources";
 import { defaultContext, errorMessage, type SourceContext } from "./sources/http";
+import { checkStateTag } from "./tags";
 
 export interface SyncResult {
   series: SeriesId;
@@ -126,8 +131,68 @@ function summarise(plan: SchedulePlan): Record<string, number> {
   };
 }
 
+interface CheckHint {
+  lastCheckedAt: string | null;
+  lastSucceededAt: string | null;
+  hasPendingChanges: boolean;
+}
+
+/** The due-check's inputs beyond the published schedule. Null without a database. */
+async function loadCheckHint(series: SeriesId): Promise<CheckHint | null> {
+  "use cache: remote";
+  cacheLife("days");
+  cacheTag(checkStateTag(series));
+
+  const db = getDb();
+  if (!db) return null;
+  const [checkRows, pendingRows] = await Promise.all([
+    db
+      .select({ lastCheckedAt: sourceChecks.lastCheckedAt, lastSucceededAt: sourceChecks.lastSucceededAt })
+      .from(sourceChecks)
+      .where(eq(sourceChecks.series, series)),
+    db
+      .select({ sessionId: pendingSessionChanges.sessionId })
+      .from(pendingSessionChanges)
+      .where(like(pendingSessionChanges.sessionId, seriesIdLikePattern(series)))
+      .limit(1),
+  ]);
+  const check = checkRows[0];
+  return {
+    lastCheckedAt: check?.lastCheckedAt?.toISOString() ?? null,
+    lastSucceededAt: check?.lastSucceededAt?.toISOString() ?? null,
+    hasPendingChanges: pendingRows.length > 0,
+  };
+}
+
+/**
+ * Whether a check may be due, from cached state. A stale cache can only make a check look due (it is then
+ * decided again from the database), except for a pending change it hasn't seen, which is why every check
+ * expires it. If the cache can't be read, the database decides.
+ */
+async function checkMayBeDue(series: SeriesId, now: Date): Promise<boolean> {
+  try {
+    const [hint, published] = await Promise.all([loadCheckHint(series), loadPublishedSchedule(series)]);
+    if (!hint || !published) return true;
+    return decideCheckDue({
+      now,
+      lastCheckedAt: hint.lastCheckedAt ? new Date(hint.lastCheckedAt) : null,
+      lastSucceededAt: hint.lastSucceededAt ? new Date(hint.lastSucceededAt) : null,
+      rounds: withCircuits(published),
+      hasPendingChanges: hint.hasPendingChanges,
+    }).due;
+  } catch (error) {
+    console.warn(`[sync:${series}] cached due-check failed; asking the database: ${errorMessage(error)}`);
+    return true;
+  }
+}
+
+function expireCheckHint(series: SeriesId): void {
+  revalidateTag(checkStateTag(series), { expire: 0 });
+}
+
 export async function syncSeries(db: Db, series: SeriesId, options: SyncOptions = {}): Promise<SyncResult> {
   const now = options.now ?? new Date();
+  if (!options.force && !(await checkMayBeDue(series, now))) return { series, status: "skipped", published: false };
   const state = await loadState(db, series);
 
   const decision: CheckDecision | { due: true; reason: "forced" } = options.force
@@ -141,6 +206,24 @@ export async function syncSeries(db: Db, series: SeriesId, options: SyncOptions 
       });
   if (!decision.due) return { series, status: "skipped", published: false };
 
+  // Expired before the check writes anything and again once it has, so a run that dies midway still
+  // leaves the next due-check reading the database.
+  expireCheckHint(series);
+  try {
+    return await runCheck(db, series, state, decision, options, now);
+  } finally {
+    expireCheckHint(series);
+  }
+}
+
+async function runCheck(
+  db: Db,
+  series: SeriesId,
+  state: Awaited<ReturnType<typeof loadState>>,
+  decision: Extract<CheckDecision, { due: true }> | { due: true; reason: "forced" },
+  options: SyncOptions,
+  now: Date,
+): Promise<SyncResult> {
   await db
     .insert(sourceChecks)
     .values({ series, lastCheckedAt: now })
