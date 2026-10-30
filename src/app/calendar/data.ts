@@ -122,7 +122,8 @@ async function readCalendarPageData(): Promise<CalendarPageData> {
       rounds.push(...upcoming.map((r) => toCalendarRound(r, r === featured)));
     } catch (error) {
       unstable_rethrow(error);
-      // Same rule as the Series pages: with a database a failed read throws so the last good page stays.
+      // Same rule as the Series pages: with a database this means the database and the live sources both
+      // failed, so throw and the last good page stays.
       if (getDb()) throw error;
       console.warn(`[calendar:${series}] schedule unavailable: ${error instanceof Error ? error.message : String(error)}`);
       unavailable.push(series);

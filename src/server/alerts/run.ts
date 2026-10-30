@@ -11,6 +11,7 @@ import { OWNER_ALERT_TTL_SECONDS, getOwnerPushEndpoint, isOwnerAlertDue, ownerAl
 import { MAX_PUSH_FAILURES, PUSH_CONCURRENCY, mapWithConcurrency, sendPush, type PushOutcome, type VapidConfig } from "./push";
 import { reminderKey, selectDueReminders } from "./reminders";
 import type { AlertSession, AlertSubscription, OutgoingPush } from "./types";
+import type { AlertsWork } from "./wake";
 
 const MINUTE = 60_000;
 const MAX_LEAD_MINUTES = Math.max(...REMINDER_LEAD_MINUTES);
@@ -51,6 +52,8 @@ export interface AlertsRunOptions {
   send?: SendFn;
   /** The owner's push endpoint for the daily sync alert. Default: OWNER_PUSH_ENDPOINT; none turns it off. */
   ownerEndpoint?: string | null;
+  /** Which passes may have work (planAlertsRun). A pass without any is skipped, never reading the database. Default: all. */
+  work?: Partial<AlertsWork>;
 }
 
 /** Whether the run may still claim work. Records the first refusal, so the result can report it. */
@@ -312,16 +315,18 @@ export async function runAlerts(
   const time = budget(options.deadline ?? clock() + RUN_BUDGET_MS, clock);
   const send: SendFn = options.send ?? ((push) => sendPush(push, vapid));
   const subs = lazySubscriptions(db);
+  const work: AlertsWork = { reminders: true, pushes: true, daily: isOwnerAlertDue(now), ...options.work };
+  const none = { due: 0, claimed: 0, processed: 0, results: [] };
 
-  const reminders = await runReminders(db, subs, now, send, time);
-  const changes = await runChanges(db, subs, now, send, time);
-  const documents = await runDocuments(db, subs, now, send, time);
+  const reminders = work.reminders ? await runReminders(db, subs, now, send, time) : none;
+  const changes = work.pushes ? await runChanges(db, subs, now, send, time) : none;
+  const documents = work.pushes ? await runDocuments(db, subs, now, send, time) : none;
   const ownerEndpoint = options.ownerEndpoint === undefined ? getOwnerPushEndpoint() : options.ownerEndpoint;
   const owner = await runOwnerAlert(db, ownerEndpoint, now, send, time);
   const removed = await recordOutcomes(db, [...reminders.results, ...changes.results, ...documents.results, ...owner]);
 
-  // Hourly housekeeping: old reminder keys and documents are never needed again.
-  if (now.getUTCMinutes() === 0) {
+  // Daily housekeeping, in the 07:00 UTC run: old reminder keys and documents are never needed again.
+  if (work.daily) {
     await db
       .delete(remindersSent)
       .where(lt(remindersSent.startsAt, new Date(now.getTime() - REMINDER_RETENTION_DAYS * 24 * 60 * MINUTE)));

@@ -1,13 +1,17 @@
 // Watches fia.com during a Round and records each new FIA Document in fia_documents, for the alerts
-// cron to push (Document Alerts). Run by the schedule sync cron every 5 minutes.
+// cron to push (Document Alerts). Run by the schedule sync cron every 5 minutes. The Round comes from the
+// cached schedule and what's already recorded from the remote cache, so a run that finds nothing new
+// never wakes the database.
 import { eq } from "drizzle-orm";
-import type { Db } from "@/db/client";
+import { cacheLife, cacheTag } from "next/cache";
+import { getDb, type Db } from "@/db/client";
 import { fiaDocuments } from "@/db/schema";
 import type { Circuit, FiaDocumentSeries, Round } from "@/domain/types";
 import { listCalendarSessions } from "@/server/schedule";
 import { addDays } from "@/server/schedule/time";
 import { defaultContext, errorMessage, type SourceContext } from "@/server/schedule/sources/http";
 import { eventMatchesRound, fetchFiaDocuments, type FiaEventDocuments } from "./fia";
+import { fiaDocumentsTag } from "./tags";
 
 /** fia.com is watched from this many days before a Round's first day (the FIA posts notes early)… */
 const WATCH_BEFORE_DAYS = 4;
@@ -75,6 +79,24 @@ export function documentRows(
   });
 }
 
+/** URLs of the documents recorded for a Round. Revalidated (fiaDocumentsTag) when the sync records more. */
+async function recordedDocumentUrls(series: FiaDocumentSeries, roundId: string): Promise<string[]> {
+  "use cache: remote";
+  cacheLife("days");
+  cacheTag(fiaDocumentsTag(series));
+
+  const db = getDb();
+  if (!db) return [];
+  const rows = await db.select({ url: fiaDocuments.url }).from(fiaDocuments).where(eq(fiaDocuments.roundId, roundId));
+  return rows.map((r) => r.url);
+}
+
+/** Whether the listing has a document not in `recorded`. */
+export function hasUnrecordedDocuments(listing: FiaEventDocuments, recorded: readonly string[]): boolean {
+  const known = new Set(recorded);
+  return listing.documents.some((d) => !known.has(d.url));
+}
+
 /** Inserts the listing's documents not seen before. Documents already recorded are left as they are. */
 export async function recordDocuments(
   db: Db,
@@ -107,6 +129,10 @@ export async function syncFiaDocuments(
     const match = watched.find(({ round, circuit }) => eventMatchesRound(listing, round, circuit));
     if (!match) return { series, status: "no-match", roundId: watched[0].round.id, event: listing.event };
 
+    const recorded = await recordedDocumentUrls(series, match.round.id);
+    if (!hasUnrecordedDocuments(listing, recorded)) {
+      return { series, status: "ok", roundId: match.round.id, found: listing.documents.length, added: 0, toNotify: 0 };
+    }
     return { series, status: "ok", roundId: match.round.id, ...(await recordDocuments(db, listing, match.round, now)) };
   } catch (error) {
     console.warn(`[documents:${series}] sync failed: ${errorMessage(error)}`);

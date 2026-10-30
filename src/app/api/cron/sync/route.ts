@@ -6,6 +6,7 @@ import type { NextRequest } from "next/server";
 import { getDb } from "@/db/client";
 import { SERIES_IDS, type SeriesId } from "@/domain/types";
 import { fiaDocumentsTag, hasFiaDocuments, syncFiaDocuments, type DocumentsSyncResult } from "@/server/documents";
+import { UNSENT_PUSHES_TAG } from "@/server/alerts/wake";
 import { isCronRequest } from "@/server/cron";
 import { scheduleTag } from "@/server/schedule";
 import { syncSeries, type SyncResult } from "@/server/schedule/sync";
@@ -35,6 +36,8 @@ export async function GET(request: NextRequest) {
     ),
   );
 
+  // New Schedule Changes or FIA Documents wake the alerts cron's push pass (see server/alerts/wake.ts).
+  let unsentPushes = results.some((r) => (r.summary?.changes ?? 0) > 0);
   for (const r of results) {
     if (!r.published) continue;
     // Schedules must be correct on the next view (e.g. after a Schedule Change push), so no stale window.
@@ -50,10 +53,13 @@ export async function GET(request: NextRequest) {
   );
   for (const d of documents) {
     if (d.status !== "ok" || d.added === 0) continue;
+    if (d.toNotify > 0) unsentPushes = true;
     // The document a push opens should already be on the Series page and in the viewer.
     revalidateTag(fiaDocumentsTag(d.series), { expire: 0 });
     revalidatePath(`/${d.series}`);
   }
+
+  if (unsentPushes) revalidateTag(UNSENT_PUSHES_TAG, { expire: 0 });
 
   const failed = results.some((r) => r.status === "failed");
   return Response.json({ results, documents }, { status: failed ? 500 : 200 });

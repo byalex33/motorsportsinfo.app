@@ -8,16 +8,14 @@ import { fiaDocuments } from "@/db/schema";
 import { FIA_DOCUMENT_SERIES, type Circuit, type FiaDocumentSeries, type Round, type RoundDocumentsResult, type SeriesId } from "@/domain/types";
 import { defaultContext, errorMessage } from "@/server/schedule/sources/http";
 import { eventMatchesRound, fetchFiaDocuments, FIA_DOCUMENT_PAGES, type FiaEventDocuments } from "./fia";
+import { fiaDocumentsTag } from "./tags";
 import { checkFiaDocument } from "./viewer";
 
 export { matchDocumentPage, type DocumentPageMatch } from "./page";
 export { syncFiaDocuments, type DocumentsSyncResult } from "./sync";
+export { fiaDocumentsTag } from "./tags";
 export { fiaDocumentSource, serveFiaDocument } from "./viewer";
 
-/** Cache tag for a Series' fia.com listing. The sync revalidates it when it records new documents. */
-export function fiaDocumentsTag(series: FiaDocumentSeries): string {
-  return `fia-documents:${series}`;
-}
 
 /** Failures are cached briefly: a retry a minute later, without hammering fia.com while it is down. */
 const FAILURE_LIFE = { stale: 60, revalidate: 60, expire: 300 };

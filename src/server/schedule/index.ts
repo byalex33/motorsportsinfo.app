@@ -1,8 +1,8 @@
 // CONTRACT — owned by the schedule-data work. UI code imports only from here.
 //
 // With a database (DATABASE_URL set) reads come from the published schedule only, cached per Series
-// and revalidated by the sync. Without one (local dev) the sources are fetched live with the same
-// parsers and memoised in-process for 15 minutes.
+// and revalidated by the sync. Without one (local dev), or when the database can't be read (an outage,
+// a spent quota), the sources are fetched live with the same parsers and memoised in-process for 15 minutes.
 //
 // When `now` is omitted the current time is read after `io()`, so under Cache Components the caller's
 // component becomes request-time (wrap it in <Suspense>) instead of freezing the time into the shell.
@@ -19,7 +19,11 @@ export type { UpcomingRound } from "./select";
 export { getSpecialEvent, listSpecialEventAnnouncements, listSpecialEvents, type SpecialEventAnnouncement } from "./special-events";
 
 async function loadRounds(series: SeriesId): Promise<RoundWithContext[]> {
-  if (getDb()) return withCircuits(await loadPublishedSchedule(series));
+  if (getDb()) {
+    const published = await loadPublishedSchedule(series);
+    if (published) return withCircuits(published);
+    // The database can't be read: pages keep updating from the sources instead of serving their last render.
+  }
   await io();
   return withCircuits(await getLiveSchedule(series));
 }
@@ -60,7 +64,8 @@ export async function listCalendarSessions(series: SeriesId[], now?: Date): Prom
 
 /**
  * When a Round's published schedule (the Round or any of its Sessions) last changed, as ISO UTC. Null
- * without a database: the live sources say nothing about when they changed. Used for sitemap lastmod.
+ * without a database, or when it can't be read: the live sources say nothing about when they changed.
+ * Used for sitemap lastmod.
  */
 export async function getRoundUpdatedAt(series: SeriesId, roundId: string): Promise<string | null> {
   return loadRoundUpdatedAt(series, roundId);

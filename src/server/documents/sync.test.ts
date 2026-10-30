@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getCircuit } from "@/data/circuits";
 import { makeRound } from "@/server/schedule/test-utils";
 import type { FiaEventDocuments } from "./fia";
-import { documentRows, watchedRounds } from "./sync";
+import { documentRows, hasUnrecordedDocuments, watchedRounds } from "./sync";
 
 const marinaBay = getCircuit("marina-bay")!;
 const singapore = makeRound("f1-2026-marina-bay", "marina-bay", "2026-10-09", "2026-10-11", { name: "Singapore Grand Prix" });
@@ -55,5 +55,26 @@ describe("documentRows", () => {
   it("stops pushing a document an hour after it was published", () => {
     const later = new Date("2026-10-09T16:30:01Z");
     expect(documentRows(listing, singapore, later, { firstLook: false })[0].notifiedAt).toEqual(later);
+  });
+});
+
+describe("hasUnrecordedDocuments", () => {
+  const doc = (n: number) => ({
+    number: n,
+    title: `Doc ${n}`,
+    kind: "other" as const,
+    url: `https://www.fia.com/system/files/decision-document/doc_${n}.pdf`,
+    file: `doc_${n}.pdf`,
+    publishedAt: null,
+  });
+  const listing: FiaEventDocuments = { event: "Singapore Grand Prix", documents: [doc(2), doc(1)] };
+
+  it("is false when every listed document is already recorded, so the database isn't asked", () => {
+    expect(hasUnrecordedDocuments(listing, [doc(1).url, doc(2).url, doc(0).url])).toBe(false);
+  });
+
+  it("is true when the FIA has listed one the sync hasn't recorded", () => {
+    expect(hasUnrecordedDocuments(listing, [doc(1).url])).toBe(true);
+    expect(hasUnrecordedDocuments(listing, [])).toBe(true);
   });
 });

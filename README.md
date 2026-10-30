@@ -138,8 +138,9 @@ flowchart LR
 
 - **`/api/cron/sync`** runs every 5 minutes and decides per Series whether a source check is due: daily, every 2 hours during a Round, and 30 minutes before a Session, each counted from the last successful check. A failed check is retried after 10 minutes, then 30, then hourly until one succeeds. During an F1, F2 or F3 Round it also records new FIA Documents.
 - **`/api/cron/alerts`** runs every minute and sends due Session Reminders, Schedule Change pushes and Document Alerts. It reads the database only.
+- Neither cron touches the database on a run with nothing to do: whether a check, a reminder or a push is due is decided from the remote cache (`"use cache: remote"`), which the sync invalidates when it writes. Pages and calendar feeds read the published schedule from the same cache, so Neon can scale to zero between real work.
 - Both crons are declared in [`vercel.ts`](vercel.ts) and require `Authorization: Bearer $CRON_SECRET`. To force a check by hand, call `/api/cron/sync?series=f1&force=1` with that header.
-- Without a database the site fetches the sources live, memoised for 15 minutes, so local development still renders real data.
+- Without a database the site fetches the sources live, memoised for 15 minutes, so local development still renders real data. The same fallback serves pages when the database can't be read (an outage or a spent quota).
 
 ## Getting started
 

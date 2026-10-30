@@ -40,9 +40,10 @@ export async function getSeriesPageData(series: SeriesId): Promise<SeriesPageDat
     featured = await getFeaturedRound(series);
   } catch (error) {
     unstable_rethrow(error);
-    // With a database a failed read still throws, so the last good page stays cached. Without one
-    // (local dev, preview builds) the live sources are all there is: a Series whose source fails or
-    // isn't wired up yet shows a "schedule coming soon" state instead of failing the page or the build.
+    // A failed database read already falls back to the live sources, so with a database this means both
+    // failed: throw, and the last good page stays cached. Without one (local dev, preview builds) the live
+    // sources are all there is: a Series whose source fails or isn't wired up yet shows a "schedule coming
+    // soon" state instead of failing the page or the build.
     if (getDb()) throw error;
     console.warn(`[series:${series}] schedule unavailable: ${error instanceof Error ? error.message : String(error)}`);
     featured = { kind: "unavailable" };
