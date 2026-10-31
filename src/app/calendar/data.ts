@@ -3,12 +3,13 @@ import { unstable_rethrow } from "next/navigation";
 import { circuitCountry } from "@/data/circuits";
 import { getDb } from "@/db/client";
 import { SERIES_IDS, type SeriesId, type Session } from "@/domain/types";
+import { isProductionBuild } from "@/lib/build-phase";
 import { circuitCountryCode, type CountryCode } from "@/lib/country-code";
 import { roundShortName } from "@/lib/seo/json-ld";
 import { indexRoundPages } from "@/lib/seo/round-page";
 import { formatRoundDates } from "@/lib/time-format";
 import { trackTimeText } from "@/lib/track-time";
-import { listScheduleRounds, listUpcomingRounds, scheduleTag, type UpcomingRound } from "@/server/schedule";
+import { isPublishedScheduleReadable, listScheduleRounds, listUpcomingRounds, scheduleTag, type UpcomingRound } from "@/server/schedule";
 
 export type CalendarSession = Pick<Session, "id" | "name" | "type" | "startsAt" | "endsAt" | "status">;
 
@@ -98,11 +99,12 @@ const allCancelled = (sessions: Session[]) => sessions.length > 0 && sessions.ev
 
 /**
  * The full calendar. With a database it is prerendered from the cached read below. Without one (local
- * dev, database-less builds) every Series is a live scrape, and all 14 take longer than a prerender lets
- * one cache entry fill, so the calendar renders at request time instead.
+ * dev, database-less builds), or in a build while it can't be read, every Series is a live scrape, and
+ * all 14 take longer than a prerender lets one cache entry fill, so the calendar renders at request time
+ * instead.
  */
 export async function getCalendarPageData(): Promise<CalendarPageData> {
-  if (!getDb()) await io();
+  if (!getDb() || (isProductionBuild() && !(await isPublishedScheduleReadable()))) await io();
   return readCalendarPageData();
 }
 
@@ -131,8 +133,8 @@ async function readCalendarPageData(): Promise<CalendarPageData> {
     } catch (error) {
       unstable_rethrow(error);
       // Same rule as the Series pages: with a database this means the database and the live sources both
-      // failed, so throw and the last good page stays.
-      if (getDb()) throw error;
+      // failed, so throw and the last good page stays (outside a build, which has none).
+      if (getDb() && !isProductionBuild()) throw error;
       console.warn(`[calendar:${series}] schedule unavailable: ${error instanceof Error ? error.message : String(error)}`);
       unavailable.push(series);
     }

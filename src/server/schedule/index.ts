@@ -8,7 +8,7 @@
 // component becomes request-time (wrap it in <Suspense>) instead of freezing the time into the shell.
 import { io } from "next/cache";
 import { getDb } from "@/db/client";
-import type { Circuit, FeaturedRoundResult, Round, SeriesId, Session } from "@/domain/types";
+import { SERIES_IDS, type Circuit, type FeaturedRoundResult, type Round, type SeriesId, type Session } from "@/domain/types";
 import { loadPublishedSchedule, loadRoundUpdatedAt, loadScheduleUpdatedAt } from "./db-read";
 import { getLiveSchedule } from "./live";
 import { selectCalendarSessions, selectFeaturedRound, selectScheduleRounds, selectUpcomingRounds, withCircuits, type UpcomingRound } from "./select";
@@ -26,6 +26,13 @@ async function loadRounds(series: SeriesId): Promise<RoundWithContext[]> {
   }
   await io();
   return withCircuits(await getLiveSchedule(series));
+}
+
+/** Whether every Series' published schedule can be read: false without a database or while it is down. */
+export async function isPublishedScheduleReadable(): Promise<boolean> {
+  if (!getDb()) return false;
+  const schedules = await Promise.all(SERIES_IDS.map((id) => loadPublishedSchedule(id)));
+  return schedules.every((schedule) => schedule !== null);
 }
 
 async function resolveNow(now: Date | undefined): Promise<Date> {
