@@ -16,6 +16,7 @@
     "@base-ui/react": "^1.9.0",
     "@neondatabase/serverless": "^1.2.0",
     "@photostructure/tz-lookup": "^11.7.0",
+    "canvas-confetti": "^1.9.3",
     "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",

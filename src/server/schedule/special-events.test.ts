@@ -66,9 +66,14 @@ describe("the hand-entered Special Events", () => {
   it("links each announcement to its page", () => {
     expect(listSpecialEventAnnouncements()).toContainEqual({
       id: "special-2026-verstappen-portimao",
-      href: "/special/verstappen-portimao",
+      kind: "special-event",
+      chip: "Special",
       text: "Max Verstappen races GT3 at Portimão this weekend",
+      highlight: null,
+      href: "/special/verstappen-portimao",
+      linkLabel: "Session times & weather",
       accent: "verstappen",
+      confetti: [],
       until: "2026-10-17T21:00:00.000Z",
     });
   });

@@ -75,6 +75,7 @@ describe("superGtSession", () => {
 
   it("drops fan programme items and flags anything unknown", () => {
     expect(superGtSession("サーキットサファリ")).toBeNull();
+    expect(superGtSession("グランドフィナーレ")).toBeNull();
     expect(superGtSession("何か")).toEqual({ name: "何か", type: null });
   });
 });

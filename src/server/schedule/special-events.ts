@@ -3,6 +3,7 @@ import { getCircuit } from "@/data/circuits";
 import { SPECIAL_EVENTS, type SpecialEventEntry } from "@/data/special-events";
 import { FEATURED_ROUND_GRACE_MINUTES } from "@/domain/series";
 import type { SpecialEvent, SpecialEventSession } from "@/domain/types";
+import type { Announcement } from "./announcements";
 import { sessionId, slugify } from "./normalise";
 
 const MINUTE = 60_000;
@@ -59,28 +60,21 @@ export function getSpecialEvent(slug: string): SpecialEvent | null {
   return listSpecialEvents().find((e) => e.slug === slug) ?? null;
 }
 
-/** What the site-wide announcement needs: plain data, safe to pass to a client component. */
-export interface SpecialEventAnnouncement {
-  /** The Special Event's id; a dismissal is remembered against it. */
-  id: string;
-  href: string;
-  text: string;
-  /** The Special Event's accent (see SpecialEvent), or null for the site's purple. */
-  accent: string | null;
-  /** ISO UTC: the announcement hides itself from then on. */
-  until: string;
-}
-
 /**
  * One announcement per Special Event, in date order. Finished ones are included: the static layout can't read
  * the clock, so the announcement hides itself once `until` has passed.
  */
-export function listSpecialEventAnnouncements(): SpecialEventAnnouncement[] {
+export function listSpecialEventAnnouncements(): Announcement[] {
   return listSpecialEvents().map((event) => ({
     id: event.id,
-    href: `/special/${event.slug}`,
+    kind: "special-event",
+    chip: "Special",
     text: event.announcement,
+    highlight: null,
+    href: `/special/${event.slug}`,
+    linkLabel: "Session times & weather",
     accent: event.accent,
+    confetti: [],
     until: specialEventAnnouncedUntil(event),
   }));
 }

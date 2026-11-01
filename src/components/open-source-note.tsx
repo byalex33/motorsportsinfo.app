@@ -17,8 +17,8 @@ function GitHubMark({ className }: { className?: string }) {
 
 /**
  * A small note in the bottom-right corner: the site is open source, star it on GitHub. It rises in a
- * moment after load (never during hydration, so it can't flash for a viewer who closed it) and stays
- * closed on this device once dismissed.
+ * moment after load (never during hydration, so it can't flash for a viewer who closed it), a beam of light
+ * circles its border, and it stays closed on this device once dismissed.
  */
 export function OpenSourceNote() {
   const dismissed = useOpenSourceNoteDismissed();
@@ -30,7 +30,7 @@ export function OpenSourceNote() {
       aria-label="Open source"
       onAnimationEnd={closing ? () => dismissed.set(true) : undefined}
       className={cn(
-        "fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 flex max-w-[calc(100vw-2rem)] items-center gap-1 rounded-lg border border-border bg-card py-1.5 pr-1.5 pl-3 text-sm text-card-foreground sm:right-6 sm:bottom-6",
+        "edge-beam fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 flex max-w-[calc(100vw-2rem)] items-center gap-1 rounded-lg border border-border bg-card py-1.5 pr-1.5 pl-3 text-sm text-card-foreground sm:right-6 sm:bottom-6",
         closing
           ? "animate-[dialog-out_160ms_var(--motion-in)_both]"
           : "animate-[dialog-in_560ms_var(--motion-spring)_1200ms_both]",
