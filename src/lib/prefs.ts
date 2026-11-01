@@ -4,7 +4,7 @@
 //   msi.time   → JSON { "mode": "viewer" | "track" | "custom", "tz"?: string }
 //   msi.units  → JSON { "temp": "c" | "f", "wind": "kmh" | "mph" }
 //   msi.oss-note → "dismissed" once the open-source note is closed (not part of the alerts contract)
-//   msi.announcement → the id of the last Special Event announcement closed (not part of the alerts contract)
+//   msi.announcement → the id of the last announcement closed (not part of the alerts contract)
 //   msi.alerts → JSON { "follows": { [SeriesId]: SessionType[] }, "leadMinutes": 15 | 60 | 1440,
 //                "documentAlerts": { [FiaDocumentSeries]: "stewards" | "all" } }, the Alerts page's choices
 // Every storage access is wrapped in try/catch; without storage the choice lives in memory for the visit.
@@ -236,8 +236,8 @@ export function useOpenSourceNoteDismissed(): PrefState<boolean> {
 }
 
 /**
- * The id of the Special Event announcement the viewer last closed; null when none, and while hydrating, so a
- * closed announcement never flashes. A newer Special Event has a new id, so its announcement shows again.
+ * The id of the announcement the viewer last closed; null when none, and while hydrating, so a closed
+ * announcement never flashes. A newer announcement has a new id, so it shows again.
  */
 export function useDismissedAnnouncement(): PrefState<string | null> {
   const raw = useStoredString(PREF_KEYS.announcement);
