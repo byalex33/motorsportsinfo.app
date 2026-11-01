@@ -3,8 +3,9 @@
 // pages are not used because their race pages leave the timetable empty and their calendar links a
 // relocated Round to its old page. Each race page's timetable has one block per day (dated by its tab,
 // "2026-10-17") with entries carrying local start and end times (data-from / data-to, JST, which has no
-// daylight saving). Only "SUPER GT : …" entries are Super GT Sessions; the Circuit Safari is a fan ride, not a
-// Session. A race listed by laps has no end time. A race page with no Super GT entries yet is "Times TBC".
+// daylight saving). Only "SUPER GT : …" entries are Super GT Sessions; the Circuit Safari (a fan ride) and
+// the season-closing Grand Finale (グランドフィナーレ, a ceremony after the last Race) are not Sessions. A race
+// listed by laps has no end time. A race page with no Super GT entries yet is "Times TBC".
 //
 // Rounds are named "Round 7": Super GT keeps its official numbers when a Round moves (in 2026 Round 3 ran at
 // Motegi in November, after Round 7), and the site numbers a Round by its name (select.ts).
@@ -30,7 +31,7 @@ export interface SuperGtRoundLink {
 /** Super GT's Japanese Session names → an English name and Session Type, or null for a non-Session. */
 export function superGtSession(label: string): { name: string; type: SessionType | null } | null {
   const n = label.normalize("NFKC").replace(/\s+/g, "");
-  if (/サファリ|ウォーク|ピット|パレード|セレモニー/.test(n)) return null;
+  if (/サファリ|ウォーク|ピット|パレード|セレモニー|フィナーレ/.test(n)) return null;
   const q = /予選.*?Q(\d)/i.exec(n);
   if (q) return { name: `Qualifying ${q[1]}`, type: "qualifying" };
   if (/予選/.test(n)) return { name: "Qualifying", type: "qualifying" };
