@@ -606,6 +606,17 @@
     opacity: 0.35;
   }
 }
+/* The angle the border beam has reached; registered so it animates smoothly. */
+@property --beam-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes beam-spin {
+  to {
+    --beam-angle: 360deg;
+  }
+}
 @keyframes glow-sheen {
   to {
     background-position: 100% 0;
@@ -758,6 +769,37 @@
   opacity: 0;
   filter: drop-shadow(0 0 3px currentColor);
   animation: sparkle-twinkle 2600ms var(--motion-in-out) infinite backwards;
+}
+/*
+ * A beam of light that circles an element's border (the open-source note): a conic gradient spun round the
+ * centre, masked to a 1px ring over the border, with a soft glow. The element must be positioned.
+ */
+@utility edge-beam {
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    padding: 1px;
+    border-radius: inherit;
+    pointer-events: none;
+    background: conic-gradient(
+      from var(--beam-angle),
+      transparent 0deg 220deg,
+      color-mix(in oklch, var(--primary) 35%, transparent) 290deg,
+      var(--primary) 340deg,
+      color-mix(in oklch, var(--primary) 45%, #fff) 356deg,
+      transparent 360deg
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+    filter: drop-shadow(0 0 3px color-mix(in oklch, var(--primary) 70%, transparent));
+    animation: beam-spin 4s linear infinite;
+  }
 }
 @utility live-breathe {
   animation: breathe 2400ms var(--motion-in-out) infinite;
@@ -1028,6 +1070,7 @@
     animation: enter-settle 200ms ease-out backwards !important;
   }
   .animate-ping,
+  .edge-beam::before,
   .live-breathe,
   .chip-shimmer::after,
   .glow-name-text,
