@@ -5,7 +5,7 @@ import * as schema from "@/db/schema";
 import { REMINDER_CHUNK, runAlerts } from "./run";
 
 const vapid = { publicKey: "pub", privateKey: "priv", subject: "mailto:x@example.com" };
-// Not on the hour, so the hourly housekeeping stays out of the way.
+// Not 07:00 UTC, so the daily housekeeping and owner alert stay out of the way.
 const NOW = new Date("2026-10-11T12:07:00Z");
 
 type Rows = {
@@ -94,6 +94,29 @@ describe("runAlerts", () => {
       ownerAlert: null,
       deadlineReached: false,
     });
+  });
+
+  it("never reads the database for passes planAlertsRun found no work for", async () => {
+    const { db, statements } = fakeDb({ sessions: [DUE_RACE], changes: [WAITING_CHANGE], documents: [WAITING_DOCUMENT] });
+    await runAlerts(db, vapid, NOW, { work: { reminders: false, pushes: false } });
+    expect(statements).toEqual([]);
+  });
+
+  it("runs only the pushes pass when no reminder can be due", async () => {
+    const { db, statements } = fakeDb({ changes: [WAITING_CHANGE] });
+    await runAlerts(db, vapid, NOW, { work: { reminders: false, pushes: true }, send: async () => "sent" });
+    expect(statements.some((s) => /from "sessions" inner join "rounds" .*"sessions"."status" = /.test(s))).toBe(false);
+    expect(statements.some((s) => /^select .* from "schedule_changes"/.test(s))).toBe(true);
+  });
+
+  it("does its housekeeping only in the 07:00 UTC run", async () => {
+    const deletes = (statements: string[]) => statements.filter((s) => /^delete from "(reminders_sent|fia_documents)"/.test(s));
+    const onTheHour = fakeDb();
+    await runAlerts(onTheHour.db, vapid, new Date("2026-10-11T12:00:00Z"), { ownerEndpoint: null });
+    expect(deletes(onTheHour.statements)).toEqual([]);
+    const daily = fakeDb();
+    await runAlerts(daily.db, vapid, new Date("2026-10-11T07:00:00Z"), { ownerEndpoint: null });
+    expect(deletes(daily.statements)).toHaveLength(2);
   });
 
   it("reads the subscriptions once when a Session is due for reminders", async () => {
