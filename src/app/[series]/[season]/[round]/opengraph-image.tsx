@@ -1,8 +1,8 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { OG_CONTENT_TYPE, OG_SIZE, seriesOgImage } from "@/lib/seo/og-image";
 import { seriesOgText } from "@/lib/seo/og-text";
 import { isSeriesId } from "@/lib/series-id";
-import { featuredRoundStaticParams, getRoundPageData } from "./data";
+import { featuredRoundStaticParams, getRetiredRoundPath, getRoundPageData } from "./data";
 
 // The Round's card. A page that sets its own openGraph metadata does not inherit the Series image.
 // It reads the page's cached data, so it refreshes with the page.
@@ -18,8 +18,13 @@ export default async function Image({ params }: { params: Promise<{ series: stri
   const { series, season, round } = await params;
   const year = /^\d{4}$/.test(season) ? Number(season) : null;
   if (!isSeriesId(series) || year === null) notFound();
-  const data = await getRoundPageData(series, year, round.toLowerCase());
-  if (!data) notFound();
+  const pageSlug = round.toLowerCase();
+  const data = await getRoundPageData(series, year, pageSlug);
+  if (!data) {
+    const redirectTo = await getRetiredRoundPath(series, year, pageSlug);
+    if (redirectTo) permanentRedirect(`${redirectTo}/opengraph-image`);
+    notFound();
+  }
   return seriesOgImage(
     series,
     seriesOgText(series, { kind: "round", round: data.round, roundNumber: data.roundNumber, circuit: data.circuit, sessions: data.sessions }, Date.parse(data.renderedAt)),

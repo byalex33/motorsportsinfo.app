@@ -3,6 +3,7 @@
 // it unchanged with an inline disposition, for the viewer page (/<series>/documents/<slug>) to render.
 // Only files in the FIA's decision-document folder are fetched: the host and folder are fixed here,
 // the file name is checked, and only a file the site has linked to is asked for.
+import { withDeadline } from "@/server/deadline";
 import { BROWSER_USER_AGENT, type Fetcher } from "@/server/schedule/sources/http";
 
 export const FIA_DOCUMENT_FOLDER = "https://www.fia.com/system/files/decision-document/";
@@ -61,12 +62,16 @@ export async function checkFiaDocument(file: string, fetcher: Fetcher = fetch): 
   const source = fiaDocumentSource(file);
   if (!source) return "missing";
   try {
-    const res = await fetcher(source, {
-      method: "HEAD",
-      headers: { "User-Agent": BROWSER_USER_AGENT },
-      signal: AbortSignal.timeout(10_000),
-      cache: "no-store",
-    });
+    const res = await withDeadline(
+      fetcher(source, {
+        method: "HEAD",
+        headers: { "User-Agent": BROWSER_USER_AGENT },
+        signal: AbortSignal.timeout(10_000),
+        cache: "no-store",
+      }),
+      10_000,
+      "fia.com",
+    );
     if (res.status === 404 || res.status === 410) return "missing";
     return res.ok ? "found" : "unknown";
   } catch {
@@ -129,11 +134,15 @@ export async function serveFiaDocument(file: string, isKnown: (file: string) => 
 
   let upstream: Response;
   try {
-    upstream = await fetcher(source, {
-      headers: { "User-Agent": BROWSER_USER_AGENT, Accept: "application/pdf" },
-      signal: AbortSignal.timeout(20_000),
-      cache: "no-store",
-    });
+    upstream = await withDeadline(
+      fetcher(source, {
+        headers: { "User-Agent": BROWSER_USER_AGENT, Accept: "application/pdf" },
+        signal: AbortSignal.timeout(20_000),
+        cache: "no-store",
+      }),
+      20_000,
+      "fia.com",
+    );
   } catch (error) {
     console.warn(`[documents] fia.com PDF request failed for ${file}:`, error);
     return toFia(source);

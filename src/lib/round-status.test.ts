@@ -38,7 +38,7 @@ describe("getRoundStatus", () => {
   it("skips cancelled Sessions", () => {
     const cancelled = { ...fp2, status: "cancelled" as const };
     expect(getRoundStatus([fp1, cancelled, quali], t("2026-11-20T02:00:00Z"))).toEqual({ kind: "upcoming", session: quali });
-    expect(getRoundStatus([cancelled], t("2026-11-20T04:30:00Z"))).toEqual({ kind: "finished" });
+    expect(getRoundStatus([cancelled], t("2026-11-20T04:30:00Z"))).toEqual({ kind: "cancelled" });
   });
 
   it("does not depend on input order", () => {

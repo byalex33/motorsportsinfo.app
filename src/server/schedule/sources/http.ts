@@ -1,4 +1,8 @@
 // HTTP helpers for the schedule sources: descriptive User-Agent, timeouts and polite delays.
+import { withDeadline } from "@/server/deadline";
+
+/** A source request gives up after this, including when the socket ignores the abort signal. */
+export const UPSTREAM_TIMEOUT_MS = 20_000;
 
 /** Sent to APIs (OpenF1, Jolpica, GitHub raw). */
 export const API_USER_AGENT = "motorsportsinfo.app (+https://motorsportsinfo.app/about)";
@@ -31,20 +35,36 @@ export class HttpError extends Error {
 async function request(ctx: SourceContext, url: string, userAgent: string, accept: string): Promise<Response> {
   const res = await ctx.fetch(url, {
     headers: { "User-Agent": userAgent, Accept: accept, "Accept-Language": "en" },
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
   });
-  if (!res.ok) throw new HttpError(url, res.status);
+  if (!res.ok) {
+    await res.body?.cancel();
+    throw new HttpError(url, res.status);
+  }
   return res;
 }
 
+/**
+ * Headers and body share one deadline. `fetch` resolving only means the headers arrived; a body that
+ * never finishes would otherwise hold a `use cache` fill until the prerender gives up. The deadline
+ * also fires when Next's patched fetch drops AbortSignal during a stale revalidation.
+ */
+function bounded<T>(work: Promise<T>): Promise<T> {
+  return withDeadline(work, UPSTREAM_TIMEOUT_MS, "upstream");
+}
+
 export async function getJson<T>(ctx: SourceContext, url: string): Promise<T> {
-  const res = await request(ctx, url, API_USER_AGENT, "application/json");
-  return (await res.json()) as T;
+  return bounded((async () => {
+    const res = await request(ctx, url, API_USER_AGENT, "application/json");
+    return (await res.json()) as T;
+  })());
 }
 
 export async function getPage(ctx: SourceContext, url: string, userAgent = BROWSER_USER_AGENT): Promise<string> {
-  const res = await request(ctx, url, userAgent, "text/html,application/xhtml+xml");
-  return res.text();
+  return bounded((async () => {
+    const res = await request(ctx, url, userAgent, "text/html,application/xhtml+xml");
+    return res.text();
+  })());
 }
 
 export function errorMessage(error: unknown): string {

@@ -94,6 +94,17 @@ describe("roundNumber", () => {
     expect(selectFeaturedRound(all, new Date("2026-12-20T00:00:00Z"))).toMatchObject({ round: { id: next2027Round.id }, roundNumber: 1 });
   });
 
+  it("gives a cancelled Round no number, including on the full schedule", () => {
+    const jeddahRound = makeRound("f1-2026-jeddah", "jeddah", "2026-10-16", "2026-10-18");
+    const jeddah = withContext(jeddahRound, [makeSession(jeddahRound.id, "race", "2026-10-18T17:00:00Z", { status: "cancelled" })]);
+    const listed = selectScheduleRounds([sg, jeddah, us]);
+    expect(listed.map((x) => [x.round.id, x.roundNumber])).toEqual([
+      [sgRound.id, 1],
+      [jeddahRound.id, null],
+      [usRound.id, 2],
+    ]);
+  });
+
   it("skips Rounds whose every Session is cancelled, and other Series", () => {
     const jeddahRound = makeRound("f1-2026-jeddah", "jeddah", "2026-10-16", "2026-10-18");
     const jeddah = withContext(jeddahRound, [makeSession(jeddahRound.id, "race", "2026-10-18T17:00:00Z", { status: "cancelled" })]);

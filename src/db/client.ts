@@ -1,7 +1,22 @@
 import "server-only";
-import { neon } from "@neondatabase/serverless";
+import { neon, neonConfig } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
+import { UPSTREAM_ATTEMPT_MS, withDeadline } from "@/server/deadline";
 import * as schema from "./schema";
+
+// A query that never returns would hold a `use cache` fill until the prerender gives up. The deadline
+// rejects the caller; cache: no-store keeps Next from caching the SQL response (caching is use cache).
+neonConfig.fetchFunction = (input: RequestInfo | URL, init?: RequestInit) =>
+  withDeadline(
+    (async () => {
+      const res = await fetch(input, { ...init, cache: "no-store", signal: AbortSignal.timeout(UPSTREAM_ATTEMPT_MS) });
+      // Buffer here so a body that never finishes is the same timeout as a socket that never connects.
+      const body = await res.arrayBuffer();
+      return new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers });
+    })(),
+    UPSTREAM_ATTEMPT_MS,
+    "database",
+  );
 
 export type Db = ReturnType<typeof createDb>;
 

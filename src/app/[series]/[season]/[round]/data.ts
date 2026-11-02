@@ -1,6 +1,6 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { SERIES_IDS, type Circuit, type Round, type SeriesId, type Session } from "@/domain/types";
-import { findRoundPage } from "@/lib/seo/round-page";
+import { findRoundPage, retiredRoundPagePath } from "@/lib/seo/round-page";
 import { listScheduleRounds, scheduleTag } from "@/server/schedule";
 import { assembleRound, getSeriesPageData, type SeriesPageData } from "../../data";
 
@@ -54,4 +54,15 @@ export async function featuredRoundStaticParams(): Promise<{ series: string; sea
     if (season && round) params.push({ series, season, round });
   }
   return params.length > 0 ? params : [{ series: "f1", season: "2026", round: "none" }];
+}
+
+/**
+ * Where an old collision suffix now lives, or null. The Bahrain Grand Prix that was run used to be
+ * "/f1/2026/bahrain-grand-prix-2" because the cancelled April Round held the plain slug.
+ */
+export async function getRetiredRoundPath(series: SeriesId, season: number, pageSlug: string): Promise<string | null> {
+  "use cache";
+  cacheLife({ stale: 60, revalidate: 300, expire: 86_400 });
+  cacheTag(scheduleTag(series));
+  return retiredRoundPagePath(await listScheduleRounds(series), season, pageSlug);
 }
