@@ -91,8 +91,8 @@ export default function AboutPage() {
                 from OpenF1, available once a Session has finished.
               </li>
               <li>
-                <strong className="font-medium text-foreground">F2 and F3 schedules:</strong> from the official timetables published on the FIA Formula 2 and
-                FIA Formula 3 websites, with the sportstimes/f1 dataset as a fallback.
+                <strong className="font-medium text-foreground">F2 and F3 schedules:</strong> from the MIT-licensed sportstimes/f1 dataset,
+                corrected by hand when it lags behind an official change.
               </li>
               <li>
                 <strong className="font-medium text-foreground">WEC schedule:</strong> from the official timetables published on the FIA WEC website.
@@ -132,9 +132,8 @@ export default function AboutPage() {
                 <a className={a} href="https://www.fia.com/documents" target="_blank" rel="noopener noreferrer">
                   Documents: FIA
                 </a>
-                . Titles and publish times from the FIA&apos;s document pages for F1, F2 and F3. The documents are the
-                FIA&apos;s own PDFs, passed through unchanged and shown on this site with PDF.js; each one can still be
-                downloaded.
+                . Titles and publish times from the FIA&apos;s document pages for F1, F2 and F3. Each one links to the
+                FIA&apos;s own PDF on fia.com; this site never copies or serves the documents.
               </li>
               <li>
                 <strong className="font-medium text-foreground">Weather:</strong>{" "}
@@ -193,7 +192,8 @@ export default function AboutPage() {
                 document alerts you chose; and your device&apos;s time zone, so the times in each notification are in
                 your local time. Alongside it we keep when it was saved, how many sends to it have failed in a row (so a
                 dead one is removed), and which Session Reminders it has been sent, for a week, so none arrives twice.
-                Nothing else. You can remove it at any time from{" "}
+                When a new device turns them on, we also keep a one-way hash of its IP address for a day, so one network
+                can only sign up a few devices an hour. Nothing else. You can remove it at any time from{" "}
                 <Link href="/alerts" className={a}>
                   Alerts
                 </Link>

@@ -6,7 +6,7 @@ export const UPSTREAM_TIMEOUT_MS = 20_000;
 
 /** Sent to APIs (OpenF1, Jolpica, GitHub raw). */
 export const API_USER_AGENT = "motorsportsinfo.app (+https://motorsportsinfo.app/about)";
-/** Sent to sites that only serve full pages to browsers (fiaformula2.com, fiaformula3.com, fiawec.com). */
+/** Sent to sites that only serve full pages to browsers (fiawec.com). */
 export const BROWSER_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 motorsportsinfo.app/1.0 (+https://motorsportsinfo.app/about)";
 

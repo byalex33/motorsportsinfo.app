@@ -271,7 +271,7 @@ export interface FiaDocument {
   kind: FiaDocumentKind;
   /** Absolute link to the PDF on fia.com (which always downloads it). */
   url: string;
-  /** The PDF's name in the FIA's decision-document folder, which our viewer can open; null for a PDF elsewhere. */
+  /** The PDF's name in the FIA's decision-document folder, which our document links redirect to; null for a PDF elsewhere. */
   file: string | null;
   /** ISO 8601 UTC, or null when the page gives no readable time. */
   publishedAt: string | null;
