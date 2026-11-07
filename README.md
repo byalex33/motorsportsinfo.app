@@ -72,7 +72,7 @@
     </td>
     <td valign="top">
       <h4>FIA Documents</h4>
-      The F1, F2 and F3 documents for each Round in an in-page viewer, with a Document Alert when a new one is published.
+      The F1, F2 and F3 documents for each Round, linking to the FIA's own PDFs, with a Document Alert when a new one is published.
     </td>
   </tr>
   <tr>
@@ -96,8 +96,8 @@
 | Series | Schedule source | Fallback | Extras |
 |---|---|---|---|
 | **F1** | [OpenF1](https://openf1.org) | [Jolpica](https://jolpi.ca) | Rain radar, Session Results, Telemetry, FIA Documents |
-| **F2** | [fiaformula2.com](https://www.fiaformula2.com) | [sportstimes/f1](https://github.com/sportstimes/f1) | FIA Documents |
-| **F3** | [fiaformula3.com](https://www.fiaformula3.com) | sportstimes/f1 | FIA Documents |
+| **F2** | [sportstimes/f1](https://github.com/sportstimes/f1) | none | FIA Documents |
+| **F3** | sportstimes/f1 | none | FIA Documents |
 | **WEC** | [fiawec.com](https://www.fiawec.com) | none | |
 | **Formula E** | sportstimes/f1 | none | |
 | **IndyCar** | sportstimes/f1 | none | |
@@ -119,7 +119,6 @@ Why community data sources, and why that keeps the site non-commercial: [ADR 000
 ```mermaid
 flowchart LR
   S1["OpenF1 and Jolpica"] --> SYNC
-  S2["FIA F2 and F3 sites"] --> SYNC
   S3["fiawec.com"] --> SYNC
   S4["sportstimes/f1"] --> SYNC
   S6["wrc.com, IMSA, NASCAR and DTM feeds"] --> SYNC
@@ -214,5 +213,9 @@ The site is non-commercial and uses no official Series logos or marks. It relies
 - Forecast radar: [Rainbow.ai](https://www.rainbow.ai)
 - Radar: [RainViewer](https://www.rainviewer.com)
 - Documents: [FIA](https://www.fia.com)
-- Schedules: [sportstimes/f1](https://github.com/sportstimes/f1), [Jolpica](https://jolpi.ca), the official F2, F3, WEC, WRC, GT World Challenge Europe and Super GT sites, and IMSA's, NASCAR's and DTM's own schedule feeds
+- Schedules: [sportstimes/f1](https://github.com/sportstimes/f1) (MIT), [Jolpica](https://jolpi.ca), the official WEC, WRC, GT World Challenge Europe and Super GT sites, and IMSA's, NASCAR's and DTM's own schedule feeds
 - Base map: [OpenFreeMap](https://openfreemap.org)
+
+## License
+
+The code is [MIT-licensed](LICENSE). The data the site shows belongs to its sources above, under their own terms (see [ADR 0001](docs/adr/0001-community-data-sources-keep-site-non-commercial.md)); the MIT license does not cover it.

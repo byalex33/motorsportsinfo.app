@@ -54,33 +54,14 @@ describe("fetchSeriesSchedule", () => {
     await expect(fetchSeriesSchedule("f1", NOW, ctx)).rejects.toBeInstanceOf(SourceFailure);
   });
 
-  it("reads F2 Round pages listed on the season page; a failed page is a warning and the season is incomplete", async () => {
+  it("reads F2 from sportstimes, never from fiaformula2.com", async () => {
     const { ctx, requests } = fakeContext({
-      "https://www.fiaformula2.com/en/racing/2026": "f2-season-2026.html",
-      "https://www.fiaformula2.com/en/racing/2026/baku": "f2-round-baku-2026.html",
-      "https://www.fiaformula2.com/en/racing/2026/lusail": "f2-round-lusail-2026.html",
-      "https://www.fiaformula2.com/en/racing/2027": 500,
       "https://raw.githubusercontent.com/sportstimes/f1/main/_db/f2/2026.json": "sportstimes-f2-2026.json",
     });
     const schedule = await fetchSeriesSchedule("f2", NOW, ctx);
-    expect(schedule).toMatchObject({ source: "fiaformula2", isFallback: false, completeSeasons: [] });
-    expect(schedule.rounds.map((r) => r.round.id)).toEqual(["f2-2026-baku", "f2-2026-lusail"]);
-    expect(schedule.warnings).toHaveLength(12);
-    // Lusail is TBC on the official page; its Session times come from sportstimes.
-    const lusail = schedule.rounds[1];
-    expect(lusail.round.sessionTimesConfirmed).toBe(true);
-    expect(lusail.sessions.map((s) => s.type)).toEqual(["practice", "qualifying", "sprint-race", "feature-race"]);
-    expect(requests[0].userAgent).toContain("Mozilla/5.0");
-  });
-
-  it("falls back to sportstimes when the F2 season page fails", async () => {
-    const { ctx } = fakeContext({
-      "https://www.fiaformula2.com/en/racing/2026": 503,
-      "https://raw.githubusercontent.com/sportstimes/f1/main/_db/f2/2026.json": "sportstimes-f2-2026.json",
-    });
-    const schedule = await fetchSeriesSchedule("f2", NOW, ctx);
-    expect(schedule).toMatchObject({ source: "sportstimes", isFallback: true });
+    expect(schedule).toMatchObject({ source: "sportstimes", isFallback: false, completeSeasons: [2026] });
     expect(schedule.rounds).toHaveLength(4);
+    expect(requests.every((r) => r.url.startsWith("https://raw.githubusercontent.com/sportstimes/"))).toBe(true);
   });
 
   it.each(["fe", "indycar", "motogp"] as const)("reads %s from sportstimes; an unpublished next season is not an error", async (series) => {

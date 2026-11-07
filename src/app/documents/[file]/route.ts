@@ -1,7 +1,6 @@
-// FIA Document viewer: GET /documents/{file}.pdf, e.g. /documents/2026_singapore_grand_prix_-_entry_list.pdf
-// Relays the FIA's PDF inline so it opens in the browser instead of downloading (see serveFiaDocument), for a
-// document the site has linked to only (see isKnownDocumentFile).
-import { isKnownDocumentFile, serveFiaDocument } from "@/server/documents";
+// GET /documents/{file}.pdf, from older links: redirects to the FIA's PDF on fia.com. The site no longer
+// relays the PDFs (ADR 0001); only a bare PDF file name in the FIA's decision-document folder is redirected.
+import { fiaDocumentSource } from "@/server/documents";
 
 export async function GET(_request: Request, ctx: RouteContext<"/documents/[file]">) {
   const { file } = await ctx.params;
@@ -11,5 +10,15 @@ export async function GET(_request: Request, ctx: RouteContext<"/documents/[file
   } catch {
     name = file;
   }
-  return serveFiaDocument(name, isKnownDocumentFile);
+  const source = fiaDocumentSource(name);
+  if (!source) {
+    return new Response("No such FIA document.\n", {
+      status: 404,
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=300" },
+    });
+  }
+  return new Response(null, {
+    status: 308,
+    headers: { Location: source, "Cache-Control": "public, max-age=86400, s-maxage=86400", "X-Robots-Tag": "noindex" },
+  });
 }

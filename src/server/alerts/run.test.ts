@@ -2,7 +2,8 @@ import { drizzle } from "drizzle-orm/pg-proxy";
 import { describe, expect, it } from "vitest";
 import type { Db } from "@/db/client";
 import * as schema from "@/db/schema";
-import { REMINDER_CHUNK, runAlerts } from "./run";
+import { CLAIM_LEASE_MS, PUSH_CHUNK, REMINDER_CHUNK, runAlerts } from "./run";
+import { maxDuration } from "@/app/api/cron/alerts/route";
 
 const vapid = { publicKey: "pub", privateKey: "priv", subject: "mailto:x@example.com" };
 // Not 07:00 UTC, so the daily housekeeping and owner alert stay out of the way.
@@ -13,6 +14,8 @@ type Rows = {
   changes?: unknown[][];
   documents?: unknown[][];
   subscriptions?: unknown[][];
+  /** What claiming a waiting FIA Document returns as how far an earlier run got. */
+  documentSentThrough?: string | null;
 };
 
 /**
@@ -22,6 +25,7 @@ type Rows = {
  */
 function fakeDb(rows: Rows = {}) {
   const statements: string[] = [];
+  const progress: string[] = [];
   const db = drizzle(
     async (sql, params) => {
       statements.push(sql);
@@ -31,6 +35,11 @@ function fakeDb(rows: Rows = {}) {
       if (/^select .* from "schedule_changes"/.test(sql)) return { rows: rows.changes ?? [] };
       if (/^select .* from "fia_documents"/.test(sql)) return { rows: rows.documents ?? [] };
       if (/^select .* from "push_subscriptions"/.test(sql)) return { rows: rows.subscriptions ?? [] };
+      if (/^update "fia_documents" set "pending_until" = now\(\)/.test(sql)) {
+        // Every waiting document is claimed, with url and sent_through returned.
+        return { rows: (rows.documents ?? []).map((d) => [d[0], rows.documentSentThrough ?? null]) };
+      }
+      if (/^update "fia_documents" set "sent_through"/.test(sql)) progress.push(String(params[0]));
       if (/^insert into "reminders_sent"/.test(sql)) {
         // Three parameters per row (subscription id, Session id, start time), echoed back as claimed.
         const claimed: unknown[][] = [];
@@ -45,7 +54,8 @@ function fakeDb(rows: Rows = {}) {
   const reminderClaims = () => statements.filter((s) => /^insert into "reminders_sent"/.test(s)).length;
   const claims = () =>
     statements.filter((s) => /^(insert into "reminders_sent"|update "schedule_changes"|update "fia_documents")/.test(s));
-  return { db: db as unknown as Db, statements, subscriptionReads, reminderClaims, claims };
+  const documentFinishes = () => statements.filter((s) => /^update "fia_documents" set "(notified_at|pending_until)" = \$/.test(s));
+  return { db: db as unknown as Db, statements, subscriptionReads, reminderClaims, claims, progress, documentFinishes };
 }
 
 const DUE_RACE = [
@@ -110,13 +120,13 @@ describe("runAlerts", () => {
   });
 
   it("does its housekeeping only in the 07:00 UTC run", async () => {
-    const deletes = (statements: string[]) => statements.filter((s) => /^delete from "(reminders_sent|fia_documents)"/.test(s));
+    const deletes = (statements: string[]) => statements.filter((s) => /^delete from "(reminders_sent|fia_documents|push_signup_attempts)"/.test(s));
     const onTheHour = fakeDb();
     await runAlerts(onTheHour.db, vapid, new Date("2026-10-11T12:00:00Z"), { ownerEndpoint: null });
     expect(deletes(onTheHour.statements)).toEqual([]);
     const daily = fakeDb();
     await runAlerts(daily.db, vapid, new Date("2026-10-11T07:00:00Z"), { ownerEndpoint: null });
-    expect(deletes(daily.statements)).toHaveLength(2);
+    expect(deletes(daily.statements)).toHaveLength(3);
   });
 
   it("reads the subscriptions once when a Session is due for reminders", async () => {
@@ -185,6 +195,73 @@ describe("runAlerts deadline", () => {
     expect(reminderClaims()).toBe(3);
     expect(result.reminders).toEqual({ due: followers, claimed: followers, sent: followers });
     expect(result.deadlineReached).toBe(false);
+  });
+});
+
+describe("runAlerts fan-out", () => {
+  const followers = PUSH_CHUNK * 2 + 50;
+  const id = (i: number) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`;
+  /** A subscription that wants every F1 document. */
+  const documentFollower = (i: number) => [id(i), `https://fcm.googleapis.com/fcm/send/device-${i}`, "p256dh", "auth", 15, {}, { f1: "all" }, "UTC", 0];
+  const documentFollowers = (count: number) => Array.from({ length: count }, (_, i) => documentFollower(i));
+
+  it("holds a claim for as long as the alerts function may run", () => {
+    expect(CLAIM_LEASE_MS).toBe(maxDuration * 1000);
+  });
+
+  it("pushes every device, saving how far it got after each chunk, then marks the document notified", async () => {
+    const { db, progress, documentFinishes } = fakeDb({ documents: [WAITING_DOCUMENT], subscriptions: documentFollowers(followers) });
+    const sent: string[] = [];
+    const result = await runAlerts(db, vapid, NOW, {
+      work: { reminders: false, pushes: true },
+      send: async (push) => {
+        sent.push(push.subscription.id);
+        return "sent";
+      },
+    });
+    expect(sent).toHaveLength(followers);
+    expect(progress).toEqual([id(PUSH_CHUNK - 1), id(PUSH_CHUNK * 2 - 1)]);
+    expect(documentFinishes()).toEqual([expect.stringMatching(/^update "fia_documents" set "notified_at" = \$1, "pending_until" = \$2/)]);
+    expect(result.documents).toEqual({ processed: 1, pushes: followers, sent: followers });
+  });
+
+  it("stops at the deadline with what it sent saved, and releases the document unnotified for the next run", async () => {
+    const { db, progress, documentFinishes } = fakeDb({ documents: [WAITING_DOCUMENT], subscriptions: documentFollowers(followers) });
+    let t = 0;
+    const sent: string[] = [];
+    const result = await runAlerts(db, vapid, NOW, {
+      work: { reminders: false, pushes: true },
+      deadline: 10,
+      clock: () => t,
+      send: async (push) => {
+        t += 1;
+        sent.push(push.subscription.id);
+        return "sent";
+      },
+    });
+    expect(sent).toHaveLength(PUSH_CHUNK);
+    expect(progress).toEqual([id(PUSH_CHUNK - 1)]);
+    expect(documentFinishes()).toEqual([expect.stringMatching(/^update "fia_documents" set "pending_until" = \$1 where/)]);
+    expect(result.documents.processed).toBe(0);
+    expect(result.deadlineReached).toBe(true);
+  });
+
+  it("carries on after the last device an earlier run reached", async () => {
+    const { db } = fakeDb({
+      documents: [WAITING_DOCUMENT],
+      subscriptions: documentFollowers(followers),
+      documentSentThrough: id(PUSH_CHUNK - 1),
+    });
+    const sent: string[] = [];
+    await runAlerts(db, vapid, NOW, {
+      work: { reminders: false, pushes: true },
+      send: async (push) => {
+        sent.push(push.subscription.id);
+        return "sent";
+      },
+    });
+    expect(sent).toHaveLength(followers - PUSH_CHUNK);
+    expect(sent[0]).toBe(id(PUSH_CHUNK));
   });
 });
 

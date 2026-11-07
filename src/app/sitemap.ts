@@ -26,8 +26,7 @@ async function seriesUpdatedAt(series: SeriesId, built: Date): Promise<Date> {
 }
 
 // The home page, every Series page, every Round page, every Special Event, the Calendar, Alerts and About.
-// FIA Document viewer pages are left out: they last only while their Round is featured and are noindex
-// (the FIA's own pages are the source). Telemetry pages are noindex too.
+// FIA Document links are left out: they only redirect to the PDFs on fia.com. Telemetry pages are noindex.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const built = new Date(await builtAt());
   const series = await Promise.all(

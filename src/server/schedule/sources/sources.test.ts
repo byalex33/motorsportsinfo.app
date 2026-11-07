@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { normaliseRounds } from "../normalise";
 import { fixture, fixtureJson } from "../test-utils";
-import { extractFiaRace, extractFlightData, fiaSessionType, parseFiaRoundPage, parseFiaSeasonPage } from "./fia-feeder";
 import { parseJolpica, type JolpicaResponse } from "./jolpica";
 import { openF1SessionType, parseOpenF1, type OpenF1Meeting, type OpenF1Session } from "./openf1";
 import { parseSportstimes, type SportstimesRace } from "./sportstimes";
@@ -101,109 +100,7 @@ describe("Jolpica", () => {
   });
 });
 
-describe("FIA F2/F3 Round pages", () => {
-  it("extracts flight data split across chunks", () => {
-    const flight = extractFlightData(fixture("f2-round-baku-2026.html"));
-    expect(flight).toContain('"meetingSessions":[');
-    expect(extractFiaRace(fixture("f2-round-baku-2026.html")).meetingSessions).toHaveLength(6);
-  });
-
-  it("parses Baku 2026 (two Qualifyings, two Feature Races) with local times + GMT offset", () => {
-    const raw = parseFiaRoundPage(fixture("f2-round-baku-2026.html"), {
-      season: 2026,
-      slug: "baku",
-      roundNumber: 12,
-      url: "https://www.fiaformula2.com/en/racing/2026/baku",
-    });
-    const { rounds, problems } = normaliseRounds("f2", [raw]);
-    // The page JSON has the season as a string; a string here made every sync rewrite every Round.
-    expect(raw.season).toBe(2026);
-    expect(problems).toEqual([]);
-    const [baku] = rounds;
-    expect(baku.round).toMatchObject({
-      id: "f2-2026-baku",
-      name: "Round 12",
-      circuitId: "baku",
-      startDate: "2026-09-24",
-      endDate: "2026-09-26",
-      sessionTimesConfirmed: true,
-    });
-    expect(baku.sessions.map((s) => [s.id.split(":")[1], s.type, s.name])).toEqual([
-      ["practice", "practice", "Practice"],
-      ["qualifying-1", "qualifying", "Qualifying 1"],
-      ["qualifying-2", "qualifying", "Qualifying 2"],
-      ["sprint-race", "sprint-race", "Sprint Race"],
-      ["feature-race-1", "feature-race", "Feature Race 1"],
-      ["feature-race-2", "feature-race", "Feature Race 2"],
-    ]);
-    expect(baku.sessions[0]).toMatchObject({
-      startsAt: "2026-09-24T06:00:00.000Z",
-      endsAt: "2026-09-24T06:45:00.000Z",
-      endIsEstimated: false,
-      status: "scheduled",
-    });
-  });
-
-  it("treats sessionStatus TBC (placeholder times) as Times TBC and keeps the Round dates", () => {
-    const raw = parseFiaRoundPage(fixture("f2-round-lusail-2026.html"), {
-      season: 2026,
-      slug: "lusail",
-      roundNumber: 13,
-      url: "https://www.fiaformula2.com/en/racing/2026/lusail",
-    });
-    const { rounds } = normaliseRounds("f2", [raw]);
-    expect(rounds[0].round).toMatchObject({
-      id: "f2-2026-lusail",
-      sessionTimesConfirmed: false,
-      startDate: "2026-11-27",
-      endDate: "2026-11-29",
-    });
-    expect(rounds[0].sessions).toEqual([]);
-  });
-
-  it("parses F3 group qualifying names", () => {
-    const raw = parseFiaRoundPage(fixture("f3-round-monza-2026.html"), {
-      season: 2026,
-      slug: "monza",
-      roundNumber: 8,
-      url: "https://www.fiaformula3.com/en/racing/2026/monza",
-    });
-    const { rounds } = normaliseRounds("f3", [raw]);
-    expect(rounds[0].sessions.map((s) => [s.id, s.type])).toEqual([
-      ["f3-2026-monza:practice", "practice"],
-      ["f3-2026-monza:group-a-qualifying", "qualifying"],
-      ["f3-2026-monza:group-b-qualifying", "qualifying"],
-      ["f3-2026-monza:sprint-race", "sprint-race"],
-      ["f3-2026-monza:feature-race", "feature-race"],
-    ]);
-  });
-
-  it("lists every Round from the season page with its number, in order", () => {
-    const f2 = parseFiaSeasonPage(fixture("f2-season-2026.html"), 2026);
-    expect(f2).toHaveLength(14);
-    expect(f2[0]).toEqual({ slug: "melbourne", roundNumber: 1 });
-    expect(f2[11]).toEqual({ slug: "baku", roundNumber: 12 });
-    expect(f2[13]).toEqual({ slug: "yas-marina", roundNumber: 14 });
-    const f3 = parseFiaSeasonPage(fixture("f3-season-2026.html"), 2026);
-    expect(f3.map((e) => e.roundNumber)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    expect(f3.at(-1)).toEqual({ slug: "madrid", roundNumber: 9 });
-  });
-
-  it("maps Session Types from sessionType and short name", () => {
-    expect(fiaSessionType({ sessionType: "Race", shortName: "Sprint Race" })).toBe("sprint-race");
-    expect(fiaSessionType({ sessionType: "Race", shortName: "Feature Race 2" })).toBe("feature-race");
-    expect(fiaSessionType({ sessionType: "Race", shortName: "Race 3" })).toBeNull();
-  });
-
-  it("reads an explicit cancelled state", () => {
-    const html = fixture("f2-round-baku-2026.html").replace('\\"state\\":\\"completed\\"', '\\"state\\":\\"cancelled\\"');
-    const raw = parseFiaRoundPage(html, { season: 2026, slug: "baku", roundNumber: 12, url: "x" });
-    expect(raw.sessions[0].cancelled).toBe(true);
-    expect(raw.sessions[1].cancelled).toBe(false);
-  });
-});
-
-describe("sportstimes (F2/F3 fallback)", () => {
+describe("sportstimes (F2/F3)", () => {
   const parsed = parseSportstimes(fixtureJson<{ races: SportstimesRace[] }>("sportstimes-f2-2026.json"), 2026, "f2");
   const { rounds, problems } = normaliseRounds("f2", parsed.rounds);
 

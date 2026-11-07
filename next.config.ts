@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV === "development";
 
 // Hosts the browser talks to directly. Everything else (Open-Meteo, OpenF1, fia.com, Rainbow.ai) is
-// fetched on the server; the PDF.js and MapLibre workers are bundled and served from this origin.
+// fetched on the server; the MapLibre workers are bundled and served from this origin.
 const TRACWELL = "https://collect.tracwell.app"; // analytics events (fetch and sendBeacon)
 const OPENFREEMAP = "https://tiles.openfreemap.org"; // radar base map: styles, vector tiles, fonts, sprites
 const RAINVIEWER_API = "https://api.rainviewer.com"; // past radar frame list, when the forecast is unavailable
@@ -21,7 +21,7 @@ const contentSecurityPolicy = [
   `img-src 'self' data: blob: ${OPENFREEMAP} ${RAINVIEWER_TILES}`,
   "font-src 'self' data:",
   `connect-src 'self' ${TRACWELL} ${OPENFREEMAP} ${RAINVIEWER_API} ${RAINVIEWER_TILES}`,
-  // MapLibre may start its workers from blob: URLs; the service worker and PDF.js worker are same-origin.
+  // MapLibre may start its workers from blob: URLs; the service worker is same-origin.
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",
@@ -54,9 +54,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Not on the FIA Document PDFs (/documents/*.pdf): they open in the browser's own PDF viewer,
-        // which a page policy such as object-src 'none' can stop once the policy is enforced.
-        source: "/((?!documents/).*)",
+        source: "/:path*",
         headers: [{ key: "Content-Security-Policy-Report-Only", value: contentSecurityPolicy }],
       },
     ];

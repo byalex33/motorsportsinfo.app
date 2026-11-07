@@ -10,7 +10,7 @@ import { matchCircuit } from "@/data/circuits";
 import type { Circuit, FiaDocument, FiaDocumentKind, FiaDocumentSeries, Round } from "@/domain/types";
 import { addDays, zoneOffsetMinutes } from "@/server/schedule/time";
 import { getPage, type SourceContext } from "@/server/schedule/sources/http";
-import { fiaDocumentFile } from "./viewer";
+import { fiaDocumentFile } from "./files";
 
 export const FIA_SITE = "https://www.fia.com";
 

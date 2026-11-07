@@ -74,7 +74,12 @@ export const scheduleChanges = pgTable(
     previousStartsAt: timestamp("previous_starts_at", { withTimezone: true }).notNull(),
     newStartsAt: timestamp("new_starts_at", { withTimezone: true }),
     detectedAt: timestamp("detected_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Set once every device has been sent its push (or none was wanted). */
     notifiedAt: timestamp("notified_at", { withTimezone: true }),
+    /** While an alerts run is pushing this change: no other run takes it until then (see server/alerts/run.ts). */
+    pendingUntil: timestamp("pending_until", { withTimezone: true }),
+    /** The last push subscription (in id order) already pushed, when a run ran out of time partway through. */
+    sentThrough: uuid("sent_through"),
   },
   // The alerts cron reads unnotified changes in id order every minute; only those are indexed.
   (t) => [
@@ -125,6 +130,20 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   failureCount: integer("failure_count").notNull().default(0),
 });
 
+/**
+ * New-device sign-ups per client, for the hourly limit in /api/push/subscription. The client is an HMAC of
+ * its IP address (never the address itself); rows are deleted after a day by the alerts cron.
+ */
+export const pushSignupAttempts = pgTable(
+  "push_signup_attempts",
+  {
+    id: serial("id").primaryKey(),
+    client: text("client").notNull(),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("push_signup_attempts_client_idx").on(t.client, t.attemptedAt)],
+);
+
 /** Idempotency for Session Reminders: one per subscription per Session per start time. */
 export const remindersSent = pgTable(
   "reminders_sent",
@@ -135,7 +154,13 @@ export const remindersSent = pgTable(
     sessionId: text("session_id").notNull(),
     /** Reminders are keyed to the start time, so a moved Session can be reminded again. */
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    /** When the reminder was claimed for sending. */
     sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Set while a run is sending the reminder, cleared once it has been. A claim still set after this time
+     * was lost (the run stopped), so a later run may take the reminder again while it is due.
+     */
+    pendingUntil: timestamp("pending_until", { withTimezone: true }),
   },
   (t) => [primaryKey({ columns: [t.subscriptionId, t.sessionId, t.startsAt] })],
 );
@@ -158,11 +183,16 @@ export const fiaDocuments = pgTable(
     number: integer("number"),
     title: text("title").notNull(),
     kind: text("kind").$type<FiaDocumentKind>().notNull(),
-    /** The file name our viewer opens; null for a PDF outside the FIA's document folder. */
+    /** The PDF's file name in the FIA's decision-document folder; null for a PDF outside it. */
     file: text("file"),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Set once every device has been sent its push (or none was wanted). */
     notifiedAt: timestamp("notified_at", { withTimezone: true }),
+    /** While an alerts run is pushing this document: no other run takes it until then (see server/alerts/run.ts). */
+    pendingUntil: timestamp("pending_until", { withTimezone: true }),
+    /** The last push subscription (in id order) already pushed, when a run ran out of time partway through. */
+    sentThrough: uuid("sent_through"),
   },
   // The alerts cron reads unnotified documents oldest first every minute; only those are indexed.
   (t) => [

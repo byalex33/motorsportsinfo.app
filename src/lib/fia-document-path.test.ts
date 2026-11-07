@@ -38,7 +38,7 @@ describe("fiaDocumentIds", () => {
   });
 });
 
-describe("viewer page slugs", () => {
+describe("document link slugs", () => {
   it("names the Round and the document, never the title", () => {
     const path = fiaDocumentPagePath("f1", "Singapore Grand Prix", "73");
     expect(path).toBe("/f1/documents/singapore-grand-prix-73");

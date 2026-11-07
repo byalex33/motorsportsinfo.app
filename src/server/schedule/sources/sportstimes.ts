@@ -1,5 +1,5 @@
-// The MIT-licensed sportstimes/f1 dataset (github.com/sportstimes/f1): the F2 and F3 fallback, and the only
-// source for Formula E, IndyCar, MotoGP and F1 Academy. UTC start times only (no end times), and it may lag behind the
+// The MIT-licensed sportstimes/f1 dataset (github.com/sportstimes/f1): the only source for F2, F3, Formula E,
+// IndyCar, MotoGP and F1 Academy. UTC start times only (no end times), and it may lag behind the
 // official sites. Each Series' file has its own quirks:
 // - F2, F3, FE, F1 Academy: `location` names the Circuit (lat/lon are city centres or 0, so unused for
 //   matching). F1 Academy's `location` is sometimes a country ("Netherlands"), so its slug is a hint too, and
@@ -40,7 +40,7 @@ interface SessionDef {
   type: SessionType;
 }
 
-// F2/F3 names match the official pages so Session ids agree between primary and fallback.
+// F2/F3 names match the official pages (an earlier source), so Session ids stay the same.
 const FEEDER_SESSIONS: Record<string, SessionDef> = {
   practice: { name: "Practice", type: "practice" },
   qualifying: { name: "Qualifying", type: "qualifying" },

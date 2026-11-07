@@ -1,10 +1,13 @@
 // Push subscription endpoints for Session Reminders and Schedule Change pushes.
-//   POST   { subscription, follows, leadMinutes, timeZone }  → save (upsert by endpoint); 503 when full (MAX_SUBSCRIPTIONS)
+//   POST   { subscription, follows, leadMinutes, timeZone }  → save (upsert by endpoint). A new device is saved only
+//          after the push service accepts a confirmation push to it (400 if refused, 503 if it can't be asked), and
+//          at most NEW_DEVICES_PER_HOUR per client (429); 503 when full (MAX_SUBSCRIPTIONS)
 //   DELETE { endpoint }                                       → turn off
 //   PATCH  { oldEndpoint, subscription }                      → browser replaced the subscription (from the service worker)
 import type { z } from "zod";
 import { getDb } from "@/db/client";
-import { deleteSubscription, rotateSubscription, upsertSubscription } from "@/server/alerts/subscriptions";
+import { getVapidConfig, sendConfirmationPush } from "@/server/alerts/push";
+import { clientKey, deleteSubscription, rotateSubscription, upsertSubscription, type UpsertResult } from "@/server/alerts/subscriptions";
 import { rotateSchema, subscribeSchema, unsubscribeSchema } from "@/server/alerts/validation";
 
 const MAX_BODY_BYTES = 16 * 1024;
@@ -38,15 +41,28 @@ async function parseBody<S extends z.ZodType>(request: Request, schema: S): Prom
   return parsed.data;
 }
 
+const REFUSALS: Record<Exclude<UpsertResult, "saved">, [string, number]> = {
+  full: ["Reminders are full right now: no new devices can sign up. Please try again later.", 503],
+  limited: ["Too many new devices have signed up from your network in the last hour. Please try again later.", 429],
+  refused: ["Your browser's push service did not accept this device. Turn alerts off and on again to make a new subscription.", 400],
+  unavailable: ["Your browser's push service could not be reached just now. Please try again in a minute.", 503],
+};
+
 export async function POST(request: Request) {
   const input = await parseBody(request, subscribeSchema);
   if (input instanceof Response) return input;
   const db = getDb();
   if (!db) return noDatabase();
-  if ((await upsertSubscription(db, input)) === "full") {
-    return json({ error: "Reminders are full right now: no new devices can sign up. Please try again later." }, 503);
-  }
-  return json({ ok: true });
+  const vapid = getVapidConfig();
+  if (!vapid) return json({ error: "Reminders are not available right now: push is not configured." }, 503);
+  const result = await upsertSubscription(db, input, {
+    client: clientKey(request.headers, vapid.privateKey),
+    confirm: (subscription) =>
+      sendConfirmationPush({ endpoint: subscription.endpoint, p256dh: subscription.keys.p256dh, auth: subscription.keys.auth }, vapid),
+  });
+  if (result === "saved") return json({ ok: true });
+  const [error, status] = REFUSALS[result];
+  return json({ error }, status);
 }
 
 export async function DELETE(request: Request) {
