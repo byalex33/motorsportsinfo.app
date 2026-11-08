@@ -87,6 +87,16 @@ export function RoundCountdown({
   const now = clock ?? Date.parse(renderedAt);
   const status = getRoundStatus(sessions, now);
 
+  if (status.kind === "cancelled") {
+    return (
+      <p className="enter-focus flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-sm">
+        <FlagIcon className="size-4 text-destructive" aria-hidden />
+        <span className="font-medium">Cancelled.</span>
+        <span className="text-muted-foreground">This Round will not be run.</span>
+      </p>
+    );
+  }
+
   if (status.kind === "finished") {
     return (
       <p className="enter-focus flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-sm">

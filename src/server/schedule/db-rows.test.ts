@@ -45,6 +45,17 @@ describe("pageSlugsToStore", () => {
     expect(Object.fromEntries(pageSlugsToStore(published, [second]))).toEqual({ [second.id]: "sao-paulo-grand-prix-2" });
   });
 
+  it("stores no slug for a Round whose every Session is cancelled", () => {
+    const ran = round({ id: "f1-2026-interlagos-2", slug: "interlagos-2", startDate: "2026-11-13", endDate: "2026-11-15" });
+    const sessions = [
+      { roundId: brazil.id, status: "cancelled" as const },
+      { roundId: brazil.id, status: "cancelled" as const },
+      { roundId: ran.id, status: "scheduled" as const },
+    ];
+    // The cancelled Round stays derived, so the Round that is run stores the plain slug.
+    expect(Object.fromEntries(pageSlugsToStore([], [brazil, ran], sessions))).toEqual({ [ran.id]: "sao-paulo-grand-prix" });
+  });
+
   it("skips a Round whose Circuit is unknown", () => {
     expect(pageSlugsToStore([], [round({ circuitId: "nowhere" })]).size).toBe(0);
   });

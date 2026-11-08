@@ -2,8 +2,6 @@
 import type { SeriesId } from "@/domain/types";
 import { normaliseRounds } from "../normalise";
 import type { RawRound, SourceSchedule } from "../types";
-import { fetchFiaFeederSeason, type FeederSeries } from "./fia-feeder";
-import { fillTbcRounds } from "./fill-tbc";
 import { fetchDtmEvents, fetchDtmSeason } from "./dtm";
 import { defaultContext, errorMessage, untilAborted, type SourceContext } from "./http";
 import { fetchGtwcCalendar, fetchGtwcSeason } from "./gtwc";
@@ -105,31 +103,15 @@ const sportstimes = (series: SportstimesSeries): SourceDef => ({
   load: perSeason((ctx, year) => fetchSportstimesSeason(ctx, series, year)),
 });
 
-const feeder = (series: FeederSeries): { primary: SourceDef; fallback: SourceDef } => ({
-  primary: {
-    name: series === "f2" ? "fiaformula2" : "fiaformula3",
-    load: perSeason(async (ctx, year) => {
-      const official = await fetchFiaFeederSeason(ctx, series, year);
-      if (official.rounds.every((r) => r.timesConfirmed)) return official;
-      // Fill Rounds the official page still marks TBC from sportstimes (see fill-tbc.ts).
-      try {
-        const { rounds } = fillTbcRounds(official.rounds, (await fetchSportstimesSeason(ctx, series, year)).rounds);
-        return { ...official, rounds };
-      } catch (error) {
-        return { ...official, warnings: [...official.warnings, `sportstimes fill-in failed: ${errorMessage(error)}`] };
-      }
-    }),
-  },
-  fallback: sportstimes(series),
-});
-
 export const SOURCES: Record<SeriesId, { primary: SourceDef; fallback?: SourceDef }> = {
   f1: {
     primary: { name: "openf1", load: perSeason(wrap(fetchOpenF1Season)) },
     fallback: { name: "jolpica", load: perSeason(wrap(fetchJolpicaSeason)) },
   },
-  f2: feeder("f2"),
-  f3: feeder("f3"),
+  // The MIT-licensed sportstimes dataset, not fiaformula2.com / fiaformula3.com, whose terms forbid
+  // extracting their data (ADR 0001). Schedule Overrides correct it when it lags; no fallback.
+  f2: { primary: sportstimes("f2") },
+  f3: { primary: sportstimes("f3") },
   // fiawec.com scraping works, so TheSportsDB is not used. WEC has no fallback.
   wec: { primary: { name: "fiawec", load: fetchWecSeasons } },
   // The sportstimes dataset is the only source for these Series (ADR 0001); no fallback.

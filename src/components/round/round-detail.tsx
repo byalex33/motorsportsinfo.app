@@ -6,6 +6,7 @@ import { RoundHero } from "@/components/round/round-hero";
 import { RoundSessions } from "@/components/round/round-sessions";
 import { officialResultsUrl, SERIES } from "@/domain/series";
 import type { Circuit, ForecastResult, Round, RoundDocumentsResult, SeriesId, Session } from "@/domain/types";
+import { everySessionCancelled } from "@/lib/round-status";
 import { DATA_CREDITS } from "@/lib/data-credits";
 import { trackTimeTexts } from "@/lib/track-time";
 
@@ -46,6 +47,7 @@ export function RoundDetail({
   preamble?: ReactNode;
 }) {
   const trackTimes = trackTimeTexts(sessions, circuit.timeZone);
+  const cancelled = everySessionCancelled(sessions);
 
   return (
     <>
@@ -56,6 +58,7 @@ export function RoundDetail({
           roundNumber={roundNumber}
           circuit={circuit}
           lead={lead}
+          cancelled={cancelled}
           countdown={
             round.sessionTimesConfirmed && sessions.length > 0 ? (
               <RoundCountdown
@@ -69,7 +72,7 @@ export function RoundDetail({
           }
         />
       </div>
-      {SERIES[series].hasRainRadar && round.sessionTimesConfirmed && <RadarSlot circuit={circuit} sessions={sessions} />}
+      {SERIES[series].hasRainRadar && round.sessionTimesConfirmed && !cancelled && <RadarSlot circuit={circuit} sessions={sessions} />}
       <RoundSessions
         credit={DATA_CREDITS[series]}
         sessions={sessions}

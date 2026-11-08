@@ -22,6 +22,10 @@ _Avoid_: Current round, next race, upcoming event
 A one-off Round the site features for a limited time, usually outside the covered Series, such as Max Verstappen's GT World Challenge Europe race at Portimão (featured before GT World Challenge Europe was covered). It is entered by hand, has its own page (/special/…) with Sessions and forecasts, and is announced in a strip under the header until 2 hours after its final Session ends. Its Sessions have no Session Type, and it has no Session Reminders, calendar feed or Session Results.
 _Avoid_: One-off, guest race, bonus event
 
+**Celebration**:
+Hand-entered news announced in the strip under the header for a limited time, such as Kimi Antonelli's 2026 F1 title. It has no page of its own; it links onwards, can take an accent and throws confetti once per visit as the strip opens. The strip shows whichever Special Event or Celebration ends soonest.
+_Avoid_: News item, banner, alert
+
 **Session**:
 A single on-track running period within a Round, with a start and end time, such as FP1, Qualifying, Hyperpole or Race.
 _Avoid_: Event, race (unless it is the Race session)

@@ -4,6 +4,7 @@ import { unstable_rethrow } from "next/navigation";
 import { SERIES_IDS, type SeriesId } from "@/domain/types";
 import { seriesLastModified } from "@/lib/seo/last-modified";
 import { indexRoundPages } from "@/lib/seo/round-page";
+import { everySessionCancelled } from "@/lib/round-status";
 import { absoluteUrl } from "@/lib/site";
 import { getRoundUpdatedAt, getScheduleUpdatedAt, listScheduleRounds, listSpecialEvents } from "@/server/schedule";
 import { getSeriesPageData } from "./[series]/data";
@@ -28,8 +29,7 @@ async function seriesUpdatedAt(series: SeriesId, built: Date): Promise<Date> {
 }
 
 // The home page, every Series page, every Round page, every Special Event, the Calendar, Alerts and About.
-// FIA Document viewer pages are left out: they last only while their Round is featured and are noindex
-// (the FIA's own pages are the source). Telemetry pages are noindex too.
+// FIA Document links are left out: they only redirect to the PDFs on fia.com. Telemetry pages are noindex.
 // A Series whose schedule can't be read (a source down, no database locally) still gets its Series page,
 // dated `built`, but no Round entries: one Series never fails the whole sitemap.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -46,14 +46,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     })),
   );
-  // Every Round the schedule loaded (this season, last season and next, when published). lastmod is the
-  // Round's own published change, not the render time.
+  // Every Round the schedule loaded (this season, last season and next, when published), except a Round
+  // whose every Session was cancelled: that page is noindex. lastmod is the Round's own published change.
   const rounds = (
     await Promise.all(
       SERIES_IDS.map(async (id) => {
         try {
           const [schedule, updated] = await Promise.all([listScheduleRounds(id), getScheduleUpdatedAt(id)]);
-          return indexRoundPages(schedule).map((round) => ({
+          return indexRoundPages(schedule)
+            .filter((round) => !everySessionCancelled(round.sessions))
+            .map((round) => ({
             url: absoluteUrl(round.path),
             lastModified: updated[round.round.id] ? new Date(updated[round.round.id]) : built,
             changeFrequency: "daily" as const,

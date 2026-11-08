@@ -386,13 +386,16 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Special Event accents: set by `accent` in src/data/special-events.ts as data-accent on the page and
-   the announcement strip (whose 7% tint keeps link text at 4.56 light / 8.34 dark).
+   Special Event and Celebration accents: set by `accent` in src/data/special-events.ts as data-accent on
+   the page and the announcement strip, and by `accent` in src/data/announcements.ts on the strip (whose 7% tint keeps link text at 4.56 light / 8.34 dark).
    Same tokens and the same AA checks as the Series accents above.
      verstappen  #f59b06  Max Verstappen's orange (given by the site owner); light mode darkens it
                           in OKLCH, keeping the hue, as F2 / F3 / IndyCar do
                  light: bg / subtle / muted · chip       dark: bg / subtle / muted · chip
      verstappen  #9e6202  5.00 / 4.79 / 4.58 · 5.00     #f59b06  9.03 / 8.61 / 8.17 · 8.64
+     antonelli   #23e4c5  Kimi Antonelli's 2026 title Celebration (given by the site owner); light mode
+                          darkens it in OKLCH, as above
+     antonelli   #027e6b  5.03 / 4.82 / 4.61 · 5.03     #23e4c5  12.23 / 11.67 / 11.08 · 11.35
    --------------------------------------------------------------------------- */
 [data-accent="verstappen"] {
   --series-accent: #9e6202;
@@ -402,6 +405,16 @@
 .dark[data-accent="verstappen"] {
   --series-accent: #f59b06;
   --series-accent-foreground: #180f02;
+}
+[data-accent="antonelli"] {
+  --series-accent: #027e6b;
+  --series-accent-foreground: #ffffff;
+  --accent-glow: #23e4c5;
+}
+.dark [data-accent="antonelli"],
+.dark[data-accent="antonelli"] {
+  --series-accent: #23e4c5;
+  --series-accent-foreground: #0a0a0a;
 }
 
 /* Decorative Series gradient (solid accent unless the Series has one). Horizontal and vertical. */
@@ -606,6 +619,43 @@
     opacity: 0.35;
   }
 }
+/* The angle the border beam has reached; registered so it animates smoothly. */
+@property --beam-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes beam-spin {
+  to {
+    --beam-angle: 360deg;
+  }
+}
+@keyframes glow-sheen {
+  to {
+    background-position: 100% 0;
+  }
+}
+@keyframes glow-pulse {
+  50% {
+    filter: drop-shadow(0 0 6px color-mix(in oklch, var(--accent-glow, var(--series-accent)) 85%, transparent))
+      drop-shadow(0 0 14px color-mix(in oklch, var(--accent-glow, var(--series-accent)) 45%, transparent));
+  }
+}
+@keyframes sparkle-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1) rotate(80deg);
+  }
+  60% {
+    opacity: 0.9;
+    transform: scale(0.85) rotate(110deg);
+  }
+}
 
 /* Staggered entrances. The stagger is an inline animation-delay (src/lib/motion.ts), which
    overrides the shorthand below and, unlike a custom property, never inherits: a nested
@@ -686,6 +736,83 @@
 }
 [data-dashed-b] .driver-b-key {
   background: repeating-linear-gradient(90deg, var(--driver-b) 0 4px, transparent 4px 6px);
+}
+/*
+ * A Celebration's highlighted name (src/components/announcement-banner.tsx): a sheen sweeps through the accent,
+ * a glow breathes behind it and sparkles twinkle round it. --glow-sheen is white in dark mode and a deep shade
+ * of the accent in light mode, so the text stays readable mid-sweep; --accent-glow (set per accent) tints the
+ * glow, falling back to the accent.
+ */
+:root {
+  --glow-sheen: color-mix(in oklch, var(--series-accent) 55%, #000);
+}
+.dark {
+  --glow-sheen: #ffffff;
+}
+.glow-name {
+  position: relative;
+  display: inline-block;
+  white-space: nowrap;
+}
+.glow-name-text {
+  font-weight: 650;
+  color: var(--series-accent);
+  background: linear-gradient(
+    100deg,
+    var(--series-accent) 0%,
+    var(--glow-sheen) 12%,
+    var(--series-accent) 24%,
+    var(--series-accent) 50%,
+    var(--glow-sheen) 62%,
+    var(--series-accent) 74%,
+    var(--series-accent) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 3px color-mix(in oklch, var(--accent-glow, var(--series-accent)) 55%, transparent));
+  animation:
+    glow-sheen 2800ms linear infinite,
+    glow-pulse 2400ms var(--motion-in-out) infinite;
+}
+.glow-sparkle {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  filter: drop-shadow(0 0 3px currentColor);
+  animation: sparkle-twinkle 2600ms var(--motion-in-out) infinite backwards;
+}
+/*
+ * A beam of light that circles an element's border (the open-source note): a conic gradient spun round the
+ * centre, masked to a 1px ring over the border, with a soft glow. The element must be positioned.
+ */
+@utility edge-beam {
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    padding: 1px;
+    border-radius: inherit;
+    pointer-events: none;
+    background: conic-gradient(
+      from var(--beam-angle),
+      transparent 0deg 220deg,
+      color-mix(in oklch, var(--primary) 35%, transparent) 290deg,
+      var(--primary) 340deg,
+      color-mix(in oklch, var(--primary) 45%, #fff) 356deg,
+      transparent 360deg
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+    filter: drop-shadow(0 0 3px color-mix(in oklch, var(--primary) 70%, transparent));
+    animation: beam-spin 4s linear infinite;
+  }
 }
 @utility live-breathe {
   animation: breathe 2400ms var(--motion-in-out) infinite;
@@ -956,8 +1083,10 @@
     animation: enter-settle 200ms ease-out backwards !important;
   }
   .animate-ping,
+  .edge-beam::before,
   .live-breathe,
   .chip-shimmer::after,
+  .glow-name-text,
   .results-chip,
   .results-chip::after,
   .wx,
@@ -966,7 +1095,8 @@
   .enter-pop {
     animation: none !important;
   }
-  .digit-out {
+  .digit-out,
+  .glow-sparkle {
     display: none;
   }
   .draw-check path {

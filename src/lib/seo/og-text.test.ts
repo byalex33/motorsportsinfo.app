@@ -24,6 +24,11 @@ describe("seriesOgText", () => {
     expect(seriesOgText("f1", { ...featured, sessions }, at("2026-10-10T11:00:00Z")).status).toBe("Next: Race · Sun 11 Oct, 12:00 UTC");
   });
 
+  it("says cancelled when every Session was cancelled, rather than complete", () => {
+    const sessions = singaporeSessions.map((s) => ({ ...s, status: "cancelled" as const }));
+    expect(seriesOgText("f1", { ...featured, sessions }, at("2026-10-11T15:00:00Z")).status).toBe("Cancelled");
+  });
+
   it("says the Round is complete during the grace period after its final Session", () => {
     expect(seriesOgText("f1", featured, at("2026-10-11T15:00:00Z")).status).toBe("Round complete");
   });

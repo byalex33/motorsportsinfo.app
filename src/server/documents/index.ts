@@ -1,27 +1,26 @@
 // CONTRACT — owned by the documents work. UI code imports only from here.
-// FIA documents (stewards' decisions, classifications, notes) for F1, F2 and F3. We list titles and
-// open the FIA's PDFs in the browser through /documents (see viewer.ts); nothing is stored. See ADR 0001.
-import { eq } from "drizzle-orm";
+// FIA documents (stewards' decisions, classifications, notes) for F1, F2 and F3. We list titles and publish
+// times, and link to the FIA's own PDFs on fia.com (see files.ts); the PDFs are never fetched, stored or
+// relayed. See ADR 0001.
+import { and, eq, isNotNull } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import { getDb } from "@/db/client";
 import { fiaDocuments } from "@/db/schema";
+import { fiaDocumentId, fiaEventSlug } from "@/lib/fia-document-path";
 import { FIA_DOCUMENT_SERIES, type Circuit, type FiaDocumentSeries, type Round, type RoundDocumentsResult, type SeriesId } from "@/domain/types";
 import { defaultContext, errorMessage } from "@/server/schedule/sources/http";
 import { eventMatchesRound, fetchFiaDocuments, FIA_DOCUMENT_PAGES, type FiaEventDocuments } from "./fia";
 import { fiaDocumentsTag } from "./tags";
-import { checkFiaDocument } from "./viewer";
+import { fiaDocumentSource } from "./files";
+import { matchDocumentLink } from "./link";
 
-export { matchDocumentPage, type DocumentPageMatch } from "./page";
 export { syncFiaDocuments, type DocumentsSyncResult } from "./sync";
 export { fiaDocumentsTag } from "./tags";
-export { fiaDocumentSource, serveFiaDocument } from "./viewer";
+export { fiaDocumentSource } from "./files";
 
 
 /** Failures are cached briefly: a retry a minute later, without hammering fia.com while it is down. */
 const FAILURE_LIFE = { stale: 60, revalidate: 60, expire: 300 };
-/** The FIA issues corrections as new files, so a file it has stays there. */
-const FILE_FOUND_LIFE = { stale: 3600, revalidate: 86_400, expire: 7 * 86_400 };
-const FILE_MISSING_LIFE = { stale: 300, revalidate: 3600, expire: 86_400 };
 
 type LoadedListing = { ok: true; listing: FiaEventDocuments } | { ok: false };
 
@@ -65,34 +64,28 @@ async function seriesListing(series: FiaDocumentSeries): Promise<LoadedListing> 
 }
 
 /**
- * Whether a document file no longer in the listing is still on fia.com, for older viewer links. Only a
- * clear "not there" counts as missing: if fia.com can't be asked, the page is shown and asked again soon.
+ * Where a document link (/<series>/documents/<slug>) goes: the PDF on fia.com, or null when the slug names
+ * no document we know. The Series' current fia.com listing is checked first, then fia_documents (kept for
+ * 30 days by the sync) for an earlier Round's link, such as one in a Document Alert.
  */
-export async function fiaDocumentExists(file: string): Promise<boolean> {
-  "use cache";
-  const status = await checkFiaDocument(file);
-  cacheLife(status === "found" ? FILE_FOUND_LIFE : status === "missing" ? FILE_MISSING_LIFE : FAILURE_LIFE);
-  return status !== "missing";
-}
-
-/**
- * Whether /documents may relay a file: one the site has linked to, so a made-up name never reaches fia.com.
- * Known means in a Series' current fia.com listing (cached), or recorded in fia_documents by the sync, which
- * keeps every document listed during a Round, so older viewer links still open. Without a database (local
- * dev) or when it can't be read, the cached fia.com check an older link's viewer page makes decides instead.
- */
-export async function isKnownDocumentFile(file: string): Promise<boolean> {
-  const listings = await Promise.all(FIA_DOCUMENT_SERIES.map(seriesListing));
-  if (listings.some((loaded) => loaded.ok && loaded.listing.documents.some((d) => d.file === file))) return true;
+export async function fiaDocumentLink(series: FiaDocumentSeries, slug: string): Promise<string | null> {
+  const loaded = await seriesListing(series);
+  const match = matchDocumentLink(slug, loaded.ok ? loaded.listing : null);
+  if (match.kind === "file") return fiaDocumentSource(match.file);
+  if (match.kind === "unknown") return null;
 
   const db = getDb();
-  if (db) {
-    try {
-      const rows = await db.select({ file: fiaDocuments.file }).from(fiaDocuments).where(eq(fiaDocuments.file, file)).limit(1);
-      return rows.length > 0;
-    } catch (error) {
-      console.warn(`[documents] fia_documents lookup failed: ${errorMessage(error)}`);
-    }
+  if (!db) return null;
+  try {
+    const number = /^\d+$/.test(match.id) ? Number(match.id) : null;
+    const rows = await db
+      .select({ event: fiaDocuments.event, number: fiaDocuments.number, file: fiaDocuments.file })
+      .from(fiaDocuments)
+      .where(and(eq(fiaDocuments.series, series), isNotNull(fiaDocuments.file), number === null ? undefined : eq(fiaDocuments.number, number)));
+    const row = rows.find((r) => fiaEventSlug(r.event) === match.event && fiaDocumentId(r) === match.id);
+    return row?.file ? fiaDocumentSource(row.file) : null;
+  } catch (error) {
+    console.warn(`[documents] fia_documents lookup failed: ${errorMessage(error)}`);
+    return null;
   }
-  return fiaDocumentExists(file);
 }

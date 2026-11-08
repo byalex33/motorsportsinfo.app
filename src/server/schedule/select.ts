@@ -2,6 +2,7 @@
 import { getCircuit } from "@/data/circuits";
 import { FEATURED_ROUND_GRACE_MINUTES, isNumberedRound } from "@/domain/series";
 import type { Circuit, FeaturedRoundResult, Round, Session } from "@/domain/types";
+import { everySessionCancelled } from "@/lib/round-status";
 import type { SessionWithContext } from "./index";
 import { addDays, MINUTE, trackMidnight } from "./time";
 import type { RoundWithContext, RoundWithSessions } from "./types";
@@ -41,7 +42,7 @@ function firstInstant(r: RoundWithContext): number {
   return starts.length > 0 ? Math.min(...starts) : roundOpensAt(r).getTime();
 }
 
-const allCancelled = (r: RoundWithContext) => r.sessions.length > 0 && r.sessions.every((s) => s.status === "cancelled");
+const allCancelled = (r: RoundWithContext) => everySessionCancelled(r.sessions);
 
 /** Rounds that haven't finished yet (featured-grace rule), in calendar order. */
 export function unfinishedRounds(rounds: RoundWithContext[], now: Date): RoundWithContext[] {
@@ -57,6 +58,8 @@ export function unfinishedRounds(rounds: RoundWithContext[], now: Date): RoundWi
  * wins over the count.
  */
 function roundNumber(target: RoundWithContext, rounds: RoundWithContext[]): number | null {
+  // A cancelled Round is not given a place. Looking it up in the numbered list used to yield 0.
+  if (allCancelled(target)) return null;
   const official = /^Round (\d+)$/.exec(target.round.name);
   if (official) return Number(official[1]);
   if (!isNumberedRound(target.round.series, target.round.name)) return null;

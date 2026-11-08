@@ -10,8 +10,8 @@ const SPORTSTIMES: DataCredit = { label: "sportstimes/f1", href: "https://github
 /** Where each Series' schedule comes from (ADR 0001). */
 export const DATA_CREDITS: Record<SeriesId, DataCredit> = {
   f1: { label: "OpenF1", href: "https://openf1.org" },
-  f2: { label: "FIA Formula 2", href: "https://www.fiaformula2.com" },
-  f3: { label: "FIA Formula 3", href: "https://www.fiaformula3.com" },
+  f2: SPORTSTIMES,
+  f3: SPORTSTIMES,
   wec: { label: "FIA WEC", href: "https://www.fiawec.com" },
   fe: SPORTSTIMES,
   indycar: SPORTSTIMES,

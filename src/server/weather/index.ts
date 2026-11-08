@@ -4,7 +4,6 @@ import { cacheLife } from "next/cache";
 import type { Circuit, ForecastResult } from "@/domain/types";
 import { fetchHourlyForecast, resolveSessionForecast, roundCoord, type HourlyForecast } from "./open-meteo";
 
-const ONE_HOUR_S = 60 * 60;
 /** Failures are cached briefly: a retry a minute later, without hammering Open-Meteo while it is down. */
 const FAILURE_LIFE = { stale: 60, revalidate: 60, expire: 300 };
 
@@ -36,12 +35,12 @@ async function cachedSessionForecast(lat: number, lon: number, startsAt: string)
   return resolveSessionForecast(loaded.hourly, startsAt, new Date());
 }
 
-// One Open-Meteo request per Circuit covers all its Sessions. The in-memory `use cache` entry is
-// backed by the fetch data cache (200 responses only), which persists across serverless instances.
+// One Open-Meteo request per Circuit covers all its Sessions. `use cache` is the only cache: the
+// fetch itself is no-store, so a stale Open-Meteo response cannot be revalidated with its timeout removed.
 async function circuitHourlyForecast(lat: number, lon: number): Promise<LoadedForecast> {
   "use cache";
   try {
-    const hourly = await fetchHourlyForecast(lat, lon, { next: { revalidate: ONE_HOUR_S } });
+    const hourly = await fetchHourlyForecast(lat, lon);
     cacheLife("hours");
     return { ok: true, hourly };
   } catch (error) {

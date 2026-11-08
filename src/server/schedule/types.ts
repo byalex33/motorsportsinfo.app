@@ -48,7 +48,7 @@ export interface RoundWithSessions {
 /** One source's view of a Series, normalised. */
 export interface SourceSchedule {
   series: SeriesId;
-  /** e.g. "openf1", "jolpica", "fiaformula2", "sportstimes", "fiawec". */
+  /** e.g. "openf1", "jolpica", "sportstimes", "fiawec". */
   source: string;
   isFallback: boolean;
   rounds: RoundWithSessions[];

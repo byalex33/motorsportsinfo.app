@@ -48,6 +48,7 @@ export function RoundHero({
   circuit,
   countdown,
   lead,
+  cancelled = false,
 }: {
   round: Round;
   /** null for a Round the Series doesn't number: the season is shown instead. */
@@ -56,14 +57,17 @@ export function RoundHero({
   countdown: ReactNode;
   /** A sentence under the title. Round pages use it so the timetable is in the HTML, not only the title. */
   lead?: string;
+  /** Every Session was cancelled. The label says so instead of a round number. */
+  cancelled?: boolean;
 }) {
   // F2 and F3 Rounds are already named "Round 13", and NASCAR's exhibition races aren't numbered: the label
-  // then shows the season instead.
+  // then shows the season instead. A cancelled Round is not numbered at all.
   const namedByNumber = round.name === `Round ${roundNumber}`;
+  const label = cancelled ? "Cancelled" : namedByNumber || roundNumber === null ? `${round.season} season` : `Round ${roundNumber}`;
   return (
     <section className="flex flex-col items-center text-center">
-      <p className="eyebrow enter-rise text-muted-foreground" style={enterDelay(ENTER.eyebrow)}>
-        {namedByNumber || roundNumber === null ? `${round.season} season` : `Round ${roundNumber}`}
+      <p className={`eyebrow enter-rise ${cancelled ? "text-destructive" : "text-muted-foreground"}`} style={enterDelay(ENTER.eyebrow)}>
+        {label}
       </p>
       <h1 className="mt-4 max-w-4xl text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
         <RevealWords text={round.name} />

@@ -2,6 +2,7 @@
 import { getCircuit } from "@/data/circuits";
 import type { Round, Session } from "@/domain/types";
 import type { rounds, sessions } from "@/db/schema";
+import { everySessionCancelled } from "@/lib/round-status";
 import { assignRoundPageSlugs, type RoundPageSource } from "@/lib/seo/round-page";
 import type { RoundWithSessions } from "./types";
 
@@ -60,21 +61,31 @@ export function roundToRow(round: Round, now: Date): typeof rounds.$inferInsert 
  * Rounds the sync is inserting or updating) is published over `published`. Slugs are assigned over the
  * whole published schedule, stored slugs included, so the collision suffixes match what pages derive. A
  * Round whose Circuit is unknown is not shown, so it gets none until its Circuit is known.
+ *
+ * `sessions` are every Session once the sync's write is done. A Round whose every Session is cancelled
+ * gets no stored slug: pages keep it off the plain slug when the Round that is run needs it (see
+ * assignRoundPageSlugs), and a stored slug would hold that place for good.
  */
-export function pageSlugsToStore(published: readonly Round[], written: readonly Round[]): Map<string, string> {
+export function pageSlugsToStore(
+  published: readonly Round[],
+  written: readonly Round[],
+  sessions: readonly Pick<Session, "roundId" | "status">[] = [],
+): Map<string, string> {
   const after = new Map(published.map((round) => [round.id, round]));
   // A source's Round carries no page slug: the published one, if any, stays.
   for (const round of written) after.set(round.id, { ...round, pageSlug: after.get(round.id)?.pageSlug });
+  const byRound = new Map<string, Pick<Session, "status">[]>();
+  for (const session of sessions) byRound.set(session.roundId, [...(byRound.get(session.roundId) ?? []), session]);
   const sources: RoundPageSource[] = [];
   for (const round of after.values()) {
     const circuit = getCircuit(round.circuitId);
-    if (circuit) sources.push({ round, circuit });
+    if (circuit) sources.push({ round, circuit, sessions: byRound.get(round.id) });
   }
   const slugs = assignRoundPageSlugs(sources);
   const out = new Map<string, string>();
-  for (const { round } of sources) {
+  for (const { round, sessions: own } of sources) {
     const slug = slugs.get(round.id);
-    if (!round.pageSlug && slug) out.set(round.id, slug);
+    if (!round.pageSlug && slug && !everySessionCancelled(own)) out.set(round.id, slug);
   }
   return out;
 }

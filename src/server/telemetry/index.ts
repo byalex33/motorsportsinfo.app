@@ -4,6 +4,7 @@
 // OpenF1's 30 req/min free tier directly.
 import { cacheLife } from "next/cache";
 import type { LapComparison, Session, SessionTelemetry, TelemetryLap } from "@/domain/types";
+import { UPSTREAM_BUDGET_MS, withDeadline } from "@/server/deadline";
 import { findOpenF1Session, openF1Get, OPENF1_PENDING_LIFE } from "@/server/openf1";
 import { errorMessage } from "@/server/schedule/sources/http";
 import { compareLaps } from "./compare";
@@ -33,29 +34,37 @@ export async function getSessionTelemetry(season: number, session: Pick<Session,
 // when the caller catches it.
 async function cachedSessionTelemetry(season: number, type: Session["type"], startsAt: string): Promise<SessionTelemetryResult> {
   "use cache";
-  const match = await findOpenF1Session(season, { type, startsAt });
-  if (!match) {
-    cacheLife(OPENF1_PENDING_LIFE);
-    return { kind: "unavailable" };
-  }
-  const key = match.session_key;
+  // The Session lookup plus laps, drivers and the classification share one budget so a slow OpenF1
+  // cannot hold this fill for the whole prerender limit.
   try {
-    const laps = await openF1Get<OpenF1Lap>(`laps?session_key=${key}`);
-    const drivers = await openF1Get<OpenF1TelemetryDriver>(`drivers?session_key=${key}`);
-    const classification = await openF1Get<OpenF1Classified>(`session_result?session_key=${key}`);
-    if (laps.length === 0 || drivers.length === 0) {
-      cacheLife(OPENF1_PENDING_LIFE);
-      return { kind: "unavailable" };
-    }
-    // The classification can still change (penalties), so this is re-read hourly.
-    if (classification.length > 0) cacheLife("hours");
-    else cacheLife(OPENF1_PENDING_LIFE);
-    return { kind: "ready", sessionKey: key, telemetry: parseSessionTelemetry(laps, drivers, classification) };
+    const loaded = await withDeadline(loadSessionTelemetry(season, type, startsAt), UPSTREAM_BUDGET_MS, "OpenF1 telemetry");
+    if (loaded.life === "hours") cacheLife("hours");
+    else cacheLife(loaded.life);
+    return loaded.result;
   } catch (error) {
-    console.warn(`[telemetry] OpenF1 laps unavailable for session ${key}: ${errorMessage(error)}`);
+    console.warn(`[telemetry] OpenF1 laps unavailable: ${errorMessage(error)}`);
     cacheLife(OPENF1_PENDING_LIFE);
     return { kind: "unavailable" };
   }
+}
+
+async function loadSessionTelemetry(
+  season: number,
+  type: Session["type"],
+  startsAt: string,
+): Promise<{ life: "hours" | typeof OPENF1_PENDING_LIFE; result: SessionTelemetryResult }> {
+  const match = await findOpenF1Session(season, { type, startsAt });
+  if (!match) return { life: OPENF1_PENDING_LIFE, result: { kind: "unavailable" } };
+  const key = match.session_key;
+  const laps = await openF1Get<OpenF1Lap>(`laps?session_key=${key}`);
+  const drivers = await openF1Get<OpenF1TelemetryDriver>(`drivers?session_key=${key}`);
+  const classification = await openF1Get<OpenF1Classified>(`session_result?session_key=${key}`);
+  if (laps.length === 0 || drivers.length === 0) return { life: OPENF1_PENDING_LIFE, result: { kind: "unavailable" } };
+  // The classification can still change (penalties), so this is re-read hourly.
+  return {
+    life: classification.length > 0 ? "hours" : OPENF1_PENDING_LIFE,
+    result: { kind: "ready", sessionKey: key, telemetry: parseSessionTelemetry(laps, drivers, classification) },
+  };
 }
 
 export interface ComparedLap {

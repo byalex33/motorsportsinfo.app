@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DeadlineError } from "@/server/deadline";
 import {
+  FORECAST_ATTEMPT_MS,
   RETRY_DELAY_MS,
   fetchHourlyForecast,
   nearestCompleteHour,
@@ -223,6 +225,50 @@ describe("fetchHourlyForecast", () => {
     const result = await run();
     expect(result.ok).toBe(false);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not use the fetch cache, so a stale revalidation cannot drop the timeout", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit & { next?: unknown }) => {
+      void init;
+      return Response.json(body);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await fetchHourlyForecast(25.49, 51.45);
+    const init = fetchMock.mock.calls[0][1];
+    expect(init?.cache).toBe("no-store");
+    expect(init?.next).toBeUndefined();
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("rejects a response that never arrives instead of waiting it out", async () => {
+    vi.stubGlobal("fetch", () => new Promise(() => {}));
+    const pending = fetchHourlyForecast(25.49, 51.45).then(
+      () => null,
+      (error: unknown) => error,
+    );
+    await vi.advanceTimersByTimeAsync(FORECAST_ATTEMPT_MS);
+    expect(await pending).toBeInstanceOf(DeadlineError);
+  });
+
+  it("rejects a body that never finishes", async () => {
+    vi.stubGlobal(
+      "fetch",
+      async () => new Response(new ReadableStream({ start() {} }), { status: 200, headers: { "content-type": "application/json" } }),
+    );
+    const pending = fetchHourlyForecast(25.49, 51.45).then(
+      () => null,
+      (error: unknown) => error,
+    );
+    await vi.advanceTimersByTimeAsync(FORECAST_ATTEMPT_MS);
+    expect(await pending).toBeInstanceOf(DeadlineError);
+  });
+
+  it("does not retry a non-JSON body", async () => {
+    const fetchMock = vi.fn(async () => new Response("Unexpected error", { status: 200, headers: { "content-type": "text/plain" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await run();
+    expect(result.ok).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("does not retry other HTTP errors, a timeout or a malformed body", async () => {

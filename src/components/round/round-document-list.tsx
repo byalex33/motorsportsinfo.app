@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { ArrowRightIcon, ArrowUpRightIcon } from "lucide-react";
+import { ArrowUpRightIcon } from "lucide-react";
 import { SpoilerTitle } from "@/components/documents/spoiler";
 import { InlineSkeleton } from "@/components/inline-skeleton";
 import { SegmentPill } from "@/components/motion/segment-pill";
@@ -23,7 +22,7 @@ export interface DocumentListRow {
   kind: FiaDocumentKind;
   /** ISO 8601 UTC, or null. */
   publishedAt: string | null;
-  /** Our viewer page (a path), or the PDF on fia.com (an absolute URL) for a document outside the FIA's folder. */
+  /** Our link that redirects to the PDF on fia.com (a path), or the PDF itself for a document outside the FIA's folder. */
   href: string;
 }
 
@@ -126,7 +125,6 @@ function DocumentRow({
   isNew: boolean;
 }) {
   const onOpen = () => track("fia_document_opened", { series, kind: doc.kind });
-  const inViewer = doc.href.startsWith("/");
   const rowClass = cn(
     "group grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 py-3.5 pr-2.5 pl-2.5 transition-colors outline-none hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:items-center sm:py-3.5 sm:pr-0 sm:pl-0",
     ROW,
@@ -164,29 +162,17 @@ function DocumentRow({
       </span>
 
       <span className="pt-0.5 sm:pt-0 sm:pr-3">
-        {inViewer ? (
-          <ArrowRightIcon className={cn(icon, "group-hover:translate-x-0.5")} aria-hidden />
-        ) : (
-          <>
-            <ArrowUpRightIcon className={cn(icon, "group-hover:translate-x-0.5 group-hover:-translate-y-0.5")} aria-hidden />
-            <span className="sr-only">(PDF on fia.com, opens in a new tab)</span>
-          </>
-        )}
+        <ArrowUpRightIcon className={cn(icon, "group-hover:translate-x-0.5 group-hover:-translate-y-0.5")} aria-hidden />
+        <span className="sr-only">(PDF on fia.com, opens in a new tab)</span>
       </span>
     </>
   );
 
   return (
     <li className={cn("enter-rise sm:grid", ROW)} style={staggerDelay(index + 1, ENTER.rows + 90)}>
-      {inViewer ? (
-        <Link href={doc.href} onClick={onOpen} className={rowClass}>
-          {body}
-        </Link>
-      ) : (
-        <a href={doc.href} target="_blank" rel="noopener noreferrer" onClick={onOpen} className={rowClass}>
-          {body}
-        </a>
-      )}
+      <a href={doc.href} target="_blank" rel="noopener noreferrer" onClick={onOpen} className={rowClass}>
+        {body}
+      </a>
     </li>
   );
 }

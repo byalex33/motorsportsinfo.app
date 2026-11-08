@@ -8,8 +8,10 @@ import { runAlerts } from "@/server/alerts/run";
 import { UNSENT_PUSHES_TAG, planAlertsRun } from "@/server/alerts/wake";
 import { isCronRequest } from "@/server/cron";
 
-// runAlerts stops claiming work RUN_BUDGET_MS (45 s) in, so what it claimed can still be sent within this.
-export const maxDuration = 60;
+// runAlerts stops claiming work RUN_BUDGET_MS (45 s) in, so what it claimed can still be sent within this, and
+// its claims last CLAIM_LEASE_MS, this long: work a run claimed but never finished is taken again after it.
+// Runs started a minute apart may overlap; their claims keep them from sending the same push.
+export const maxDuration = 300;
 
 export async function GET(request: Request) {
   if (!isCronRequest(request)) {

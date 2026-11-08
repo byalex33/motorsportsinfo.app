@@ -3,6 +3,7 @@
 // their official results page instead (officialResultsUrl in src/domain/series.ts).
 import { cacheLife } from "next/cache";
 import type { SeriesId, Session, SessionResult } from "@/domain/types";
+import { UPSTREAM_BUDGET_MS, withDeadline } from "@/server/deadline";
 import { matchOpenF1Session, openF1Get, openF1Sessions, OPENF1_PENDING_LIFE } from "@/server/openf1";
 import { errorMessage } from "@/server/schedule/sources/http";
 import { parseOpenF1Result, type OpenF1Driver, type OpenF1SessionResult } from "./openf1";
@@ -27,35 +28,38 @@ export async function getSessionResults(series: SeriesId, season: number, finish
 // function fails the prerender even when the caller catches it, and OpenF1 does answer 429 at build time.
 async function cachedF1Results(season: number, sessions: ResultSession[]): Promise<Record<string, SessionResult>> {
   "use cache";
+  // Sessions, then results, then drivers: three reads in this one fill. Each may take the source
+  // timeout, which together is longer than a prerender allows, so they share one budget.
+  let out: Record<string, SessionResult>;
+  try {
+    out = await withDeadline(loadF1Results(season, sessions), UPSTREAM_BUDGET_MS, "OpenF1 results");
+  } catch (error) {
+    console.warn(`[results] OpenF1 results unavailable for ${season}: ${errorMessage(error)}`);
+    cacheLife(OPENF1_PENDING_LIFE);
+    return {};
+  }
+  // Results can still change after the fact (penalties), so even a complete set is re-read hourly.
+  if (Object.keys(out).length === sessions.length) cacheLife("hours");
+  else cacheLife(OPENF1_PENDING_LIFE);
+  return out;
+}
+
+async function loadF1Results(season: number, sessions: ResultSession[]): Promise<Record<string, SessionResult>> {
   const candidates = (await openF1Sessions(season)) ?? [];
   const matched = sessions.flatMap((session) => {
     const match = matchOpenF1Session(session, candidates);
     return match ? [{ session, key: match.session_key, meeting: match.meeting_key }] : [];
   });
-  if (matched.length === 0) {
-    cacheLife(OPENF1_PENDING_LIFE);
-    return {};
-  }
+  if (matched.length === 0) return {};
 
   const meeting = matched[0].meeting;
-  let results: OpenF1SessionResult[];
-  let drivers: OpenF1Driver[];
-  try {
-    results = await openF1Get(`session_result?meeting_key=${meeting}`);
-    drivers = await openF1Get(`drivers?meeting_key=${meeting}`);
-  } catch (error) {
-    console.warn(`[results] OpenF1 results unavailable for meeting ${meeting}: ${errorMessage(error)}`);
-    cacheLife(OPENF1_PENDING_LIFE);
-    return {};
-  }
+  const results = await openF1Get<OpenF1SessionResult>(`session_result?meeting_key=${meeting}`);
+  const drivers = await openF1Get<OpenF1Driver>(`drivers?meeting_key=${meeting}`);
 
   const out: Record<string, SessionResult> = {};
   for (const { session, key } of matched) {
     const result = parseOpenF1Result(key, results, drivers);
     if (result) out[session.id] = result;
   }
-  // Results can still change after the fact (penalties), so even a complete set is re-read hourly.
-  if (Object.keys(out).length === sessions.length) cacheLife("hours");
-  else cacheLife(OPENF1_PENDING_LIFE);
   return out;
 }

@@ -4,7 +4,8 @@ import type { OutgoingPush } from "./types";
 const sendNotification = vi.fn(async (): Promise<unknown> => ({ statusCode: 201 }));
 vi.mock("web-push", () => ({ default: { sendNotification } }));
 
-const { classifyPushError, mapWithConcurrency, sendPush } = await import("./push");
+const { CONFIRMATION_PAYLOAD, classifyConfirmationError, classifyPushError, mapWithConcurrency, sendConfirmationPush, sendPush } =
+  await import("./push");
 // web-push is CommonJS: the real module's functions sit on its default export at runtime.
 const realWebPush = (await vi.importActual<{ default: typeof import("web-push") }>("web-push")).default;
 
@@ -98,5 +99,31 @@ describe("mapWithConcurrency", () => {
 
   it("handles an empty list", async () => {
     expect(await mapWithConcurrency([], 10, async () => 1)).toEqual([]);
+  });
+});
+
+describe("sendConfirmationPush", () => {
+  const target = { endpoint: "https://fcm.googleapis.com/fcm/send/new-device", p256dh: "p256dh", auth: "auth" };
+
+  it("sends the confirmation payload to a push service endpoint", async () => {
+    sendNotification.mockClear();
+    expect(await sendConfirmationPush(target, vapid)).toBe("sent");
+    expect(sendNotification).toHaveBeenCalledWith(
+      { endpoint: target.endpoint, keys: { p256dh: "p256dh", auth: "auth" } },
+      JSON.stringify(CONFIRMATION_PAYLOAD),
+      expect.objectContaining({ vapidDetails: vapid }),
+    );
+  });
+
+  it("refuses an endpoint off the push services without sending", async () => {
+    sendNotification.mockClear();
+    expect(await sendConfirmationPush({ ...target, endpoint: "https://example.com/push" }, vapid)).toBe("refused");
+    expect(sendNotification).not.toHaveBeenCalled();
+  });
+
+  it("takes a 4xx as a refusal, and a 429, a 5xx or a network error as the push service being unavailable", () => {
+    for (const statusCode of [400, 403, 404, 410]) expect(classifyConfirmationError({ statusCode })).toBe("refused");
+    for (const statusCode of [429, 500, 503]) expect(classifyConfirmationError({ statusCode })).toBe("unavailable");
+    expect(classifyConfirmationError(new Error("timeout"))).toBe("unavailable");
   });
 });

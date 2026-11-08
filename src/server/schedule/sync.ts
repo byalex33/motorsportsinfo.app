@@ -7,7 +7,7 @@ import { cacheLife, cacheTag, revalidateTag } from "next/cache";
 import { getDb, type Db } from "@/db/client";
 import { pendingSessionChanges, rounds, scheduleChanges, scheduleFlags, sessions, sourceChecks } from "@/db/schema";
 import { SCHEDULE_OVERRIDES, type ScheduleOverride } from "@/data/overrides";
-import type { Round, SeriesId } from "@/domain/types";
+import type { SeriesId } from "@/domain/types";
 import { decideCheckDue, type CheckDecision } from "./check-due";
 import { loadPublishedSchedule } from "./db-read";
 import { groupSessions, pageSlugsToStore, roundToRow, sessionToRow } from "./db-rows";
@@ -18,6 +18,7 @@ import { withCircuits } from "./select";
 import { fetchSeriesSchedule } from "./sources";
 import { defaultContext, errorMessage, type SourceContext } from "./sources/http";
 import { checkStateTag } from "./tags";
+import type { RoundWithSessions } from "./types";
 
 export interface SyncResult {
   series: SeriesId;
@@ -59,7 +60,7 @@ async function loadState(db: Db, series: SeriesId) {
   return { published: groupSessions(roundRows, sessionRows), pending, openFlags: flagRows, check: checkRows[0] ?? null };
 }
 
-async function writePlan(db: Db, series: SeriesId, plan: SchedulePlan, now: Date, published: Round[]): Promise<void> {
+async function writePlan(db: Db, series: SeriesId, plan: SchedulePlan, now: Date, published: RoundWithSessions[]): Promise<void> {
   // Built as an array of drizzle queries and sent as one neon-http batch (a single transaction).
   const queries = [];
   const written = [...plan.roundInserts, ...plan.roundUpdates];
@@ -69,7 +70,10 @@ async function writePlan(db: Db, series: SeriesId, plan: SchedulePlan, now: Date
   }
   // A Round's page slug is stored once (new Rounds, and Rounds published before it was stored) and never
   // overwritten, so a rename keeps its URL. Same value as the page derived, so no revalidation is needed.
-  for (const [id, pageSlug] of pageSlugsToStore(published, written)) {
+  const sessionsAfter = new Map(published.flatMap((r) => r.sessions).map((s) => [s.id, s]));
+  for (const s of [...plan.sessionInserts, ...plan.sessionUpdates]) sessionsAfter.set(s.id, s);
+  const publishedRounds = published.map((r) => r.round);
+  for (const [id, pageSlug] of pageSlugsToStore(publishedRounds, written, [...sessionsAfter.values()])) {
     queries.push(db.update(rounds).set({ pageSlug }).where(and(eq(rounds.id, id), isNull(rounds.pageSlug))));
   }
   if (plan.sessionInserts.length > 0) {
@@ -271,7 +275,7 @@ async function runCheck(
   const warnings = [...schedule.warnings, ...applied.warnings];
   for (const w of warnings) console.warn(`[sync:${series}] ${w}`);
 
-  await writePlan(db, series, plan, now, state.published.map((r) => r.round));
+  await writePlan(db, series, plan, now, state.published);
   await db
     .update(sourceChecks)
     .set({

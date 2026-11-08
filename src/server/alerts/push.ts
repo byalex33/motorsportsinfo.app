@@ -1,6 +1,6 @@
 import "server-only";
 import webpush from "web-push";
-import type { OutgoingPush } from "./types";
+import type { OutgoingPush, PushPayload } from "./types";
 import { isPushServiceEndpoint } from "./validation";
 
 /** Pushes sent at once. */
@@ -42,22 +42,25 @@ export function classifyPushError(error: unknown): Exclude<PushOutcome, "sent"> 
   return "error";
 }
 
+type Target = { endpoint: string; p256dh: string; auth: string };
+
+/** One Web Push request. Throws what web-push throws (a WebPushError with statusCode for an HTTP refusal). */
+async function deliver(target: Target, payload: PushPayload, ttlSeconds: number, vapid: VapidConfig): Promise<void> {
+  await webpush.sendNotification({ endpoint: target.endpoint, keys: { p256dh: target.p256dh, auth: target.auth } }, JSON.stringify(payload), {
+    vapidDetails: vapid,
+    TTL: ttlSeconds,
+    urgency: "high",
+    contentEncoding: "aes128gcm",
+    timeout: 10_000,
+  });
+}
+
 export async function sendPush(push: OutgoingPush, vapid: VapidConfig): Promise<PushOutcome> {
   const { subscription, payload, ttlSeconds } = push;
   // Rows saved before the push service check could point anywhere: never send to them, and drop them.
   if (!isPushServiceEndpoint(subscription.endpoint)) return "gone";
   try {
-    await webpush.sendNotification(
-      { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } },
-      JSON.stringify(payload),
-      {
-        vapidDetails: vapid,
-        TTL: ttlSeconds,
-        urgency: "high",
-        contentEncoding: "aes128gcm",
-        timeout: 10_000,
-      },
-    );
+    await deliver(subscription, payload, ttlSeconds, vapid);
     return "sent";
   } catch (error) {
     const outcome = classifyPushError(error);
@@ -84,4 +87,37 @@ export async function mapWithConcurrency<T, R>(items: readonly T[], limit: numbe
   }
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
   return results;
+}
+
+/** The first push to a device, sent before it is saved (see upsertSubscription). */
+export const CONFIRMATION_PAYLOAD: PushPayload = {
+  title: "Alerts are on",
+  body: "This device will get the alerts you chose. You can change them on the Alerts page.",
+  url: "/alerts",
+  tag: "alerts:confirmed",
+};
+
+export type ConfirmOutcome = "sent" | "refused" | "unavailable";
+
+/**
+ * Sends a new device its confirmation push, which proves the subscription is real and was made for this
+ * site's VAPID key: a push service refuses (4xx) an endpoint that does not exist, or one made for another
+ * key. "unavailable" when it could not be asked (a timeout, a 5xx), so a hiccup is not taken as a refusal.
+ */
+export async function sendConfirmationPush(target: Target, vapid: VapidConfig): Promise<ConfirmOutcome> {
+  if (!isPushServiceEndpoint(target.endpoint)) return "refused";
+  try {
+    await deliver(target, CONFIRMATION_PAYLOAD, 300, vapid);
+    return "sent";
+  } catch (error) {
+    const outcome = classifyConfirmationError(error);
+    if (outcome === "unavailable") console.warn("[alerts] confirmation push failed", describeError(error));
+    return outcome;
+  }
+}
+
+/** A 4xx (other than 429, rate limited) is the push service saying no; anything else may be temporary. */
+export function classifyConfirmationError(error: unknown): Exclude<ConfirmOutcome, "sent"> {
+  const status = typeof error === "object" && error !== null ? (error as { statusCode?: unknown }).statusCode : undefined;
+  return typeof status === "number" && status >= 400 && status < 500 && status !== 429 ? "refused" : "unavailable";
 }

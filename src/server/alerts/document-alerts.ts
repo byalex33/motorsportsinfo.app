@@ -53,7 +53,7 @@ export function wantsDocument(alerts: DocumentAlerts, series: FiaDocumentSeries,
   return level === "all" || (level === "stewards" && kind === "stewards");
 }
 
-/** The document's viewer page, addressed by event and number so the URL never spells out the title. */
+/** The document's link, which redirects to its PDF on fia.com, addressed by event and number so the URL never spells out the title. */
 function documentUrl(doc: DocumentAlertRow): string {
   return doc.file ? fiaDocumentPagePath(doc.series, doc.event, fiaDocumentId(doc)) : `/${doc.series}#documents`;
 }

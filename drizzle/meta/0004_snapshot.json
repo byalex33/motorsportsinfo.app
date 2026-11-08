@@ -1,5 +1,5 @@
 {
-  "id": "761f817d-b91f-486d-a50f-0f2e57bacbd7",
+  "id": "25fdbb29-f270-4ead-9998-53d8bbd1f97a",
   "prevId": "72c5c85f-e3d1-481b-8171-a6d589bb7247",
   "version": "7",
   "dialect": "postgresql",
@@ -74,6 +74,18 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "pending_until": {
+          "name": "pending_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sent_through": {
+          "name": "sent_through",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -139,6 +151,60 @@
         }
       },
       "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.push_signup_attempts": {
+      "name": "push_signup_attempts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "client": {
+          "name": "client",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempted_at": {
+          "name": "attempted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "push_signup_attempts_client_idx": {
+          "name": "push_signup_attempts_client_idx",
+          "columns": [
+            {
+              "expression": "client",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "attempted_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -294,6 +360,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "pending_until": {
+          "name": "pending_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -385,12 +457,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "page_slug": {
-          "name": "page_slug",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp with time zone",
@@ -457,6 +523,18 @@
         "notified_at": {
           "name": "notified_at",
           "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pending_until": {
+          "name": "pending_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sent_through": {
+          "name": "sent_through",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         }

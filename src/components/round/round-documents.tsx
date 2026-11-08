@@ -11,7 +11,7 @@ interface RoundDocumentsProps {
 }
 
 /**
- * The FIA's documents for the Featured Round, newest first, opening in our viewer page. A server component:
+ * The FIA's documents for the Featured Round, newest first, each opening the FIA's PDF on fia.com. A server component:
  * only what a row shows goes to the browser, not the listing's fia.com URLs and file names.
  */
 export function RoundDocuments({ series, documents, circuitTimeZone }: RoundDocumentsProps) {
@@ -61,7 +61,10 @@ export function RoundDocuments({ series, documents, circuitTimeZone }: RoundDocu
   );
 }
 
-/** Documents in the FIA's folder open in our viewer page; anything else links to fia.com. */
+/**
+ * Documents in the FIA's folder link through /<series>/documents/<round>-<number>, which redirects to the PDF
+ * on fia.com, so the link never shows the file name (a spoiler); anything else links to fia.com directly.
+ */
 function listRows(series: SeriesId, { event, documents }: Extract<RoundDocumentsResult, { kind: "documents" }>): DocumentListRow[] {
   const ids = fiaDocumentIds(documents);
   return documents.map((doc, i) => ({

@@ -12,6 +12,7 @@ import type { SeriesId } from "@/domain/types";
 import { roundBreadcrumbJsonLd, roundEventName, roundJsonLd } from "@/lib/seo/json-ld";
 import { pageMetadata } from "@/lib/seo/metadata";
 import { roundPagePath, roundPageSeo } from "@/lib/seo/round-page";
+import { everySessionCancelled } from "@/lib/round-status";
 import { absoluteUrl } from "@/lib/site";
 import { isSeriesId } from "@/lib/series-id";
 import { calendarFeedPath } from "@/server/alerts/selection";
@@ -41,29 +42,31 @@ function canonicalRoundParams(series: string, season: string, round: string): { 
 }
 
 /**
- * No Round has this page slug: redirect to the Round it most likely meant (an old link from before a
- * rename, the other source's name, the Circuit id), or 404.
+ * The Round, or a 308 to the Round the slug most likely meant (an old collision suffix, an old link from
+ * before a rename, the other source's name, the Circuit id), or a 404.
  */
-async function missingRound(series: SeriesId, season: number, pageSlug: string): Promise<never> {
-  const path = await getRoundPageRedirect(series, season, pageSlug);
-  if (path) permanentRedirect(path);
+async function loadRoundPage(series: SeriesId, season: number, pageSlug: string) {
+  const data = await getRoundPageData(series, season, pageSlug);
+  if (data) return data;
+  const redirectTo = await getRoundPageRedirect(series, season, pageSlug);
+  if (redirectTo) permanentRedirect(redirectTo);
   notFound();
 }
 
 export async function generateMetadata({ params }: PageProps<"/[series]/[season]/[round]">): Promise<Metadata> {
   const raw = await params;
   const { series, season, round } = canonicalRoundParams(raw.series, raw.season, raw.round);
-  const data = await getRoundPageData(series, season, round);
-  // notFound() here as well as in the page: with ensureStatic, a 404 whose metadata resolved normally keeps
-  // the root layout's title instead of not-found.tsx's "Page not found".
-  if (!data) return missingRound(series, season, round);
-  const { title, description } = roundPageSeo(series, data.round, data.circuit, data.pageSlug);
+  const data = await loadRoundPage(series, season, round);
+  const cancelled = everySessionCancelled(data.sessions);
+  const { title, description } = roundPageSeo(series, data.round, data.circuit, data.pageSlug, cancelled);
   const calendar = calendarFeedPath({ [series]: SERIES[series].defaultReminderTypes });
   return pageMetadata({
     title,
     description,
     path: data.path,
     absoluteTitle: true,
+    // A cancelled Round keeps a page so the old URL does not 404, but it is not a result to index.
+    robots: cancelled ? { index: false, follow: true } : undefined,
     alternates: calendar ? { types: { "text/calendar": calendar } } : undefined,
   });
 }
@@ -71,15 +74,14 @@ export async function generateMetadata({ params }: PageProps<"/[series]/[season]
 export default async function RoundPage({ params }: PageProps<"/[series]/[season]/[round]">) {
   const raw = await params;
   const { series, season, round: pageSlug } = canonicalRoundParams(raw.series, raw.season, raw.round);
-  const [data, { featured }] = await Promise.all([getRoundPageData(series, season, pageSlug), getSeriesPageData(series)]);
-  if (!data) return missingRound(series, season, pageSlug);
+  const [data, { featured }] = await Promise.all([loadRoundPage(series, season, pageSlug), getSeriesPageData(series)]);
 
   const { round, circuit, sessions, forecasts, results, documents, renderedAt, path } = data;
   // The Results route and the Telemetry pages only know the Featured Round's Sessions (they are looked up
   // by Session slug, "race"). On any other Round the chips would open the Featured Round's data, so its
   // RESULTS chips link to the official results instead and there is no TELEMETRY chip.
   const isFeatured = featured.kind === "round" && featured.round.id === round.id;
-  const seo = roundPageSeo(series, round, circuit, data.pageSlug);
+  const seo = roundPageSeo(series, round, circuit, data.pageSlug, everySessionCancelled(sessions));
   // A Round page for a past Round has no FIA listing of its own (fia.com shows the current Round). Hide
   // the empty state there; still show a failure to load, and the documents when they match this Round.
   const documentsForRound = documents?.kind === "none" ? null : documents;

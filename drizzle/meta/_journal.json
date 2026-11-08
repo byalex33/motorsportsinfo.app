@@ -33,8 +33,15 @@
     {
       "idx": 4,
       "version": "7",
+      "when": 1794067516241,
+      "tag": "0004_alerts_claims_and_signup_limit",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
       "when": 1794101957978,
-      "tag": "0004_round_page_slug",
+      "tag": "0005_round_page_slug",
       "breakpoints": true
     }
   ]

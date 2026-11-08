@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
   for (const d of documents) {
     if (d.status !== "ok" || d.added === 0) continue;
     if (d.toNotify > 0) unsentPushes = true;
-    // The document a push opens should already be on the Series page and in the viewer.
+    // The document a push opens should already be on the Series page, and its link should find it.
     revalidateTag(fiaDocumentsTag(d.series), { expire: 0 });
     revalidatePath(`/${d.series}`, "layout");
   }
