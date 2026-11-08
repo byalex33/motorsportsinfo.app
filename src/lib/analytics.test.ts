@@ -63,6 +63,9 @@ describe("track", () => {
     track("units_changed", { temp: "c", wind: "kmh" });
     initAnalytics();
     initAnalytics();
+    // Tracked while the SDK is still loading: held, then forwarded in order.
+    track("radar_opened", { series: "wec" });
+    await vi.dynamicImportSettled();
     track("series_selected", { series: "f1" });
 
     expect(createTracwell).toHaveBeenCalledTimes(1);
@@ -73,6 +76,7 @@ describe("track", () => {
     });
     expect(sdkTrack.mock.calls).toEqual([
       ["units_changed", { temp: "c", wind: "kmh" }],
+      ["radar_opened", { series: "wec" }],
       ["series_selected", { series: "f1" }],
     ]);
   });
@@ -85,6 +89,20 @@ describe("track", () => {
     });
     const { track, initAnalytics } = await load();
     initAnalytics();
+    await vi.dynamicImportSettled();
     expect(() => track("push_disabled", { series_count: 0 })).not.toThrow();
+  });
+
+  it("turns itself off when the SDK cannot be created", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    stubBrowser("motorsportsinfo.app");
+    createTracwell.mockImplementationOnce(() => {
+      throw new Error("boom");
+    });
+    const { track, initAnalytics } = await load();
+    initAnalytics();
+    await vi.dynamicImportSettled();
+    track("series_selected", { series: "f1" });
+    expect(sdkTrack).not.toHaveBeenCalled();
   });
 });

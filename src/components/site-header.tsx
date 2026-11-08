@@ -3,13 +3,11 @@
 import { BellIcon, CalendarDaysIcon, ChevronDownIcon, ChevronsUpDownIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, ViewTransition, type ReactElement, type ReactNode } from "react";
+import { ViewTransition, type ReactElement, type ReactNode } from "react";
 import { BrandMark } from "@/components/brand-mark";
-import { SeriesPickerContent } from "@/components/series-picker-dialog";
+import { deferredLoader, useDeferredPopup } from "@/components/deferred-popup";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { MAIN_SERIES_IDS, OTHER_SERIES_IDS, SERIES } from "@/domain/series";
+import { MAIN_SERIES_IDS, SERIES } from "@/domain/series";
 import type { SeriesId } from "@/domain/types";
 import { isSeriesId } from "@/lib/series-id";
 import { cn } from "@/lib/utils";
@@ -94,9 +92,8 @@ function SeriesNav({ current }: { current: SeriesId | null }) {
   );
 }
 
-/** The Other menu: a button that opens the remaining Series as links. */
-function OtherSeriesMenu({ current }: { current: SeriesId | null }) {
-  const [open, setOpen] = useState(false);
+/** The Other menu button's label and look, shared by its stand-in and the loaded menu (site-header-menus.tsx). */
+export function otherMenuTrigger(current: SeriesId | null, open: boolean) {
   const label = (
     <>
       Other
@@ -106,49 +103,45 @@ function OtherSeriesMenu({ current }: { current: SeriesId | null }) {
       />
     </>
   );
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        aria-label={current ? `Other Series (viewing ${SERIES[current].name})` : "Other Series"}
-        className={cn(
-          navLink,
-          "cursor-pointer",
-          current || open ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+  return {
+    "aria-label": current ? `Other Series (viewing ${SERIES[current].name})` : "Other Series",
+    className: cn(navLink, "cursor-pointer", current || open ? "text-foreground" : "text-muted-foreground hover:text-foreground"),
+    children: current ? <ActiveMarks>{label}</ActiveMarks> : label,
+  };
+}
+
+/** The phone Series switcher button's label and look, shared by its stand-in and the loaded dialog. */
+export function seriesSwitcherTrigger(current: SeriesId | null) {
+  const info = current ? SERIES[current] : null;
+  return {
+    "data-series": current ?? undefined,
+    "aria-label": info
+      ? `${info.shortName}${info.name !== info.shortName ? ` (${info.name})` : ""} — choose another Series`
+      : "Series — choose a Series",
+    className:
+      "flex h-9 min-w-0 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium tracking-tight text-foreground transition-[background-color,scale] duration-200 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring active:scale-95 data-popup-open:bg-muted",
+    children: (
+      <>
+        {info && (
+          <ActiveDot key={current}>
+            <span aria-hidden className="inline-block size-1.5 shrink-0 rounded-full bg-series-gradient" />
+          </ActiveDot>
         )}
-      >
-        {current ? <ActiveMarks>{label}</ActiveMarks> : label}
-      </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={2} className="w-64 gap-0 p-1">
-        <ul>
-          {OTHER_SERIES_IDS.map((id) => {
-            const active = current === id;
-            return (
-              <li key={id} data-series={id}>
-                <Link
-                  href={`/${id}`}
-                  prefetch
-                  onClick={() => setOpen(false)}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "flex items-center gap-2.5 rounded-md px-2.5 py-2 outline-none transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
-                    active && "bg-muted",
-                  )}
-                >
-                  <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-series-gradient" />
-                  <span className="min-w-0">
-                    <span className="block font-medium tracking-tight text-foreground">{SERIES[id].shortName}</span>
-                    {SERIES[id].name !== SERIES[id].shortName && (
-                      <span className="block truncate text-xs text-muted-foreground">{SERIES[id].name}</span>
-                    )}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </PopoverContent>
-    </Popover>
-  );
+        <span className="truncate">{info ? info.shortName : "Series"}</span>
+        <ChevronsUpDownIcon aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
+      </>
+    ),
+  };
+}
+
+// The Popover and Dialog behind these two buttons load after the page is interactive (deferred-popup.ts).
+const loadMenus = deferredLoader(() => import("@/components/site-header-menus"));
+
+/** The Other menu: a button that opens the remaining Series as links. */
+function OtherSeriesMenu({ current }: { current: SeriesId | null }) {
+  const { popup, mount, triggerProps } = useDeferredPopup(loadMenus);
+  if (popup) return <popup.OtherSeriesMenu current={current} {...mount} />;
+  return <button {...triggerProps} {...otherMenuTrigger(current, false)} />;
 }
 
 /**
@@ -156,31 +149,14 @@ function OtherSeriesMenu({ current }: { current: SeriesId | null }) {
  * button that opens the Series picker. The dot pops in again when the Series changes.
  */
 function SeriesSwitcher({ current }: { current: SeriesId | null }) {
-  const [open, setOpen] = useState(false);
-  const info = current ? SERIES[current] : null;
-
+  const { popup, mount, triggerProps } = useDeferredPopup(loadMenus);
   return (
     <nav aria-label="Series" className="min-w-0 sm:hidden">
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger
-          data-series={current ?? undefined}
-          aria-label={
-            info
-              ? `${info.shortName}${info.name !== info.shortName ? ` (${info.name})` : ""} — choose another Series`
-              : "Series — choose a Series"
-          }
-          className="flex h-9 min-w-0 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium tracking-tight text-foreground transition-[background-color,scale] duration-200 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring active:scale-95 data-popup-open:bg-muted"
-        >
-          {info && (
-            <ActiveDot key={current}>
-              <span aria-hidden className="inline-block size-1.5 shrink-0 rounded-full bg-series-gradient" />
-            </ActiveDot>
-          )}
-          <span className="truncate">{info ? info.shortName : "Series"}</span>
-          <ChevronsUpDownIcon aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
-        </DialogTrigger>
-        <SeriesPickerContent current={current} onNavigate={() => setOpen(false)} />
-      </Dialog>
+      {popup ? (
+        <popup.SeriesSwitcherDialog current={current} {...mount} />
+      ) : (
+        <button {...triggerProps} {...seriesSwitcherTrigger(current)} />
+      )}
     </nav>
   );
 }
