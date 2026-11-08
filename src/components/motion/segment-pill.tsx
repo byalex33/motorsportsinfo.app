@@ -48,10 +48,18 @@ export function SegmentPill() {
     };
 
     place();
-    const mutations = new MutationObserver(place);
-    mutations.observe(group, { subtree: true, attributes: true, attributeFilter: ["aria-pressed", "data-checked"] });
     const resizes = new ResizeObserver(place);
-    for (const child of group.children) resizes.observe(child);
+    const observeItems = () => {
+      for (const child of group.children) resizes.observe(child);
+    };
+    // Items can be replaced, such as a deferred popup trigger swapped in for its stand-in (deferred-popup.ts):
+    // follow the new one too.
+    const mutations = new MutationObserver((records) => {
+      if (records.some((record) => record.type === "childList" && record.target === group)) observeItems();
+      place();
+    });
+    mutations.observe(group, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-pressed", "data-checked"] });
+    observeItems();
     return () => {
       mutations.disconnect();
       resizes.disconnect();
