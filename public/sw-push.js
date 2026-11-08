@@ -35,7 +35,8 @@ self.addEventListener("notificationclick", (event) => {
       const sameOrigin = windows.find((client) => new URL(client.url).origin === self.location.origin);
       if (sameOrigin && "navigate" in sameOrigin) {
         const focused = await sameOrigin.focus();
-        return focused.navigate(target);
+        // navigate() rejects for a window this worker does not control: open a new one instead.
+        return focused.navigate(target).catch(() => self.clients.openWindow(target));
       }
       return self.clients.openWindow(target);
     })(),

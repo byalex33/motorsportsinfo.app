@@ -104,7 +104,22 @@ function eventLines({ session, round, circuit }: SessionWithContext, revision: S
   return lines;
 }
 
-/** A complete VCALENDAR document with CRLF line endings, one VEVENT per Session. */
+/**
+ * RFC 5545 needs at least one component in a VCALENDAR, so a feed with no Sessions carries a minimal UTC
+ * VTIMEZONE instead (no event refers to it).
+ */
+const EMPTY_CALENDAR_COMPONENT = [
+  "BEGIN:VTIMEZONE",
+  "TZID:UTC",
+  "BEGIN:STANDARD",
+  "DTSTART:19700101T000000",
+  "TZOFFSETFROM:+0000",
+  "TZOFFSETTO:+0000",
+  "END:STANDARD",
+  "END:VTIMEZONE",
+];
+
+/** A complete VCALENDAR document with CRLF line endings, one VEVENT per Session (or EMPTY_CALENDAR_COMPONENT). */
 export function buildCalendar({ name, description, entries, revisions, now }: CalendarInput): string {
   const lines = [
     "BEGIN:VCALENDAR",
@@ -118,7 +133,9 @@ export function buildCalendar({ name, description, entries, revisions, now }: Ca
     `X-WR-CALDESC:${escapeText(description)}`,
     "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
     "X-PUBLISHED-TTL:PT1H",
-    ...entries.flatMap((entry) => eventLines(entry, revisions.get(entry.session.id), now)),
+    ...(entries.length > 0
+      ? entries.flatMap((entry) => eventLines(entry, revisions.get(entry.session.id), now))
+      : EMPTY_CALENDAR_COMPONENT),
     "END:VCALENDAR",
   ];
   return lines.map(foldLine).join("\r\n") + "\r\n";

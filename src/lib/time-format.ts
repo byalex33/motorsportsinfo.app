@@ -63,6 +63,19 @@ export function zoneOffsetLabel(tz: string, at: Date, locale?: string): string {
   }
 }
 
+/** The labels without repeats or blanks, in first-seen order. */
+export function distinctOffsets(labels: readonly (string | null | undefined)[]): string[] {
+  return [...new Set(labels.filter((label): label is string => !!label))];
+}
+
+/**
+ * The offsets of the instants `starts` in `tz`, without repeats, in order. A Round that crosses a clock
+ * change gets two, e.g. ["GMT+1", "GMT+0"] in Europe/London for the 23–25 Oct 2026 weekend.
+ */
+export function zoneOffsetLabels(tz: string, starts: readonly string[], locale?: string): string[] {
+  return distinctOffsets(starts.map((iso) => zoneOffsetLabel(tz, new Date(iso), locale)));
+}
+
 /** Calendar date key (YYYY-MM-DD) of an instant in `tz`. */
 export function dayKey(iso: string, tz: string): string {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(iso));

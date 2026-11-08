@@ -12,6 +12,20 @@ import { scheduleTag } from "@/server/schedule";
 import { syncSeries, type SyncResult } from "@/server/schedule/sync";
 
 export const maxDuration = 300;
+/**
+ * The schedule checks' deadline, well inside maxDuration. Next applies revalidateTag only once the handler
+ * returns, so a run killed at maxDuration would lose every invalidation; at the deadline the sources still
+ * reading fail instead, and the rest of the run (FIA Documents, revalidation) has a minute left.
+ */
+const SYNC_DEADLINE_MS = 240_000;
+
+/** Makes a Series' newly published schedule visible on the next view. */
+function revalidateSeries(id: SeriesId): void {
+  // Schedules must be correct on the next view (e.g. after a Schedule Change push), so no stale window.
+  revalidateTag(scheduleTag(id), { expire: 0 });
+  // "layout" covers the Series page and each Round page under /<series>/<season>/<round>.
+  revalidatePath(`/${id}`, "layout");
+}
 
 export async function GET(request: NextRequest) {
   if (!isCronRequest(request)) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -27,24 +41,33 @@ export async function GET(request: NextRequest) {
   const force = params.get("force") === "1" || params.get("force") === "true";
 
   // Different hosts per Series, so they run in parallel; each source fetches its own pages sequentially.
-  const results: SyncResult[] = await Promise.all(
-    series.map((id) =>
-      syncSeries(db, id, { force }).catch((error: unknown): SyncResult => {
-        console.error(`[sync:${id}] failed`, error);
-        return { series: id, status: "failed", published: false, error: error instanceof Error ? error.message : String(error) };
-      }),
-    ),
+  // Each Series is revalidated as soon as its own check is done, so a slow one doesn't hold back the rest.
+  const deadline = new AbortController();
+  const timer = setTimeout(
+    () => deadline.abort(new Error(`sync run deadline (${SYNC_DEADLINE_MS / 1000} s) passed`)),
+    SYNC_DEADLINE_MS,
   );
+  let results: SyncResult[];
+  try {
+    results = await Promise.all(
+      series.map((id) =>
+        syncSeries(db, id, { force, signal: deadline.signal })
+          .then((result) => {
+            if (result.published) revalidateSeries(id);
+            return result;
+          })
+          .catch((error: unknown): SyncResult => {
+            console.error(`[sync:${id}] failed`, error);
+            return { series: id, status: "failed", published: false, error: error instanceof Error ? error.message : String(error) };
+          }),
+      ),
+    );
+  } finally {
+    clearTimeout(timer);
+  }
 
   // New Schedule Changes or FIA Documents wake the alerts cron's push pass (see server/alerts/wake.ts).
   let unsentPushes = results.some((r) => (r.summary?.changes ?? 0) > 0);
-  for (const r of results) {
-    if (!r.published) continue;
-    // Schedules must be correct on the next view (e.g. after a Schedule Change push), so no stale window.
-    revalidateTag(scheduleTag(r.series), { expire: 0 });
-    // "layout" covers the Series page and each Round page under /<series>/<season>/<round>.
-    revalidatePath(`/${r.series}`, "layout");
-  }
   if (results.some((r) => r.published)) revalidatePath("/calendar");
 
   // FIA Documents for Document Alerts, after the schedule so a just-published Round is watched. Never fails the sync.

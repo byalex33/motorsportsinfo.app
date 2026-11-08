@@ -61,7 +61,7 @@ export async function fetchRadarFrames(signal?: AbortSignal): Promise<RadarFrame
   return buildRadarFrames(await res.json());
 }
 
-/** "14:20" in the viewer's local time (24-hour). */
+/** "14:20" (24-hour) in `timeZone`, or in the device's zone when it is not given. */
 export function formatFrameClock(time: number, timeZone?: string): string {
   return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone }).format(
     new Date(time * 1000),

@@ -11,7 +11,7 @@ import { staggerDelay } from "@/lib/motion";
 import { useUnitsPref } from "@/lib/prefs";
 import { getRoundStatus, sessionPhase, type SessionPhase } from "@/lib/round-status";
 import { sessionSlug } from "@/lib/session-slug";
-import { formatSessionDay, formatTimeRange, zoneOffsetLabel } from "@/lib/time-format";
+import { distinctOffsets, formatSessionDay, formatTimeRange, zoneOffsetLabel, zoneOffsetLabels } from "@/lib/time-format";
 import type { TrackTimeText } from "@/lib/track-time";
 import { cn } from "@/lib/utils";
 import { LiveDot } from "./round-countdown";
@@ -22,6 +22,8 @@ interface SessionListProps {
   forecasts: Record<string, ForecastResult>;
   /** Ids of the finished Sessions with a Session Result. */
   results: string[];
+  /** Whether finished F1 Sessions get a TELEMETRY chip: the Telemetry pages only know the Featured Round. */
+  showTelemetry?: boolean;
   resultsUrl: string;
   timesConfirmed: boolean;
   /** Null on the server and during hydration: rows then show the server's Track Time text. */
@@ -34,15 +36,31 @@ interface SessionListProps {
 const COLS = "sm:grid sm:grid-cols-[4.5rem_minmax(0,1fr)_auto_auto] sm:gap-x-6";
 const ROW = "sm:col-span-4 sm:grid-cols-subgrid";
 
-export function SessionList({ sessions, forecasts, results, resultsUrl, timesConfirmed, zone, circuitTimeZone, trackTimes }: SessionListProps) {
+export function SessionList({
+  sessions,
+  forecasts,
+  results,
+  showTelemetry = true,
+  resultsUrl,
+  timesConfirmed,
+  zone,
+  circuitTimeZone,
+  trackTimes,
+}: SessionListProps) {
   // Phases only need minute precision; the hero handles the per-second countdown.
   // With times TBC the start/end values are placeholders, so no live/next/finished states.
   const clock = useNow(60_000);
   const now = timesConfirmed ? clock : null;
   const status = now !== null ? getRoundStatus(sessions, now) : null;
   const nextId = status?.kind === "upcoming" ? status.session.id : null;
-  const first = sessions[0];
-  const offset = timesConfirmed && first ? (zone ? zoneOffsetLabel(zone.tz, new Date(first.startsAt)) : (trackTimes[first.id]?.offset ?? null)) : null;
+  // A Round across a clock change has two offsets: then each row shows its own and the header none.
+  const offsets = !timesConfirmed
+    ? []
+    : zone
+      ? zoneOffsetLabels(zone.tz, sessions.map((s) => s.startsAt))
+      : distinctOffsets(sessions.map((s) => trackTimes[s.id]?.offset));
+  const offset = offsets.length === 1 ? offsets[0] : null;
+  const rowOffsets = offsets.length > 1;
 
   return (
     <ol className={cn("divide-y divide-border border-y border-border", COLS)}>
@@ -59,11 +77,13 @@ export function SessionList({ sessions, forecasts, results, resultsUrl, timesCon
           session={session}
           forecast={forecasts[session.id]}
           hasResult={results.includes(session.id)}
+          showTelemetry={showTelemetry}
           resultsUrl={resultsUrl}
           timesConfirmed={timesConfirmed}
           zone={zone}
           zoneKey={zone?.tz ?? circuitTimeZone}
           track={trackTimes[session.id]}
+          showOffset={rowOffsets}
           phase={now === null ? (session.status === "cancelled" ? "cancelled" : null) : sessionPhase(session, now)}
           isNext={session.id === nextId}
         />
@@ -77,11 +97,13 @@ function SessionRow({
   session,
   forecast,
   hasResult,
+  showTelemetry,
   resultsUrl,
   timesConfirmed,
   zone,
   zoneKey,
   track,
+  showOffset,
   phase,
   isNext,
 }: {
@@ -89,12 +111,15 @@ function SessionRow({
   session: TimedSession;
   forecast: ForecastResult | undefined;
   hasResult: boolean;
+  showTelemetry: boolean;
   resultsUrl: string;
   timesConfirmed: boolean;
   zone: DisplayZone | null;
   /** The zone the row's text is in, so text re-animates only when the zone actually changes. */
   zoneKey: string;
   track: TrackTimeText | undefined;
+  /** True when the Round's Sessions have different offsets, so the header cannot carry one. */
+  showOffset: boolean;
   phase: SessionPhase | null;
   isNext: boolean;
 }) {
@@ -141,11 +166,11 @@ function SessionRow({
             <>
               <span className="chip px-0 text-muted-foreground">Finished</span>
               <SessionResultsDialog session={session} hasResult={hasResult} resultsUrl={resultsUrl} />
-              {session.series === "f1" && (
+              {showTelemetry && session.series === "f1" && (
                 // The Telemetry page shows its own spoiler warning, so the chip can link straight to it. Like the
                 // RESULTS chip, the link is a 24 px tap target that takes no more room than the chip inside.
                 <Link href={`/f1/telemetry/${sessionSlug(session)}`} className="group -my-0.5 inline-flex min-h-6 items-center outline-none">
-                  <span className="chip results-chip border border-telemetry/50 bg-telemetry/10 text-telemetry transition-colors [--chip-delay:120ms] [--chip-sheen:var(--telemetry)] group-hover:border-telemetry group-hover:bg-telemetry/20 group-focus-visible:ring-2 group-focus-visible:ring-telemetry/60">
+                  <span className="chip results-chip border border-telemetry/50 bg-telemetry/10 text-telemetry transition-colors [--chip-delay:120ms] [--chip-sheen:var(--telemetry)] group-hover:border-telemetry group-hover:bg-telemetry/12 dark:group-hover:bg-telemetry/20 group-focus-visible:ring-2 group-focus-visible:ring-telemetry/60">
                     <ActivityIcon className="size-3" aria-hidden />
                     Telemetry
                     <span className="sr-only"> for {session.name}</span>
@@ -172,7 +197,7 @@ function SessionRow({
             >
               {cancelled && <span className="sr-only">Was </span>}
               {range}
-              {offset && <span className="sr-only"> {offset}</span>}
+              {offset && <span className={showOffset ? "text-muted-foreground" : "sr-only"}> {offset}</span>}
             </time>
           ) : (
             <InlineSkeleton className="h-4 w-28" />

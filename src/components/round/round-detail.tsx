@@ -21,9 +21,11 @@ export function RoundDetail({
   sessions,
   forecasts,
   results,
+  showTelemetry = true,
   documents,
   renderedAt,
   lead,
+  finishedNote,
   preamble,
 }: {
   series: SeriesId;
@@ -33,9 +35,13 @@ export function RoundDetail({
   sessions: Session[];
   forecasts: Record<string, ForecastResult>;
   results: string[];
+  /** False on a Round page for a Round that is not featured: the Telemetry pages only know the Featured Round. */
+  showTelemetry?: boolean;
   documents: RoundDocumentsResult | null;
   renderedAt: string;
   lead?: string;
+  /** Shown after "Round complete." once every Session has finished. The Series page keeps the default. */
+  finishedNote?: ReactNode;
   /** Breadcrumbs, sitting with the hero so the page's section gap stays below them. */
   preamble?: ReactNode;
 }) {
@@ -52,7 +58,13 @@ export function RoundDetail({
           lead={lead}
           countdown={
             round.sessionTimesConfirmed && sessions.length > 0 ? (
-              <RoundCountdown sessions={sessions} circuitTimeZone={circuit.timeZone} trackTimes={trackTimes} renderedAt={renderedAt} />
+              <RoundCountdown
+                sessions={sessions}
+                circuitTimeZone={circuit.timeZone}
+                trackTimes={trackTimes}
+                renderedAt={renderedAt}
+                finishedNote={finishedNote}
+              />
             ) : null
           }
         />
@@ -63,6 +75,7 @@ export function RoundDetail({
         sessions={sessions}
         forecasts={forecasts}
         results={results}
+        showTelemetry={showTelemetry}
         resultsUrl={officialResultsUrl(series, round.season)}
         timesConfirmed={round.sessionTimesConfirmed}
         circuitTimeZone={circuit.timeZone}

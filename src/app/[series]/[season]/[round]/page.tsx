@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { JsonLd } from "@/components/json-ld";
@@ -14,7 +15,8 @@ import { roundPagePath, roundPageSeo } from "@/lib/seo/round-page";
 import { absoluteUrl } from "@/lib/site";
 import { isSeriesId } from "@/lib/series-id";
 import { calendarFeedPath } from "@/server/alerts/selection";
-import { featuredRoundStaticParams, getRoundPageData } from "./data";
+import { getSeriesPageData } from "../../data";
+import { featuredRoundStaticParams, getRoundPageData, getRoundPageRedirect } from "./data";
 
 // Static like the Series pages. Only the Featured Round of each Series is prerendered; every other Round
 // is rendered on its first request and kept. ensureStatic = "navigation" makes an unknown Round wait for
@@ -38,13 +40,23 @@ function canonicalRoundParams(series: string, season: string, round: string): { 
   return { series: seriesId, season: year, round: slug };
 }
 
+/**
+ * No Round has this page slug: redirect to the Round it most likely meant (an old link from before a
+ * rename, the other source's name, the Circuit id), or 404.
+ */
+async function missingRound(series: SeriesId, season: number, pageSlug: string): Promise<never> {
+  const path = await getRoundPageRedirect(series, season, pageSlug);
+  if (path) permanentRedirect(path);
+  notFound();
+}
+
 export async function generateMetadata({ params }: PageProps<"/[series]/[season]/[round]">): Promise<Metadata> {
   const raw = await params;
   const { series, season, round } = canonicalRoundParams(raw.series, raw.season, raw.round);
   const data = await getRoundPageData(series, season, round);
   // notFound() here as well as in the page: with ensureStatic, a 404 whose metadata resolved normally keeps
   // the root layout's title instead of not-found.tsx's "Page not found".
-  if (!data) notFound();
+  if (!data) return missingRound(series, season, round);
   const { title, description } = roundPageSeo(series, data.round, data.circuit, data.pageSlug);
   const calendar = calendarFeedPath({ [series]: SERIES[series].defaultReminderTypes });
   return pageMetadata({
@@ -59,10 +71,14 @@ export async function generateMetadata({ params }: PageProps<"/[series]/[season]
 export default async function RoundPage({ params }: PageProps<"/[series]/[season]/[round]">) {
   const raw = await params;
   const { series, season, round: pageSlug } = canonicalRoundParams(raw.series, raw.season, raw.round);
-  const data = await getRoundPageData(series, season, pageSlug);
-  if (!data) notFound();
+  const [data, { featured }] = await Promise.all([getRoundPageData(series, season, pageSlug), getSeriesPageData(series)]);
+  if (!data) return missingRound(series, season, pageSlug);
 
   const { round, circuit, sessions, forecasts, results, documents, renderedAt, path } = data;
+  // The Results route and the Telemetry pages only know the Featured Round's Sessions (they are looked up
+  // by Session slug, "race"). On any other Round the chips would open the Featured Round's data, so its
+  // RESULTS chips link to the official results instead and there is no TELEMETRY chip.
+  const isFeatured = featured.kind === "round" && featured.round.id === round.id;
   const seo = roundPageSeo(series, round, circuit, data.pageSlug);
   // A Round page for a past Round has no FIA listing of its own (fia.com shows the current Round). Hide
   // the empty state there; still show a failure to load, and the documents when they match this Round.
@@ -95,10 +111,20 @@ export default async function RoundPage({ params }: PageProps<"/[series]/[season
           circuit={circuit}
           sessions={sessions}
           forecasts={forecasts}
-          results={results}
+          results={isFeatured ? results : []}
+          showTelemetry={isFeatured}
           documents={documentsForRound}
           renderedAt={renderedAt}
           lead={seo.lead}
+          finishedNote={
+            <>
+              See the{" "}
+              <Link href={`/${series}`} className="underline underline-offset-4 transition-colors hover:text-foreground">
+                {SERIES[series].shortName} page
+              </Link>{" "}
+              for the next Round.
+            </>
+          }
           preamble={
             <Breadcrumbs
               items={[

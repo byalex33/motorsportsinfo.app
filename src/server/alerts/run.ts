@@ -1,6 +1,6 @@
 // The alerts cron: sends due Session Reminders, unsent Schedule Change pushes and Document Alerts, and once a
 // day the owner's sync alert. Reads the database only — never the schedule sources or fia.com.
-import { and, eq, gt, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, eq, gt, gte, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { fiaDocuments, pushSubscriptions, remindersSent, rounds, scheduleChanges, sessions } from "@/db/schema";
 import { REMINDER_LEAD_MINUTES } from "@/domain/series";
@@ -9,7 +9,7 @@ import { planChangePushes, type ScheduleChangeRow } from "./changes";
 import { planDocumentPushes, type DocumentAlertRow } from "./document-alerts";
 import { OWNER_ALERT_TTL_SECONDS, getOwnerPushEndpoint, isOwnerAlertDue, ownerAlertPayload } from "./owner";
 import { MAX_PUSH_FAILURES, PUSH_CONCURRENCY, mapWithConcurrency, sendPush, type PushOutcome, type VapidConfig } from "./push";
-import { reminderKey, selectDueReminders } from "./reminders";
+import { reminderKey, selectDueReminders, type DueReminder } from "./reminders";
 import type { AlertSession, AlertSubscription, OutgoingPush } from "./types";
 import type { AlertsWork } from "./wake";
 
@@ -130,7 +130,7 @@ async function loadReminderSessions(db: Db, now: Date): Promise<AlertSession[]> 
     );
 }
 
-async function sendAll(pushes: readonly OutgoingPush[], send: SendFn) {
+async function sendAll<P extends OutgoingPush>(pushes: readonly P[], send: SendFn): Promise<{ push: P; outcome: PushOutcome }[]> {
   const outcomes = await mapWithConcurrency(pushes, PUSH_CONCURRENCY, send);
   return pushes.map((push, i) => ({ push, outcome: outcomes[i] }));
 }
@@ -152,6 +152,45 @@ async function claimReminders<T extends { subscription: AlertSubscription; sessi
   return due.filter((d) => claimed.has(reminderKey(d.subscription.id, d.sessionId, d.startsAt)));
 }
 
+/**
+ * Deletes the claims of reminders whose send did not go through ("error" or "failed"), so the next run sends
+ * them again. This never loops: selectDueReminders only offers a reminder inside its catch-up window
+ * (REMINDER_CATCH_UP_MINUTES after start − lead, and before the Session starts), so at most that many runs retry it.
+ * A failed release only costs the retry, so it is logged and the run goes on.
+ */
+async function releaseReminders(
+  db: Db,
+  results: readonly { push: DueReminder; outcome: PushOutcome }[],
+): Promise<void> {
+  const retry = results.filter((r) => r.outcome === "error" || r.outcome === "failed").map((r) => r.push);
+  if (retry.length === 0) return;
+  // One condition per Session start, so the statement stays small however many devices missed it.
+  const bySession = new Map<string, { sessionId: string; startsAt: Date; subscriptionIds: string[] }>();
+  for (const r of retry) {
+    const key = `${r.sessionId}|${r.startsAt.toISOString()}`;
+    const group = bySession.get(key) ?? { sessionId: r.sessionId, startsAt: r.startsAt, subscriptionIds: [] };
+    group.subscriptionIds.push(r.subscription.id);
+    bySession.set(key, group);
+  }
+  try {
+    for (const groups of chunk([...bySession.values()], INSERT_CHUNK)) {
+      await db.delete(remindersSent).where(
+        or(
+          ...groups.map((g) =>
+            and(
+              eq(remindersSent.sessionId, g.sessionId),
+              eq(remindersSent.startsAt, g.startsAt),
+              inArray(remindersSent.subscriptionId, g.subscriptionIds),
+            ),
+          ),
+        ),
+      );
+    }
+  } catch (error) {
+    console.error("[alerts] could not release unsent Session Reminders for a retry", error);
+  }
+}
+
 /** Claims unnotified Schedule Changes by setting notifiedAt, so overlapping runs never push one twice. */
 async function claimChanges(db: Db, ids: readonly number[], now: Date): Promise<Set<number>> {
   if (ids.length === 0) return new Set();
@@ -166,6 +205,7 @@ async function claimChanges(db: Db, ids: readonly number[], now: Date): Promise<
 /**
  * Claims and sends due reminders a chunk at a time, and claims no new chunk once out of time: a reminder is
  * only claimed when it is about to be sent, so one left over is still due (within the catch-up window) next run.
+ * A claimed reminder whose send did not go through is released again (releaseReminders), so it is retried too.
  */
 async function runReminders(db: Db, subs: LoadSubscriptions, now: Date, send: SendFn, time: Budget) {
   const reminderSessions = await loadReminderSessions(db, now);
@@ -177,7 +217,9 @@ async function runReminders(db: Db, subs: LoadSubscriptions, now: Date, send: Se
     if (!time.hasTime()) break;
     const fresh = await claimReminders(db, part);
     claimed += fresh.length;
-    results.push(...(await sendAll(fresh, send)));
+    const sent = await sendAll(fresh, send);
+    await releaseReminders(db, sent);
+    results.push(...sent);
   }
   return { due: due.length, claimed, results };
 }
@@ -263,7 +305,12 @@ async function runOwnerAlert(db: Db, endpoint: string | null, now: Date, send: S
   return sendAll([{ subscription, payload, ttlSeconds: OWNER_ALERT_TTL_SECONDS }], send);
 }
 
-/** Deletes gone subscriptions, counts failures (deleting after MAX_PUSH_FAILURES), resets the count on success. */
+/**
+ * Deletes gone subscriptions, counts "failed" sends (deleting after MAX_PUSH_FAILURES), resets the count on
+ * success. An "error" says nothing about the subscription, so it neither counts nor resets. When every push of
+ * a run went wrong, the fault is ours or the push service's (a bad VAPID key, an outage), not every device's:
+ * nothing is counted, so a bad deploy cannot delete every subscription.
+ */
 async function recordOutcomes(db: Db, results: { push: OutgoingPush; outcome: PushOutcome }[]): Promise<number> {
   const gone = new Set<string>();
   const failed = new Set<string>();
@@ -272,7 +319,15 @@ async function recordOutcomes(db: Db, results: { push: OutgoingPush; outcome: Pu
     const sub = push.subscription;
     if (outcome === "gone") gone.add(sub.id);
     else if (outcome === "failed") failed.add(sub.id);
-    else if (sub.failureCount > 0) recovered.add(sub.id);
+    else if (outcome === "sent" && sub.failureCount > 0) recovered.add(sub.id);
+  }
+  const wrong = results.filter((r) => r.outcome === "error" || r.outcome === "failed").length;
+  if (results.length > 1 && wrong === results.length) {
+    const errors = results.filter((r) => r.outcome === "error").length;
+    console.error(
+      `[alerts] every push this run went wrong (${errors} error, ${wrong - errors} failed): not counting them against subscriptions`,
+    );
+    failed.clear();
   }
   for (const id of gone) {
     failed.delete(id);

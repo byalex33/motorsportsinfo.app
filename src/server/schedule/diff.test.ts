@@ -100,6 +100,28 @@ describe("diffSchedule", () => {
       expect(plan.changes).toEqual([]);
     });
 
+    it("drops a pending change whose Session the primary source no longer lists", () => {
+      const pending = [{ sessionId: race.id, observedStartsAt: newRace.startsAt, observedEndsAt: newRace.endsAt, seenCount: 1 }];
+      // A finished WRC rally, say: the Round comes back with no Sessions.
+      const plan = diffSchedule(input([], { pending }));
+      expect(plan.pendingDeletes).toEqual([race.id]);
+      expect(plan.pendingUpserts).toEqual([]);
+      expect(plan.sessionUpdates).toEqual([]);
+      expect(plan.changes).toEqual([]);
+      expect(plan.log).toContain(`pending change for ${race.id} dropped: Session no longer listed by openf1`);
+    });
+
+    it("drops each pending change once, also when the Round is no longer listed", () => {
+      const pending = [
+        { sessionId: race.id, observedStartsAt: newRace.startsAt, observedEndsAt: newRace.endsAt, seenCount: 1 },
+        { sessionId: fp1.id, observedStartsAt: "2026-10-23T18:30:00.000Z", observedEndsAt: "2026-10-23T19:30:00.000Z", seenCount: 1 },
+      ];
+      // fp1 is listed and back at its published time (dropped in the loop); race is gone.
+      expect(diffSchedule(input([fp1], { pending })).pendingDeletes).toEqual([fp1.id, race.id]);
+      const noRound = diffSchedule({ ...input([], { pending }), incoming: [] });
+      expect(noRound.pendingDeletes).toEqual([race.id, fp1.id]);
+    });
+
     it("compares instants, not strings", () => {
       const plan = diffSchedule(input([fp1, { ...race, startsAt: "2026-10-25T20:00:00Z" }]));
       expect(plan.pendingUpserts).toEqual([]);
@@ -212,6 +234,12 @@ describe("diffSchedule", () => {
       expect(plan.sessionUpdates).toEqual([]);
       expect(plan.changes).toEqual([]);
       expect(plan.flags).toEqual([]);
+    });
+
+    it("keep a pending change whose Session they don't list", () => {
+      const pending = [{ sessionId: race.id, observedStartsAt: "2026-10-25T19:00:00.000Z", observedEndsAt: "x", seenCount: 1 }];
+      const plan = diffSchedule(input([], { isFallback: true, pending }));
+      expect(plan.pendingDeletes).toEqual([]);
     });
 
     it("never replace a known end time with an estimate (primary either)", () => {

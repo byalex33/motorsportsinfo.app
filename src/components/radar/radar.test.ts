@@ -109,6 +109,14 @@ describe("RainViewer frames", () => {
     expect(formatFrameAge(t / 1000, t - 40 * MIN)).toBe("in 40 min");
     expect(formatFrameAge(t / 1000, t - 120 * MIN)).toBe("in 2 h");
   });
+
+  it("shows the frame clock in the zone it is given, not the device's", () => {
+    const frame = Date.parse("2026-10-25T19:00:00Z") / 1000; // after London leaves BST, before Austin does
+    expect(formatFrameClock(frame, "Europe/London")).toBe("19:00");
+    expect(formatFrameClock(frame, "America/Chicago")).toBe("14:00");
+    expect(formatFrameClock(frame, "Asia/Tokyo")).toBe("04:00");
+    expect(formatFrameClock(frame, "UTC")).toBe(formatFrameClock(frame, "Etc/UTC"));
+  });
 });
 
 describe("forecast frames", () => {

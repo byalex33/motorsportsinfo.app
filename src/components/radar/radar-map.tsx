@@ -5,9 +5,10 @@ import { useEffect, useRef, useState } from "react";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { Pause, Play } from "lucide-react";
 import type { Circuit } from "@/domain/types";
+import { useDisplayZone } from "@/components/round/use-display-zone";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { MAP_HEIGHT, RadarCard } from "./radar-card";
+import { MAP_HEIGHT, RadarCard, RadarCredit } from "./radar-card";
 import { RADAR_PAN_DEGREES } from "@/lib/radar-forecast";
 import { fetchRadarFeed, type RadarFeed } from "./feed";
 import { RADAR_TILE_SIZE, formatFrameAge, formatFrameClock } from "./rainviewer";
@@ -92,6 +93,8 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
   const [index, setIndex] = useState(0);
   // Rendered client-only (ssr: false), so this is the real preference on first render.
   const [playing, setPlaying] = useState(!reducedMotion);
+  // Frame times follow the zone the Session list uses (Viewer Time, Track Time or the chosen zone).
+  const timeZone = useDisplayZone(circuit.timeZone)?.tz;
 
   const { lat, lon, name } = circuit;
   const initialDark = useRef(dark);
@@ -221,41 +224,44 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
   };
 
   const footer = (
-    <div className="flex h-11 items-center gap-3 border-t border-border px-2.5">
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={togglePlaying}
-        disabled={frames.length < 2}
-        aria-label={isPlaying ? "Pause radar animation" : "Play radar animation"}
-      >
-        {isPlaying ? <Pause key="pause" aria-hidden="true" className="enter-pop" /> : <Play key="play" aria-hidden="true" className="enter-pop" />}
-      </Button>
-      <p className="min-w-0 flex-1 truncate font-mono text-xs tabular-nums text-muted-foreground">
-        {frame ? (
-          <>
-            <time dateTime={new Date(frame.time * 1000).toISOString()} className="font-medium text-foreground">
-              {formatFrameClock(frame.time)}
-            </time>{" "}
-            · {formatFrameAge(frame.time, nowMs)}
-          </>
-        ) : framesError ? (
-          "Radar images unavailable right now"
-        ) : (
-          "Loading radar…"
+    <>
+      <div className="flex h-11 items-center gap-3 border-t border-border px-2.5">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={togglePlaying}
+          disabled={frames.length < 2}
+          aria-label={isPlaying ? "Pause radar animation" : "Play radar animation"}
+        >
+          {isPlaying ? <Pause key="pause" aria-hidden="true" className="enter-pop" /> : <Play key="play" aria-hidden="true" className="enter-pop" />}
+        </Button>
+        <p className="min-w-0 flex-1 truncate font-mono text-xs tabular-nums text-muted-foreground">
+          {frame ? (
+            <>
+              <time dateTime={new Date(frame.time * 1000).toISOString()} className="font-medium text-foreground">
+                {formatFrameClock(frame.time, timeZone)}
+              </time>{" "}
+              · {formatFrameAge(frame.time, nowMs)}
+            </>
+          ) : framesError ? (
+            "Radar images unavailable right now"
+          ) : (
+            "Loading radar…"
+          )}
+        </p>
+        {frames.length > 1 && (
+          <div className="hidden w-24 gap-0.5 sm:flex" aria-hidden="true">
+            {frames.map((f, i) => (
+              <span
+                key={f.id}
+                className={cn("h-0.5 flex-1 transition-colors duration-300 ease-out", i <= activeIndex ? "bg-series-accent" : "bg-border")}
+              />
+            ))}
+          </div>
         )}
-      </p>
-      {frames.length > 1 && (
-        <div className="hidden w-24 gap-0.5 sm:flex" aria-hidden="true">
-          {frames.map((f, i) => (
-            <span
-              key={f.id}
-              className={cn("h-0.5 flex-1 transition-colors duration-300 ease-out", i <= activeIndex ? "bg-series-accent" : "bg-border")}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+      </div>
+      <RadarCredit kind={feed?.kind} />
+    </>
   );
 
   return (

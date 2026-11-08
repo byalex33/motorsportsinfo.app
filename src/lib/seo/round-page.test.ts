@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
 import type { Circuit, Round } from "@/domain/types";
-import { assignRoundPageSlugs, findRoundPage, indexRoundPages, roundPagePath, roundPageSeo, roundPageSlug } from "./round-page";
+import {
+  assignRoundPageSlugs,
+  findRoundPage,
+  findRoundPageRedirect,
+  indexRoundPages,
+  roundPagePath,
+  roundPageSeo,
+  roundPageSlug,
+} from "./round-page";
 import { singapore, singaporeRound } from "./test-fixtures";
 
-function source(round: Pick<Round, "id" | "series" | "season" | "slug" | "name" | "startDate">, circuit: Pick<Circuit, "name" | "location">) {
+function source(round: Pick<Round, "id" | "series" | "season" | "slug" | "name" | "startDate" | "pageSlug">, circuit: Pick<Circuit, "name" | "location">) {
   return { round, circuit };
 }
 
@@ -54,6 +62,78 @@ describe("assignRoundPageSlugs", () => {
     expect(findRoundPage(rounds, 2026, "sao-paulo-e-prix")?.round.id).toBe(first.id);
     expect(findRoundPage(rounds, 2025, "sao-paulo-e-prix")).toBeNull();
     expect(indexRoundPages(rounds)).toHaveLength(2);
+  });
+});
+
+describe("stored page slugs", () => {
+  const interlagos = { name: "Autódromo José Carlos Pace", location: "São Paulo, Brazil" };
+  const sakhir = { name: "Bahrain International Circuit", location: "Sakhir, Bahrain" };
+  // Published by OpenF1 as "São Paulo Grand Prix", then renamed by Jolpica (the fallback).
+  const brazil: Round = {
+    ...singaporeRound,
+    id: "f1-2026-interlagos",
+    slug: "interlagos",
+    circuitId: "interlagos",
+    name: "Brazilian Grand Prix",
+    startDate: "2026-11-06",
+    endDate: "2026-11-08",
+    pageSlug: "sao-paulo-grand-prix",
+  };
+  const bahrain: Round = {
+    ...singaporeRound,
+    id: "f1-2026-sakhir",
+    slug: "sakhir",
+    circuitId: "sakhir",
+    name: "Bahrain Grand Prix",
+    startDate: "2026-04-10",
+    endDate: "2026-04-12",
+    pageSlug: "bahrain-grand-prix",
+  };
+  const rounds = [source(bahrain, sakhir), source(singaporeRound, singapore), source(brazil, interlagos)];
+
+  it("keeps a stored slug when the Round is renamed", () => {
+    const indexed = indexRoundPages(rounds);
+    expect(indexed.find((r) => r.round.id === brazil.id)?.path).toBe("/f1/2026/sao-paulo-grand-prix");
+    expect(findRoundPage(rounds, 2026, "sao-paulo-grand-prix")?.round.id).toBe(brazil.id);
+    expect(findRoundPage(rounds, 2026, "brazilian-grand-prix")).toBeNull();
+    // Rounds with no stored slug (the live sources) still derive it from the name.
+    expect(indexed.find((r) => r.round.id === singaporeRound.id)?.pageSlug).toBe("singapore-grand-prix");
+  });
+
+  it("gives a new Round a suffix rather than another Round's stored slug", () => {
+    const renamed: Round = { ...singaporeRound, name: "Sao Paulo Grand Prix" };
+    const slugs = assignRoundPageSlugs([source(brazil, interlagos), source(renamed, singapore)]);
+    expect(slugs.get(brazil.id)).toBe("sao-paulo-grand-prix");
+    expect(slugs.get(renamed.id)).toBe("sao-paulo-grand-prix-2");
+  });
+
+  it("redirects the other source's name, the current name and the Circuit id to the stored slug", () => {
+    for (const slug of ["brazilian-grand-prix", "interlagos"]) {
+      expect(findRoundPageRedirect(rounds, 2026, slug)?.path).toBe("/f1/2026/sao-paulo-grand-prix");
+    }
+    // Stored under the fallback's name; the primary's name has no words in common with it.
+    const stored = [source({ ...brazil, name: "São Paulo Grand Prix", pageSlug: "brazilian-grand-prix" }, interlagos)];
+    expect(findRoundPageRedirect(stored, 2026, "sao-paulo-grand-prix")?.path).toBe("/f1/2026/brazilian-grand-prix");
+    // A name that only adds words.
+    expect(findRoundPageRedirect(rounds, 2026, "bahrain-grand-prix-in-malaysia")?.path).toBe("/f1/2026/bahrain-grand-prix");
+    const malaysia = [source({ ...bahrain, pageSlug: "bahrain-grand-prix-in-malaysia" }, sakhir)];
+    expect(findRoundPageRedirect(malaysia, 2026, "bahrain-grand-prix")?.path).toBe("/f1/2026/bahrain-grand-prix-in-malaysia");
+  });
+
+  it("uses the added words to pick between two Rounds with the same name", () => {
+    // OpenF1 lists "Bahrain Grand Prix" twice in 2026; Jolpica calls the second one "… in Malaysia".
+    const sepang = { name: "Sepang International Circuit", location: "Sepang, Malaysia" };
+    const second: Round = { ...bahrain, id: "f1-2026-sepang", slug: "sepang", circuitId: "sepang", startDate: "2026-09-25", endDate: "2026-09-27" };
+    const live = [source({ ...bahrain, pageSlug: undefined }, sakhir), source({ ...second, pageSlug: undefined }, sepang)];
+    expect(findRoundPageRedirect(live, 2026, "bahrain-grand-prix-in-malaysia")?.path).toBe("/f1/2026/bahrain-grand-prix-2");
+    // Words that describe neither Circuit stay ambiguous.
+    expect(findRoundPageRedirect(live, 2026, "bahrain-grand-prix-in-qatar")).toBeNull();
+  });
+
+  it("does not redirect another season, an unknown slug or a collision suffix", () => {
+    expect(findRoundPageRedirect(rounds, 2025, "brazilian-grand-prix")).toBeNull();
+    expect(findRoundPageRedirect(rounds, 2026, "italian-grand-prix")).toBeNull();
+    expect(findRoundPageRedirect(rounds, 2026, "bahrain-grand-prix-2")).toBeNull();
   });
 });
 

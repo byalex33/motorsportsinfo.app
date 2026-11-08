@@ -27,6 +27,11 @@ export const rounds = pgTable("rounds", {
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
   sessionTimesConfirmed: boolean("session_times_confirmed").notNull(),
+  /**
+   * The Round page's URL slug ("sao-paulo-grand-prix"), set once when the sync first publishes the Round and
+   * never changed, so a source renaming the Round keeps its URL. Null until the sync sets it.
+   */
+  pageSlug: text("page_slug"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

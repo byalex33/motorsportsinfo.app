@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { cacheLife } from "next/cache";
+import { unstable_rethrow } from "next/navigation";
 import { SERIES_IDS, type SeriesId } from "@/domain/types";
 import { seriesLastModified } from "@/lib/seo/last-modified";
 import { indexRoundPages } from "@/lib/seo/round-page";
@@ -14,6 +15,8 @@ async function builtAt(): Promise<string> {
   return new Date().toISOString();
 }
 
+const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
 /**
  * A Series page's last real content change: its Featured Round's schedule or newest FIA Document.
  * Reads the same cached entry the page does, plus one small cached schedule read.
@@ -27,12 +30,18 @@ async function seriesUpdatedAt(series: SeriesId, built: Date): Promise<Date> {
 // The home page, every Series page, every Round page, every Special Event, the Calendar, Alerts and About.
 // FIA Document viewer pages are left out: they last only while their Round is featured and are noindex
 // (the FIA's own pages are the source). Telemetry pages are noindex too.
+// A Series whose schedule can't be read (a source down, no database locally) still gets its Series page,
+// dated `built`, but no Round entries: one Series never fails the whole sitemap.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const built = new Date(await builtAt());
   const series = await Promise.all(
     SERIES_IDS.map(async (id) => ({
       url: absoluteUrl(`/${id}`),
-      lastModified: await seriesUpdatedAt(id, built),
+      lastModified: await seriesUpdatedAt(id, built).catch((error: unknown) => {
+        unstable_rethrow(error);
+        console.warn(`[sitemap:${id}] Series page lastmod unavailable, using the build time: ${errorMessage(error)}`);
+        return built;
+      }),
       changeFrequency: "hourly" as const,
       priority: 0.9,
     })),
@@ -42,13 +51,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const rounds = (
     await Promise.all(
       SERIES_IDS.map(async (id) => {
-        const [schedule, updated] = await Promise.all([listScheduleRounds(id), getScheduleUpdatedAt(id)]);
-        return indexRoundPages(schedule).map((round) => ({
-          url: absoluteUrl(round.path),
-          lastModified: updated[round.round.id] ? new Date(updated[round.round.id]) : built,
-          changeFrequency: "daily" as const,
-          priority: 0.8,
-        }));
+        try {
+          const [schedule, updated] = await Promise.all([listScheduleRounds(id), getScheduleUpdatedAt(id)]);
+          return indexRoundPages(schedule).map((round) => ({
+            url: absoluteUrl(round.path),
+            lastModified: updated[round.round.id] ? new Date(updated[round.round.id]) : built,
+            changeFrequency: "daily" as const,
+            priority: 0.8,
+          }));
+        } catch (error) {
+          unstable_rethrow(error);
+          console.warn(`[sitemap:${id}] Rounds left out, the schedule can't be read: ${errorMessage(error)}`);
+          return [];
+        }
       }),
     )
   ).flat();

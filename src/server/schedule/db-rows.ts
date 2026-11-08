@@ -1,6 +1,8 @@
 // Maps between database rows and domain objects.
+import { getCircuit } from "@/data/circuits";
 import type { Round, Session } from "@/domain/types";
 import type { rounds, sessions } from "@/db/schema";
+import { assignRoundPageSlugs, type RoundPageSource } from "@/lib/seo/round-page";
 import type { RoundWithSessions } from "./types";
 
 type RoundRow = typeof rounds.$inferSelect;
@@ -19,6 +21,7 @@ export function roundFromRow(row: RoundRow): Round {
     startDate: String(row.startDate).slice(0, 10),
     endDate: String(row.endDate).slice(0, 10),
     sessionTimesConfirmed: row.sessionTimesConfirmed,
+    ...(row.pageSlug ? { pageSlug: row.pageSlug } : {}),
   };
 }
 
@@ -36,8 +39,44 @@ export function sessionFromRow(row: SessionRow): Session {
   };
 }
 
+/** The Round's columns, without page_slug: that is only ever set by pageSlugsToStore, never overwritten. */
 export function roundToRow(round: Round, now: Date): typeof rounds.$inferInsert {
-  return { ...round, updatedAt: now };
+  return {
+    id: round.id,
+    series: round.series,
+    season: round.season,
+    slug: round.slug,
+    name: round.name,
+    circuitId: round.circuitId,
+    startDate: round.startDate,
+    endDate: round.endDate,
+    sessionTimesConfirmed: round.sessionTimesConfirmed,
+    updatedAt: now,
+  };
+}
+
+/**
+ * The page slugs to store, keyed by Round id: one for each Round that has none yet, once `written` (the
+ * Rounds the sync is inserting or updating) is published over `published`. Slugs are assigned over the
+ * whole published schedule, stored slugs included, so the collision suffixes match what pages derive. A
+ * Round whose Circuit is unknown is not shown, so it gets none until its Circuit is known.
+ */
+export function pageSlugsToStore(published: readonly Round[], written: readonly Round[]): Map<string, string> {
+  const after = new Map(published.map((round) => [round.id, round]));
+  // A source's Round carries no page slug: the published one, if any, stays.
+  for (const round of written) after.set(round.id, { ...round, pageSlug: after.get(round.id)?.pageSlug });
+  const sources: RoundPageSource[] = [];
+  for (const round of after.values()) {
+    const circuit = getCircuit(round.circuitId);
+    if (circuit) sources.push({ round, circuit });
+  }
+  const slugs = assignRoundPageSlugs(sources);
+  const out = new Map<string, string>();
+  for (const { round } of sources) {
+    const slug = slugs.get(round.id);
+    if (!round.pageSlug && slug) out.set(round.id, slug);
+  }
+  return out;
 }
 
 export function sessionToRow(session: Session, now: Date): typeof sessions.$inferInsert {

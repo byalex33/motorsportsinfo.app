@@ -12,7 +12,12 @@ export interface SourceContext {
   fetch: Fetcher;
   /** Waits between requests to the same host. Tests pass a no-op. */
   sleep: (ms: number) => Promise<void>;
+  /** The sync run's deadline: aborting it cancels every request still in flight. */
+  signal?: AbortSignal;
 }
+
+/** Each request's own timeout. */
+export const REQUEST_TIMEOUT_MS = 20_000;
 
 export const defaultContext: SourceContext = {
   fetch: (url, init) => fetch(url, { cache: "no-store", ...init }),
@@ -31,7 +36,7 @@ export class HttpError extends Error {
 async function request(ctx: SourceContext, url: string, userAgent: string, accept: string): Promise<Response> {
   const res = await ctx.fetch(url, {
     headers: { "User-Agent": userAgent, Accept: accept, "Accept-Language": "en" },
-    signal: AbortSignal.timeout(20_000),
+    signal: ctx.signal ? AbortSignal.any([AbortSignal.timeout(REQUEST_TIMEOUT_MS), ctx.signal]) : AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!res.ok) throw new HttpError(url, res.status);
   return res;
@@ -45,6 +50,29 @@ export async function getJson<T>(ctx: SourceContext, url: string): Promise<T> {
 export async function getPage(ctx: SourceContext, url: string, userAgent = BROWSER_USER_AGENT): Promise<string> {
   const res = await request(ctx, url, userAgent, "text/html,application/xhtml+xml");
   return res.text();
+}
+
+/**
+ * Settles like `promise`, or rejects with the signal's reason as soon as it aborts, even when the work
+ * behind the promise ignores the signal (a page parse, a source that never answers).
+ */
+export function untilAborted<T>(promise: Promise<T>, signal: AbortSignal | undefined): Promise<T> {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(value);
+      },
+      (error: unknown) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(error);
+      },
+    );
+  });
 }
 
 export function errorMessage(error: unknown): string {

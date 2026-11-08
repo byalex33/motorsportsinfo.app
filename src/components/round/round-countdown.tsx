@@ -1,7 +1,7 @@
 "use client";
 
 import { FlagIcon } from "lucide-react";
-import { Fragment, useState } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import type { TimedSession } from "@/domain/types";
 import { useNow } from "@/lib/client-stores";
 import { countdownParts, formatCountdown, getRoundStatus } from "@/lib/round-status";
@@ -77,7 +77,7 @@ export function RoundCountdown({
   /** When the page data was rendered: the server HTML (and hydration) show the status at that moment. */
   renderedAt: string;
   /** Shown after "Round complete." once every Session has finished. */
-  finishedNote?: string;
+  finishedNote?: ReactNode;
 }) {
   const clock = useNow(1000);
   const zone = useDisplayZone(circuitTimeZone);

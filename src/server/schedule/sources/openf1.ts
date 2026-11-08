@@ -1,5 +1,6 @@
 // F1 primary source: OpenF1 (https://openf1.org). Free tier: 3 req/s, 30 req/min. CC BY-NC-SA 4.0.
 import type { SessionType } from "@/domain/types";
+import { openF1Slot } from "@/server/openf1/rate-limit";
 import { getCircuitTimeZoneDate } from "./dates";
 import { getJson, type SourceContext } from "./http";
 import type { RawRound, RawSession } from "../types";
@@ -90,10 +91,15 @@ export function parseOpenF1(meetings: OpenF1Meeting[], sessions: OpenF1Session[]
     });
 }
 
+/** One OpenF1 request, in its turn in the instance's shared OpenF1 queue (waiting with the context's sleep). */
+async function openF1Json(ctx: SourceContext, path: string): Promise<unknown> {
+  await openF1Slot(ctx.sleep);
+  return getJson<unknown>(ctx, `${BASE}/${path}`);
+}
+
 export async function fetchOpenF1Season(ctx: SourceContext, year: number): Promise<RawRound[]> {
-  const meetings = await getJson<unknown>(ctx, `${BASE}/meetings?year=${year}`);
-  await ctx.sleep(400);
-  const sessions = await getJson<unknown>(ctx, `${BASE}/sessions?year=${year}`);
+  const meetings = await openF1Json(ctx, `meetings?year=${year}`);
+  const sessions = await openF1Json(ctx, `sessions?year=${year}`);
   // OpenF1 answers {"detail": "No results found."} for a year with no data.
   if (!Array.isArray(meetings) || !Array.isArray(sessions)) return [];
   return parseOpenF1(meetings as OpenF1Meeting[], sessions as OpenF1Session[]);

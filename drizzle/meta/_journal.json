@@ -29,6 +29,13 @@
       "when": 1791685137595,
       "tag": "0003_alerts_cron_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794101957978,
+      "tag": "0004_round_page_slug",
+      "breakpoints": true
     }
   ]
 }

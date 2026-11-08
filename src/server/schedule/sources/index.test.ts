@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { fixture } from "../test-utils";
 import { API_USER_AGENT, type SourceContext } from "./http";
 import { fetchSeriesSchedule, SourceFailure } from "./index";
@@ -47,6 +47,55 @@ describe("fetchSeriesSchedule", () => {
     expect(schedule).toMatchObject({ source: "jolpica", isFallback: true });
     expect(schedule.warnings[0]).toContain("HTTP 429");
     expect(schedule.rounds).toHaveLength(3);
+  });
+
+  describe("the sync run's deadline", () => {
+    it("rejects a source that never answers once the run signal aborts, and tries no fallback", async () => {
+      const requests: string[] = [];
+      const run = new AbortController();
+      const ctx: SourceContext = {
+        sleep: async () => {},
+        // Never settles and ignores the signal: only the run deadline can end it.
+        fetch: (url) => {
+          requests.push(url);
+          return new Promise<Response>(() => {});
+        },
+        signal: run.signal,
+      };
+      const pending = fetchSeriesSchedule("f1", NOW, ctx);
+      run.abort(new Error("sync run deadline (240 s) passed"));
+      const error = await pending.catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(SourceFailure);
+      expect((error as SourceFailure).errors).toEqual(["openf1: sync run deadline (240 s) passed"]);
+      expect(requests.some((url) => url.includes("jolpi.ca"))).toBe(false);
+    });
+
+    it("aborts the requests in flight", async () => {
+      const run = new AbortController();
+      let requestSignal: AbortSignal | undefined;
+      const ctx: SourceContext = {
+        sleep: async () => {},
+        fetch: (_url, init) => {
+          requestSignal = init?.signal ?? undefined;
+          return new Promise<Response>(() => {});
+        },
+        signal: run.signal,
+      };
+      const pending = fetchSeriesSchedule("wec", NOW, ctx).catch(() => null);
+      await vi.waitFor(() => expect(requestSignal).toBeDefined());
+      expect(requestSignal?.aborted).toBe(false);
+      run.abort(new Error("deadline"));
+      await pending;
+      expect(requestSignal?.aborted).toBe(true);
+    });
+
+    it("fails at once when the deadline already passed", async () => {
+      const { ctx, requests } = fakeContext({});
+      await expect(fetchSeriesSchedule("f1", NOW, { ...ctx, signal: AbortSignal.abort(new Error("late")) })).rejects.toThrow(
+        "All sources failed for f1: openf1: late",
+      );
+      expect(requests).toEqual([]);
+    });
   });
 
   it("throws a SourceFailure when every source fails", async () => {

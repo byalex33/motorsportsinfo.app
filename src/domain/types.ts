@@ -130,6 +130,12 @@ export interface Round {
   endDate: string;
   /** False when the Round's dates are known but its Session times are not ("Times TBC"). */
   sessionTimesConfirmed: boolean;
+  /**
+   * The Round page's URL slug as the database stores it, kept when a source renames the Round. Missing on
+   * Rounds read live from the sources, and until the sync has stored one: the slug is then derived from the
+   * name (see src/lib/seo/round-page.ts).
+   */
+  pageSlug?: string;
 }
 
 export type FeaturedRoundResult =

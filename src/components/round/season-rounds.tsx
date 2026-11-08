@@ -34,7 +34,7 @@ export function SeasonRounds({ series, rounds }: { series: SeriesId; rounds: Sea
                     <span className="min-w-0">
                       <span className={cn("font-medium", round.featured && "text-foreground")}>{round.name}</span>
                       {round.featured && (
-                        <span className="chip ml-2 bg-series-accent/15 text-series-accent ring-1 ring-series-accent/30">Featured</span>
+                        <span className="chip ml-2 bg-series-accent/5 text-series-accent ring-1 ring-series-accent/30 dark:bg-series-accent/10">Featured</span>
                       )}
                     </span>
                     <span className="shrink-0 font-mono text-xs text-muted-foreground tabular">{round.dates}</span>

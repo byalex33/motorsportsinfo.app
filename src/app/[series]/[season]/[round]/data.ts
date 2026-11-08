@@ -1,6 +1,6 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { SERIES_IDS, type Circuit, type Round, type SeriesId, type Session } from "@/domain/types";
-import { findRoundPage } from "@/lib/seo/round-page";
+import { findRoundPage, findRoundPageRedirect } from "@/lib/seo/round-page";
 import { listScheduleRounds, scheduleTag } from "@/server/schedule";
 import { assembleRound, getSeriesPageData, type SeriesPageData } from "../../data";
 
@@ -35,6 +35,18 @@ export async function getRoundPageData(series: SeriesId, season: number, pageSlu
     ...detail,
     renderedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Where a page slug no Round has should go: the current path of the Round it most likely meant (see
+ * findRoundPageRedirect), or null for a 404. Cached and tagged like getRoundPageData.
+ */
+export async function getRoundPageRedirect(series: SeriesId, season: number, pageSlug: string): Promise<string | null> {
+  "use cache";
+  cacheLife({ stale: 60, revalidate: 300, expire: 86_400 });
+  cacheTag(scheduleTag(series));
+
+  return findRoundPageRedirect(await listScheduleRounds(series), season, pageSlug)?.path ?? null;
 }
 
 /**

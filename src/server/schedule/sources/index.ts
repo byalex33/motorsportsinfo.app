@@ -5,7 +5,7 @@ import type { RawRound, SourceSchedule } from "../types";
 import { fetchFiaFeederSeason, type FeederSeries } from "./fia-feeder";
 import { fillTbcRounds } from "./fill-tbc";
 import { fetchDtmEvents, fetchDtmSeason } from "./dtm";
-import { defaultContext, errorMessage, type SourceContext } from "./http";
+import { defaultContext, errorMessage, untilAborted, type SourceContext } from "./http";
 import { fetchGtwcCalendar, fetchGtwcSeason } from "./gtwc";
 import { fetchImsaSeason } from "./imsa";
 import { fetchJolpicaSeason } from "./jolpica";
@@ -155,7 +155,11 @@ export class SourceFailure extends Error {
   }
 }
 
-/** Reads a Series' schedule for the current and next season: primary, then fallback if the primary fails. */
+/**
+ * Reads a Series' schedule for the current and next season: primary, then fallback if the primary fails.
+ * Once `ctx.signal` (the sync run's deadline) aborts, it rejects at once and tries no fallback: a source
+ * that swallowed the aborted requests as warnings would otherwise return a half-read schedule.
+ */
 export async function fetchSeriesSchedule(
   series: SeriesId,
   now: Date = new Date(),
@@ -170,7 +174,9 @@ export async function fetchSeriesSchedule(
   ] as const) {
     if (!def) continue;
     try {
-      const loaded = await def.load(ctx, year);
+      ctx.signal?.throwIfAborted();
+      const loaded = await untilAborted(def.load(ctx, year), ctx.signal);
+      ctx.signal?.throwIfAborted();
       const { rounds, problems } = normaliseRounds(series, loaded.rounds);
       return {
         series,
@@ -182,6 +188,7 @@ export async function fetchSeriesSchedule(
         warnings: [...errors.map((e) => `primary failed: ${e}`), ...loaded.warnings],
       };
     } catch (error) {
+      if (ctx.signal?.aborted) throw new SourceFailure(series, [...errors, `${def.name}: ${errorMessage(ctx.signal.reason)}`]);
       errors.push(`${def.name}: ${errorMessage(error)}`);
     }
   }

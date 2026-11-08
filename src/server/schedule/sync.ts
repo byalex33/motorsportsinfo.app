@@ -7,10 +7,10 @@ import { cacheLife, cacheTag, revalidateTag } from "next/cache";
 import { getDb, type Db } from "@/db/client";
 import { pendingSessionChanges, rounds, scheduleChanges, scheduleFlags, sessions, sourceChecks } from "@/db/schema";
 import { SCHEDULE_OVERRIDES, type ScheduleOverride } from "@/data/overrides";
-import type { SeriesId } from "@/domain/types";
+import type { Round, SeriesId } from "@/domain/types";
 import { decideCheckDue, type CheckDecision } from "./check-due";
 import { loadPublishedSchedule } from "./db-read";
-import { groupSessions, roundToRow, sessionToRow } from "./db-rows";
+import { groupSessions, pageSlugsToStore, roundToRow, sessionToRow } from "./db-rows";
 import { diffSchedule, planChangesPublished, type PendingChange, type SchedulePlan } from "./diff";
 import { isIdOfSeries, seriesIdLikePattern } from "./normalise";
 import { applyOverrides } from "./overrides";
@@ -35,6 +35,8 @@ export interface SyncOptions {
   force?: boolean;
   ctx?: SourceContext;
   overrides?: ScheduleOverride[];
+  /** The sync run's deadline: once it aborts, the sources' requests are cancelled and the check fails. */
+  signal?: AbortSignal;
 }
 
 async function loadState(db: Db, series: SeriesId) {
@@ -57,12 +59,18 @@ async function loadState(db: Db, series: SeriesId) {
   return { published: groupSessions(roundRows, sessionRows), pending, openFlags: flagRows, check: checkRows[0] ?? null };
 }
 
-async function writePlan(db: Db, series: SeriesId, plan: SchedulePlan, now: Date): Promise<void> {
+async function writePlan(db: Db, series: SeriesId, plan: SchedulePlan, now: Date, published: Round[]): Promise<void> {
   // Built as an array of drizzle queries and sent as one neon-http batch (a single transaction).
   const queries = [];
-  for (const r of [...plan.roundInserts, ...plan.roundUpdates]) {
+  const written = [...plan.roundInserts, ...plan.roundUpdates];
+  for (const r of written) {
     const row = roundToRow(r, now);
     queries.push(db.insert(rounds).values(row).onConflictDoUpdate({ target: rounds.id, set: row }));
+  }
+  // A Round's page slug is stored once (new Rounds, and Rounds published before it was stored) and never
+  // overwritten, so a rename keeps its URL. Same value as the page derived, so no revalidation is needed.
+  for (const [id, pageSlug] of pageSlugsToStore(published, written)) {
+    queries.push(db.update(rounds).set({ pageSlug }).where(and(eq(rounds.id, id), isNull(rounds.pageSlug))));
   }
   if (plan.sessionInserts.length > 0) {
     queries.push(
@@ -231,7 +239,8 @@ async function runCheck(
 
   let schedule;
   try {
-    schedule = await fetchSeriesSchedule(series, now, options.ctx ?? defaultContext);
+    const ctx = options.ctx ?? defaultContext;
+    schedule = await fetchSeriesSchedule(series, now, options.signal ? { ...ctx, signal: options.signal } : ctx);
   } catch (error) {
     const message = errorMessage(error);
     console.error(`[sync:${series}] all sources failed: ${message}`);
@@ -262,7 +271,7 @@ async function runCheck(
   const warnings = [...schedule.warnings, ...applied.warnings];
   for (const w of warnings) console.warn(`[sync:${series}] ${w}`);
 
-  await writePlan(db, series, plan, now);
+  await writePlan(db, series, plan, now, state.published.map((r) => r.round));
   await db
     .update(sourceChecks)
     .set({

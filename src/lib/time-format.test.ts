@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { resolveDisplayZone } from "./display-zone";
 import {
   dayKey,
+  distinctOffsets,
   filterTimeZones,
   formatClock,
   formatRoundDates,
@@ -9,6 +10,7 @@ import {
   formatTimeRange,
   isValidTimeZone,
   zoneCity,
+  zoneOffsetLabels,
 } from "./time-format";
 
 describe("isValidTimeZone", () => {
@@ -44,6 +46,30 @@ describe("Session time formatting", () => {
     expect(formatTimeRange(start, end, "Europe/London", "en-GB")).toBe("04:00 – 05:00");
     expect(formatTimeRange(start, end, "Europe/London", "en-GB", { endEstimated: true })).toBe("04:00 – ~05:00");
     expect(formatTimeRange("2026-06-13T14:00:00Z", "2026-06-14T14:00:00Z", "Europe/Paris", "en-GB")).toBe("16:00 – 16:00 (+1)");
+  });
+});
+
+describe("Round offsets", () => {
+  // 2026 US GP, 23–25 Oct: Europe/London leaves BST at 01:00 UTC on Sunday 25 Oct; Austin changes on 1 Nov.
+  const fp1 = "2026-10-23T17:30:00Z";
+  const qualifying = "2026-10-24T21:00:00Z";
+  const race = "2026-10-25T19:00:00Z";
+
+  it("gives two offsets for a Round across the clock change, in Round order", () => {
+    const offsets = zoneOffsetLabels("Europe/London", [fp1, qualifying, race]);
+    expect(offsets).toHaveLength(2);
+    expect(offsets[0]).toBe("GMT+1");
+    expect(offsets[1]).toMatch(/^GMT(\+0)?$/); // ICU versions differ on "GMT" vs "GMT+0"
+  });
+
+  it("gives one offset when the zone does not change during the Round", () => {
+    expect(zoneOffsetLabels("America/Chicago", [fp1, qualifying, race])).toEqual(["GMT-5"]);
+    expect(zoneOffsetLabels("Europe/London", [fp1, qualifying])).toEqual(["GMT+1"]);
+  });
+
+  it("drops repeats and blanks from Track Time offsets", () => {
+    expect(distinctOffsets(["GMT-5", undefined, "GMT-5", null, ""])).toEqual(["GMT-5"]);
+    expect(distinctOffsets([])).toEqual([]);
   });
 });
 

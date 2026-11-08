@@ -5,6 +5,7 @@ import type { Session } from "@/domain/types";
 import { defaultContext, errorMessage, getJson } from "@/server/schedule/sources/http";
 import type { OpenF1Session } from "@/server/schedule/sources/openf1";
 import { matchOpenF1Session } from "./match";
+import { openF1Slot } from "./rate-limit";
 
 export { matchOpenF1Session };
 
@@ -14,17 +15,21 @@ const BASE = "https://api.openf1.org/v1";
 export const OPENF1_PENDING_LIFE = { stale: 60, revalidate: 300, expire: 900 };
 
 /**
- * GET an OpenF1 endpoint, e.g. `laps?session_key=11379`. Throws on HTTP errors (429 included). OpenF1
- * answers {"detail": "No results found."} instead of an empty list, so anything but an array is [].
+ * The longest a page's OpenF1 request waits for its slot. Past that it fails like a 429 would (the caller
+ * caches it as pending), well before a "use cache" fill's 50 s build timeout.
+ */
+const OPENF1_MAX_WAIT_MS = 20_000;
+
+/**
+ * GET an OpenF1 endpoint, e.g. `laps?session_key=11379`, in its turn in this instance's OpenF1 queue
+ * (see rate-limit.ts), so parallel callers stay inside the free tier. Throws on HTTP errors (429
+ * included) and when the queue is full. OpenF1 answers {"detail": "No results found."} instead of an
+ * empty list, so anything but an array is [].
  */
 export async function openF1Get<T>(path: string): Promise<T[]> {
+  await openF1Slot(undefined, OPENF1_MAX_WAIT_MS);
   const value = await getJson<unknown>(defaultContext, `${BASE}/${path}`);
   return Array.isArray(value) ? (value as T[]) : [];
-}
-
-/** Waits between requests to OpenF1 so a burst stays inside the free tier. */
-export function openF1Pause(): Promise<void> {
-  return defaultContext.sleep(400);
 }
 
 /**

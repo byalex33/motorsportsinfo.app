@@ -106,6 +106,27 @@ describe("buildCalendar", () => {
     expect(lines).toContain("METHOD:PUBLISH");
   });
 
+  it("gives an empty feed a minimal UTC VTIMEZONE, so the VCALENDAR still has a component (RFC 5545)", () => {
+    const lines = unfold(calendar([]));
+    const begin = lines.indexOf("BEGIN:VTIMEZONE");
+    expect(lines.slice(begin, begin + 8)).toEqual([
+      "BEGIN:VTIMEZONE",
+      "TZID:UTC",
+      "BEGIN:STANDARD",
+      "DTSTART:19700101T000000",
+      "TZOFFSETFROM:+0000",
+      "TZOFFSETTO:+0000",
+      "END:STANDARD",
+      "END:VTIMEZONE",
+    ]);
+    expect(lines[begin + 8]).toBe("END:VCALENDAR");
+  });
+
+  it("leaves the VTIMEZONE out when there are Sessions", () => {
+    const lines = unfold(calendar([{ session: session(), round, circuit }]));
+    expect(lines).not.toContain("BEGIN:VTIMEZONE");
+  });
+
   it("writes one VEVENT per Session with a stable UID, UTC times, summary, location and link", () => {
     const ics = calendar([
       { session: session(), round, circuit },

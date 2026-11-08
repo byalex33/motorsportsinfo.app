@@ -1,0 +1,1 @@
+ALTER TABLE "rounds" ADD COLUMN "page_slug" text;

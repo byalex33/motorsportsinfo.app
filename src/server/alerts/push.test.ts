@@ -1,10 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 import type { OutgoingPush } from "./types";
 
-const sendNotification = vi.fn(async () => ({ statusCode: 201 }));
+const sendNotification = vi.fn(async (): Promise<unknown> => ({ statusCode: 201 }));
 vi.mock("web-push", () => ({ default: { sendNotification } }));
 
 const { classifyPushError, mapWithConcurrency, sendPush } = await import("./push");
+// web-push is CommonJS: the real module's functions sit on its default export at runtime.
+const realWebPush = (await vi.importActual<{ default: typeof import("web-push") }>("web-push")).default;
+
+/** The error the real web-push throws for a bad VAPID_SUBJECT, before any request is made. */
+function badSubjectError(): unknown {
+  try {
+    realWebPush.getVapidHeaders("https://fcm.googleapis.com", "not a url", "pub", "priv", "aes128gcm");
+  } catch (error) {
+    return error;
+  }
+  throw new Error("expected getVapidHeaders to throw");
+}
 
 const vapid = { publicKey: "pub", privateKey: "priv", subject: "mailto:x@example.com" };
 const push = (endpoint: string): OutgoingPush => ({
@@ -35,6 +47,17 @@ describe("sendPush", () => {
     expect(await sendPush(push("https://victim.example/hook"), vapid)).toBe("gone");
     expect(sendNotification).not.toHaveBeenCalled();
   });
+
+  it("reports a bad VAPID subject as an error, not a failure of the subscription", async () => {
+    const error = badSubjectError();
+    expect((error as Error).message).toMatch(/^Vapid subject is not a valid URL/);
+    expect((error as { statusCode?: number }).statusCode).toBeUndefined();
+    sendNotification.mockRejectedValueOnce(error);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await sendPush(push("https://fcm.googleapis.com/fcm/send/abc"), vapid)).toBe("error");
+    expect(warn).toHaveBeenCalledWith("[alerts] push error", "sub-1", expect.stringMatching(/^Vapid subject/));
+    warn.mockRestore();
+  });
 });
 
 describe("classifyPushError", () => {
@@ -42,11 +65,19 @@ describe("classifyPushError", () => {
     expect(classifyPushError({ statusCode: 404 })).toBe("gone");
     expect(classifyPushError({ statusCode: 410 })).toBe("gone");
   });
-  it("treats everything else as a temporary failure", () => {
-    expect(classifyPushError({ statusCode: 429 })).toBe("failed");
-    expect(classifyPushError({ statusCode: 500 })).toBe("failed");
-    expect(classifyPushError(new Error("socket hang up"))).toBe("failed");
-    expect(classifyPushError(undefined)).toBe("failed");
+  it("treats another 4xx as the push service refusing this subscription", () => {
+    expect(classifyPushError({ statusCode: 400 })).toBe("failed");
+    expect(classifyPushError({ statusCode: 403 })).toBe("failed");
+    expect(classifyPushError({ statusCode: 413 })).toBe("failed");
+  });
+  it("treats rate limits, push service outages and errors without a status as faults outside the subscription", () => {
+    expect(classifyPushError({ statusCode: 429 })).toBe("error");
+    expect(classifyPushError({ statusCode: 500 })).toBe("error");
+    expect(classifyPushError({ statusCode: 503 })).toBe("error");
+    expect(classifyPushError(new Error("socket hang up"))).toBe("error");
+    expect(classifyPushError(Object.assign(new Error("getaddrinfo ENOTFOUND"), { code: "ENOTFOUND" }))).toBe("error");
+    expect(classifyPushError(badSubjectError())).toBe("error");
+    expect(classifyPushError(undefined)).toBe("error");
   });
 });
 

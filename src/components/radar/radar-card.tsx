@@ -6,6 +6,29 @@ export const MAP_HEIGHT = "h-[280px] md:h-[360px]";
 /** Card frame shared by the radar map, its loading placeholder and the no-coverage notice. */
 const TIME_SPAN_LABELS = { forecast: "next 2 hours", past: "past 2 hours" } as const;
 
+/** The radar credit lines ADR 0001 requires on the page, by the feed the map plays. */
+const RADAR_CREDITS = {
+  forecast: { label: "Forecast radar: Rainbow.ai", href: "https://www.rainbow.ai/" },
+  past: { label: "Radar: RainViewer", href: "https://www.rainviewer.com/" },
+} as const;
+
+/**
+ * The always-visible credit under the map (MapLibre's compact attribution collapses on the first drag).
+ * The line keeps its height while the feed loads, so the card does not grow when the credit appears.
+ */
+export function RadarCredit({ kind }: { kind?: keyof typeof RADAR_CREDITS }) {
+  const credit = kind ? RADAR_CREDITS[kind] : null;
+  return (
+    <p className="h-7 truncate border-t border-border px-3 font-mono text-[0.6875rem] leading-7 tracking-[0.04em] text-muted-foreground">
+      {credit && (
+        <a className="transition-colors hover:text-foreground" href={credit.href} target="_blank" rel="noopener noreferrer">
+          {credit.label}
+        </a>
+      )}
+    </p>
+  );
+}
+
 export function RadarCard({
   circuitName,
   timeSpan,
@@ -42,7 +65,8 @@ export function RadarMapPlaceholder({ circuitName }: { circuitName: string }) {
   return (
     <RadarCard circuitName={circuitName}>
       <div className={cn(MAP_HEIGHT, "animate-pulse bg-muted")} aria-hidden="true" />
-      <div className="h-11" aria-hidden="true" />
+      <div className="h-11 border-t border-border" aria-hidden="true" />
+      <RadarCredit />
     </RadarCard>
   );
 }

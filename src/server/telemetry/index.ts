@@ -4,7 +4,7 @@
 // OpenF1's 30 req/min free tier directly.
 import { cacheLife } from "next/cache";
 import type { LapComparison, Session, SessionTelemetry, TelemetryLap } from "@/domain/types";
-import { findOpenF1Session, openF1Get, openF1Pause, OPENF1_PENDING_LIFE } from "@/server/openf1";
+import { findOpenF1Session, openF1Get, OPENF1_PENDING_LIFE } from "@/server/openf1";
 import { errorMessage } from "@/server/schedule/sources/http";
 import { compareLaps } from "./compare";
 import {
@@ -41,9 +41,7 @@ async function cachedSessionTelemetry(season: number, type: Session["type"], sta
   const key = match.session_key;
   try {
     const laps = await openF1Get<OpenF1Lap>(`laps?session_key=${key}`);
-    await openF1Pause();
     const drivers = await openF1Get<OpenF1TelemetryDriver>(`drivers?session_key=${key}`);
-    await openF1Pause();
     const classification = await openF1Get<OpenF1Classified>(`session_result?session_key=${key}`);
     if (laps.length === 0 || drivers.length === 0) {
       cacheLife(OPENF1_PENDING_LIFE);
@@ -92,9 +90,7 @@ async function lapData(sessionKey: number, driver: number, startsAt: string, tim
   const to = encodeURIComponent(new Date(Date.parse(startsAt) + (time + 1) * 1000).toISOString());
   const window = `session_key=${sessionKey}&driver_number=${driver}&date%3E%3D${from}&date%3C%3D${to}`;
   try {
-    await openF1Pause();
     const car = await openF1Get<OpenF1CarData>(`car_data?${window}`);
-    await openF1Pause();
     const location = await openF1Get<OpenF1Location>(`location?${window}`);
     if (car.length === 0) {
       cacheLife(OPENF1_PENDING_LIFE);

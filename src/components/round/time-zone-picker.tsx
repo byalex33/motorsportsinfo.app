@@ -54,14 +54,16 @@ export function TimeZonePicker({ value, active, onSelect, className }: TimeZoneP
             className="h-9 pl-8"
           />
         </label>
-        <ul role="listbox" aria-label="Time zones" className="max-h-72 overflow-y-auto overscroll-contain">
+        {/* A plain list of buttons: the chosen zone is the pressed one. */}
+        <ul aria-label="Time zones" className="max-h-72 overflow-y-auto overscroll-contain">
           {results.length === 0 && <li className="px-2 py-6 text-center text-sm text-muted-foreground">No matching time zone</li>}
           {results.map((tz) => {
             const selected = active && tz === value;
             return (
-              <li key={tz} role="option" aria-selected={selected}>
+              <li key={tz}>
                 <button
                   type="button"
+                  aria-pressed={selected || undefined}
                   onClick={() => {
                     onSelect(tz);
                     setOpen(false);

@@ -3,7 +3,7 @@
 // their official results page instead (officialResultsUrl in src/domain/series.ts).
 import { cacheLife } from "next/cache";
 import type { SeriesId, Session, SessionResult } from "@/domain/types";
-import { matchOpenF1Session, openF1Get, openF1Pause, openF1Sessions, OPENF1_PENDING_LIFE } from "@/server/openf1";
+import { matchOpenF1Session, openF1Get, openF1Sessions, OPENF1_PENDING_LIFE } from "@/server/openf1";
 import { errorMessage } from "@/server/schedule/sources/http";
 import { parseOpenF1Result, type OpenF1Driver, type OpenF1SessionResult } from "./openf1";
 
@@ -41,9 +41,7 @@ async function cachedF1Results(season: number, sessions: ResultSession[]): Promi
   let results: OpenF1SessionResult[];
   let drivers: OpenF1Driver[];
   try {
-    await openF1Pause();
     results = await openF1Get(`session_result?meeting_key=${meeting}`);
-    await openF1Pause();
     drivers = await openF1Get(`drivers?meeting_key=${meeting}`);
   } catch (error) {
     console.warn(`[results] OpenF1 results unavailable for meeting ${meeting}: ${errorMessage(error)}`);

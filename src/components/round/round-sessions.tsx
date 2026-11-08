@@ -16,6 +16,8 @@ interface RoundSessionsProps {
   forecasts: Record<string, ForecastResult>;
   /** Ids of the finished Sessions with a Session Result. The classification itself loads on reveal. */
   results: string[];
+  /** Whether finished F1 Sessions get a TELEMETRY chip. Default true. */
+  showTelemetry?: boolean;
   /** Linked from finished Sessions that have no Session Result. */
   resultsUrl: string;
   timesConfirmed: boolean;
@@ -30,6 +32,7 @@ export function RoundSessions({
   sessions,
   forecasts,
   results,
+  showTelemetry = true,
   resultsUrl,
   timesConfirmed,
   circuitTimeZone,
@@ -74,6 +77,7 @@ export function RoundSessions({
           sessions={sessions}
           forecasts={forecasts}
           results={results}
+          showTelemetry={showTelemetry}
           resultsUrl={resultsUrl}
           timesConfirmed={timesConfirmed}
           zone={zone}

@@ -8,7 +8,15 @@ export const PUSH_CONCURRENCY = 10;
 /** A subscription is deleted after this many failed sends in a row. */
 export const MAX_PUSH_FAILURES = 5;
 
-export type PushOutcome = "sent" | "gone" | "failed";
+/**
+ * What one send did:
+ * - "sent": the push service accepted it.
+ * - "gone": the browser dropped the subscription for good (404/410); it is deleted.
+ * - "failed": the push service refused this subscription (another 4xx); it counts towards MAX_PUSH_FAILURES.
+ * - "error": the send never got an answer about this subscription (no HTTP status, 429 or 5xx): a config,
+ *   network or push service fault that says nothing about the subscription, so it never counts against it.
+ */
+export type PushOutcome = "sent" | "gone" | "failed" | "error";
 
 export interface VapidConfig {
   publicKey: string;
@@ -23,10 +31,15 @@ export function getVapidConfig(): VapidConfig | null {
   return publicKey && privateKey && subject ? { publicKey, privateKey, subject } : null;
 }
 
-/** 404/410 mean the browser dropped the subscription for good; anything else may be temporary. */
+/**
+ * 404/410 mean the browser dropped the subscription for good; another 4xx is the push service refusing this
+ * subscription. No status (bad VAPID config, DNS or egress fault), 429 and 5xx are faults outside it.
+ */
 export function classifyPushError(error: unknown): Exclude<PushOutcome, "sent"> {
   const status = typeof error === "object" && error !== null ? (error as { statusCode?: unknown }).statusCode : undefined;
-  return status === 404 || status === 410 ? "gone" : "failed";
+  if (status === 404 || status === 410) return "gone";
+  if (typeof status === "number" && status >= 400 && status < 500 && status !== 429) return "failed";
+  return "error";
 }
 
 export async function sendPush(push: OutgoingPush, vapid: VapidConfig): Promise<PushOutcome> {
@@ -48,15 +61,14 @@ export async function sendPush(push: OutgoingPush, vapid: VapidConfig): Promise<
     return "sent";
   } catch (error) {
     const outcome = classifyPushError(error);
-    if (outcome === "failed") console.warn("[alerts] push failed", subscription.id, describeError(error));
+    if (outcome !== "gone") console.warn(`[alerts] push ${outcome}`, subscription.id, describeError(error));
     return outcome;
   }
 }
 
 function describeError(error: unknown): string {
-  if (error && typeof error === "object" && "statusCode" in error) {
-    return `HTTP ${(error as { statusCode: number }).statusCode}`;
-  }
+  const status = error && typeof error === "object" ? (error as { statusCode?: unknown }).statusCode : undefined;
+  if (typeof status === "number") return `HTTP ${status}`;
   return error instanceof Error ? error.message : String(error);
 }
 

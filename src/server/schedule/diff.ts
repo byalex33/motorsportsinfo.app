@@ -247,6 +247,19 @@ export function diffSchedule(input: DiffInput): SchedulePlan {
     }
   }
 
+  // A pending change can only be confirmed by a check that lists its Session. One whose Session has left
+  // the primary source (a finished WRC rally's itinerary, say) is dropped, or every check 10 minutes later
+  // would be due for ever. A fallback lists a different set of Sessions, so it never drops one.
+  if (!isFallback) {
+    const dropped = new Set(plan.pendingDeletes);
+    for (const p of existing.pending) {
+      if (incomingSessionIds.has(p.sessionId) || dropped.has(p.sessionId)) continue;
+      dropped.add(p.sessionId);
+      plan.pendingDeletes.push(p.sessionId);
+      plan.log.push(`pending change for ${p.sessionId} dropped: Session no longer listed by ${input.source}`);
+    }
+  }
+
   // Disappearances: flag once, never delete or push. Primary sources and complete seasons only.
   const complete = new Set(input.completeSeasons);
   if (!isFallback) {

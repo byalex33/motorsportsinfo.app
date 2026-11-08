@@ -1,7 +1,10 @@
+import { createECDH, randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/pg-proxy";
-import { describe, expect, it } from "vitest";
+import webpush from "web-push";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "@/db/client";
 import * as schema from "@/db/schema";
+import type { PushOutcome } from "./push";
 import { REMINDER_CHUNK, runAlerts } from "./run";
 
 const vapid = { publicKey: "pub", privateKey: "priv", subject: "mailto:x@example.com" };
@@ -22,9 +25,11 @@ type Rows = {
  */
 function fakeDb(rows: Rows = {}) {
   const statements: string[] = [];
+  const calls: { sql: string; params: unknown[] }[] = [];
   const db = drizzle(
     async (sql, params) => {
       statements.push(sql);
+      calls.push({ sql, params });
       if (/^select .* from "sessions" inner join "rounds" .*"sessions"."status" = /.test(sql)) {
         return { rows: rows.sessions ?? [] };
       }
@@ -45,7 +50,8 @@ function fakeDb(rows: Rows = {}) {
   const reminderClaims = () => statements.filter((s) => /^insert into "reminders_sent"/.test(s)).length;
   const claims = () =>
     statements.filter((s) => /^(insert into "reminders_sent"|update "schedule_changes"|update "fia_documents")/.test(s));
-  return { db: db as unknown as Db, statements, subscriptionReads, reminderClaims, claims };
+  const matching = (pattern: RegExp) => calls.filter((c) => pattern.test(c.sql));
+  return { db: db as unknown as Db, statements, calls, matching, subscriptionReads, reminderClaims, claims };
 }
 
 const DUE_RACE = [
@@ -71,9 +77,12 @@ const WAITING_DOCUMENT = [
 ];
 
 /** A subscription following F1 Races with a 15-minute lead, so it is due a Session Reminder for DUE_RACE. */
-function raceFollower(i: number, endpoint = `https://fcm.googleapis.com/fcm/send/device-${i}`): unknown[] {
-  const id = `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`;
-  return [id, endpoint, "p256dh", "auth", 15, { f1: ["race"] }, {}, "Europe/London", 0];
+function followerId(i: number): string {
+  return `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`;
+}
+
+function raceFollower(i: number, endpoint = `https://fcm.googleapis.com/fcm/send/device-${i}`, failureCount = 0): unknown[] {
+  return [followerId(i), endpoint, "p256dh", "auth", 15, { f1: ["race"] }, {}, "Europe/London", failureCount];
 }
 
 function raceFollowers(count: number): unknown[][] {
@@ -227,5 +236,123 @@ describe("runAlerts owner alert", () => {
     });
     expect(statusReads(statements)).toBe(0);
     expect(result.ownerAlert).toBeNull();
+  });
+});
+
+const FAILURE_COUNT_UP = /^update "push_subscriptions" set "failure_count" = "push_subscriptions"."failure_count" \+ 1/;
+const FAILURE_COUNT_RESET = /^update "push_subscriptions" set "failure_count" = \$1/;
+const SUBSCRIPTION_DELETE = /^delete from "push_subscriptions"/;
+const REMINDER_RELEASE = /^delete from "reminders_sent"/;
+
+/** A send that answers each follower (by index) with the given outcome. */
+function sendOutcomes(outcomes: PushOutcome[]) {
+  return async (push: { subscription: { id: string } }) => outcomes[Number(push.subscription.id.slice(-12))];
+}
+
+describe("runAlerts push outcomes", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("counts a failed send against its subscription when other pushes went through", async () => {
+    const { db, matching } = fakeDb({ sessions: [DUE_RACE], subscriptions: raceFollowers(2) });
+    await runAlerts(db, vapid, NOW, { send: sendOutcomes(["failed", "sent"]) });
+    const up = matching(FAILURE_COUNT_UP);
+    expect(up).toHaveLength(1);
+    expect(up[0].params).toEqual([followerId(0)]);
+    expect(matching(SUBSCRIPTION_DELETE)).toHaveLength(1);
+  });
+
+  it("counts a single failed push", async () => {
+    const { db, matching } = fakeDb({ sessions: [DUE_RACE], subscriptions: raceFollowers(1) });
+    await runAlerts(db, vapid, NOW, { send: sendOutcomes(["failed"]) });
+    expect(matching(FAILURE_COUNT_UP)).toHaveLength(1);
+  });
+
+  it("never counts an error against a subscription, and never resets its count either", async () => {
+    const subscriptions = [raceFollower(0, undefined, 3), raceFollower(1, undefined, 2)];
+    const { db, matching } = fakeDb({ sessions: [DUE_RACE], subscriptions });
+    await runAlerts(db, vapid, NOW, { send: sendOutcomes(["error", "sent"]) });
+    expect(matching(FAILURE_COUNT_UP)).toEqual([]);
+    expect(matching(SUBSCRIPTION_DELETE)).toEqual([]);
+    const reset = matching(FAILURE_COUNT_RESET);
+    expect(reset).toHaveLength(1);
+    expect(reset[0].params).toEqual([0, followerId(1)]);
+  });
+
+  it("counts nothing and logs one line when every push of the run went wrong", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { db, matching } = fakeDb({ sessions: [DUE_RACE], subscriptions: raceFollowers(3) });
+    const result = await runAlerts(db, vapid, NOW, { send: sendOutcomes(["failed", "error", "failed"]) });
+    expect(matching(FAILURE_COUNT_UP)).toEqual([]);
+    expect(matching(SUBSCRIPTION_DELETE)).toEqual([]);
+    expect(result.subscriptionsRemoved).toBe(0);
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(error.mock.calls[0][0]).toMatch(/every push this run went wrong \(1 error, 2 failed\)/);
+  });
+
+  it("deletes no subscription when a bad VAPID subject stops every send before it leaves", async () => {
+    // Real subscription keys, so the payload encrypts and the real web-push gets as far as the VAPID check.
+    const ecdh = createECDH("prime256v1");
+    ecdh.generateKeys();
+    const p256dh = ecdh.getPublicKey().toString("base64url");
+    const auth = randomBytes(16).toString("base64url");
+    const subscriptions = [0, 1].map((i) => {
+      const row = raceFollower(i, undefined, 4);
+      row[2] = p256dh;
+      row[3] = auth;
+      return row;
+    });
+    const keys = webpush.generateVAPIDKeys();
+    const badVapid = { publicKey: keys.publicKey, privateKey: keys.privateKey, subject: "not a url" };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { db, matching } = fakeDb({ sessions: [DUE_RACE], subscriptions });
+
+    const result = await runAlerts(db, badVapid, NOW);
+
+    expect(warn).toHaveBeenCalledWith("[alerts] push error", followerId(0), expect.stringMatching(/^Vapid subject is not a valid URL/));
+    expect(result.reminders).toEqual({ due: 2, claimed: 2, sent: 0 });
+    expect(matching(FAILURE_COUNT_UP)).toEqual([]);
+    expect(matching(SUBSCRIPTION_DELETE)).toEqual([]);
+    expect(result.subscriptionsRemoved).toBe(0);
+  });
+});
+
+describe("runAlerts Session Reminder retry", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("releases the claims of reminders whose send did not go through, so the next run retries them", async () => {
+    const { db, matching } = fakeDb({ sessions: [DUE_RACE], subscriptions: raceFollowers(4) });
+    await runAlerts(db, vapid, NOW, { send: sendOutcomes(["sent", "error", "failed", "gone"]) });
+    const release = matching(REMINDER_RELEASE);
+    expect(release).toHaveLength(1);
+    // Keyed like the claim: Session id, start time and the subscriptions that missed it.
+    expect(release[0].sql).toMatch(/"session_id" = \$1 and "reminders_sent"."starts_at" = \$2 and "reminders_sent"."subscription_id" in \(\$3, \$4\)/);
+    expect(release[0].params).toEqual([DUE_RACE[0], DUE_RACE[4], followerId(1), followerId(2)]);
+  });
+
+  it("releases nothing when every reminder went out", async () => {
+    const { db, matching } = fakeDb({ sessions: [DUE_RACE], subscriptions: raceFollowers(2) });
+    await runAlerts(db, vapid, NOW, { send: async () => "sent" });
+    expect(matching(REMINDER_RELEASE)).toEqual([]);
+  });
+
+  it("keeps the run going when the release fails", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { db, matching } = fakeDb({ sessions: [DUE_RACE], subscriptions: raceFollowers(2) });
+    const failing = new Proxy(db, {
+      get(target, prop, receiver) {
+        if (prop === "delete") {
+          return (table: unknown) => {
+            if (table === schema.remindersSent) throw new Error("connection lost");
+            return target.delete(table as typeof schema.pushSubscriptions);
+          };
+        }
+        return Reflect.get(target, prop, receiver);
+      },
+    });
+    const result = await runAlerts(failing, vapid, NOW, { send: sendOutcomes(["error", "sent"]) });
+    expect(result.reminders.sent).toBe(1);
+    expect(matching(REMINDER_RELEASE)).toEqual([]);
+    expect(error).toHaveBeenCalledWith("[alerts] could not release unsent Session Reminders for a retry", expect.any(Error));
   });
 });

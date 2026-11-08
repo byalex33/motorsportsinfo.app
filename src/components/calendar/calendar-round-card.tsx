@@ -5,7 +5,7 @@ import { MapPinIcon } from "lucide-react";
 import type { CalendarRound } from "@/app/calendar/data";
 import { useDisplayZone } from "@/components/round/use-display-zone";
 import { SERIES } from "@/domain/series";
-import { formatClock, formatSessionDay, zoneOffsetLabel } from "@/lib/time-format";
+import { distinctOffsets, formatClock, formatSessionDay, zoneOffsetLabels } from "@/lib/time-format";
 import { cn } from "@/lib/utils";
 import { CountryFlag } from "./country-flag";
 
@@ -22,7 +22,11 @@ export function CalendarRoundCard({ round, now }: { round: CalendarRound; now: n
   const first = round.sessions[0];
   const last = round.sessions.at(-1);
   const live = now !== null && first && last && !round.cancelled && Date.parse(first.startsAt) <= now && now < Date.parse(last.endsAt);
-  const offset = first ? (zone ? zoneOffsetLabel(zone.tz, new Date(first.startsAt)) : round.trackTimes[first.id]?.offset) : null;
+  // Both offsets ("GMT+1 / GMT+0") when the Round crosses a clock change in the zone shown.
+  const offsets = zone
+    ? zoneOffsetLabels(zone.tz, round.sessions.map((s) => s.startsAt))
+    : distinctOffsets(round.sessions.map((s) => round.trackTimes[s.id]?.offset));
+  const offset = offsets.join(" / ") || null;
 
   return (
     <article
@@ -42,7 +46,7 @@ export function CalendarRoundCard({ round, now }: { round: CalendarRound; now: n
               {round.roundNumber !== null && ` R${round.roundNumber}`}
             </span>
             {live && <span className="chip bg-series-accent text-series-accent-foreground">Live</span>}
-            {round.cancelled && <span className="chip bg-destructive/10 text-destructive">Cancelled</span>}
+            {round.cancelled && <span className="chip border border-destructive/50 text-destructive">Cancelled</span>}
           </p>
           <h3 id={`${round.id}-name`} className="mt-1 text-base leading-snug font-semibold tracking-tight text-balance">
             {/* The name is the anchor; the ::after covers the card. prefetch stays off: a calendar
@@ -63,7 +67,7 @@ export function CalendarRoundCard({ round, now }: { round: CalendarRound; now: n
             </span>
           </p>
         </div>
-        {round.sprint && <span className="chip shrink-0 bg-series-accent/15 text-series-accent ring-1 ring-series-accent/30">Sprint</span>}
+        {round.sprint && <span className="chip shrink-0 bg-series-accent/5 text-series-accent ring-1 ring-series-accent/30 dark:bg-series-accent/10">Sprint</span>}
       </header>
 
       <div className="border-t border-border px-4 py-3">
