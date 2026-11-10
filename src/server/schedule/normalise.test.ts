@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isIdOfSeries, normaliseRounds, slugify } from "./normalise";
 import { applyOverrides } from "./overrides";
-import { localWithOffsetToIso, trackDate, trackMidnight } from "./time";
+import { trackDate, trackMidnight } from "./time";
 import type { RawRound } from "./types";
 
 const raw = (over: Partial<RawRound>): RawRound => ({
@@ -59,6 +59,36 @@ describe("normaliseRounds", () => {
     ]);
   });
 
+  it("keeps the ids of two Rounds at one Circuit on the same dates when one gets Session times first", () => {
+    // Super GT 2026: Round 3 moved to Motegi, the weekend of Round 8. Round 3's timetable came out first.
+    const motegi = (n: number, sessions: RawRound["sessions"]) =>
+      raw({
+        name: `Round ${n}`,
+        circuitHints: ["Motegi"],
+        timesConfirmed: sessions.length > 0,
+        sessions,
+        startDate: "2026-11-06",
+        endDate: "2026-11-08",
+        sourceRef: `https://supergt.net/races/round${n}-motegi`,
+      });
+    const race = [{ key: "Race", name: "Race", type: "race" as const, startsAt: "2026-11-08T04:30:00Z", endsAt: null, cancelled: false }];
+    const ids = (raws: RawRound[]) => Object.fromEntries(normaliseRounds("super-gt", raws).rounds.map((r) => [r.round.name, r.round.id]));
+    const expected = { "Round 3": "super-gt-2026-motegi", "Round 8": "super-gt-2026-motegi-2" };
+    expect(ids([motegi(3, []), motegi(8, [])])).toEqual(expected);
+    expect(ids([motegi(3, race), motegi(8, [])])).toEqual(expected);
+    expect(ids([motegi(8, []), motegi(3, race)])).toEqual(expected);
+    expect(ids([motegi(8, race), motegi(3, [])])).toEqual(expected);
+  });
+
+  it("orders a source's Round numbers numerically when Rounds share a Circuit and a date", () => {
+    const at = (n: number) => raw({ name: `R${n}`, timesConfirmed: false, startDate: "2026-09-06", endDate: "2026-09-06", sourceRef: `round ${n}` });
+    const { rounds } = normaliseRounds("f2", [at(10), at(9)]);
+    expect(rounds.map((r) => [r.round.name, r.round.id])).toEqual([
+      ["R9", "f2-2026-monza"],
+      ["R10", "f2-2026-monza-2"],
+    ]);
+  });
+
   it("gives repeated Session names distinct ids", () => {
     const s = { key: "Qualifying", name: "Qualifying", type: "qualifying" as const, endsAt: null, cancelled: false };
     const { rounds } = normaliseRounds("f3", [
@@ -82,11 +112,6 @@ describe("normaliseRounds", () => {
 });
 
 describe("time helpers", () => {
-  it("converts local times with a GMT offset", () => {
-    expect(localWithOffsetToIso("2026-09-24T10:00:00", "+04:00")).toBe("2026-09-24T06:00:00.000Z");
-    expect(localWithOffsetToIso("2026-11-21T20:00:00", "-08:00")).toBe("2026-11-22T04:00:00.000Z");
-  });
-
   it("computes Track Time dates and midnights across DST", () => {
     expect(trackDate("2026-11-22T04:00:00Z", "America/Los_Angeles")).toBe("2026-11-21");
     expect(trackMidnight("2026-10-25", "Europe/Madrid").toISOString()).toBe("2026-10-24T22:00:00.000Z"); // CEST

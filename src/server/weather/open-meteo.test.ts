@@ -92,10 +92,27 @@ describe("nearest-hour selection", () => {
       weatherCode: 3,
       isDay: true,
       temperatureC: 14,
-      precipitationProbability: 14,
+      // The rain chance is the slot that ends after the start (15:00 covers 14:00–15:00).
+      precipitationProbability: 15,
       windSpeedKmh: 24,
       windDirectionDeg: 140,
     });
+  });
+
+  // Open-Meteo's hourly precipitation_probability covers the preceding hour; the other values are instantaneous.
+  it("takes the rain chance from the hour after the start, not the hour before it", () => {
+    const wet = hourly(48);
+    wet.precipitationProbability[14] = 5; // 13:00–14:00, dry
+    wet.precipitationProbability[15] = 80; // 14:00–15:00, a shower
+    const result = resolveSessionForecast(wet, iso(14), now);
+    expect(result.kind === "forecast" && result.precipitationProbability).toBe(80);
+    expect(result.kind === "forecast" && result.temperatureC).toBe(14);
+  });
+
+  it("still gives a rain chance for a Session at the last available hour", () => {
+    const short = hourly(48, 15);
+    const result = resolveSessionForecast(short, iso(14), now);
+    expect(result.kind === "forecast" && result.precipitationProbability).toBe(14);
   });
 
   it("reports night hours", () => {

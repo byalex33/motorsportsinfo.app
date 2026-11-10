@@ -1,4 +1,4 @@
-// Every minute (vercel.ts): due Session Reminders, unsent Schedule Change pushes and Document Alerts, and at 07:00 UTC
+// Every minute (vercel.ts): due Session Reminders, unsent Schedule Change pushes and Document Alerts, and once in the 07:00 UTC hour
 // the owner's sync alert (OWNER_PUSH_ENDPOINT). Reads the database only, and only when the remote cache says
 // something may be due: most minutes nothing is, and the database can then scale to zero.
 import { revalidateTag } from "next/cache";

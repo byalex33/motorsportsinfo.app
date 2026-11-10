@@ -192,6 +192,43 @@ describe("fetchSeriesSchedule", () => {
     expect(schedule.warnings[0]).toBe("No 2026 Rounds listed any more; reading 2027 only");
   });
 
+  describe("in January, before a source publishes the new season", () => {
+    const JANUARY = new Date("2027-01-01T06:00:00Z");
+
+    it("reads last season from sportstimes when the new season's file is not there yet", async () => {
+      const { ctx } = fakeContext({
+        "https://raw.githubusercontent.com/sportstimes/f1/main/_db/f2/2026.json": "sportstimes-f2-2026.json",
+      });
+      const schedule = await fetchSeriesSchedule("f2", JANUARY, ctx);
+      expect(schedule).toMatchObject({ source: "sportstimes", isFallback: false, completeSeasons: [2026] });
+      expect(schedule.rounds).toHaveLength(4);
+      expect(schedule.warnings[0]).toBe("No 2027 data yet; reading 2026");
+    });
+
+    it("reads last season from a calendar page that lists only last season", async () => {
+      const { ctx } = fakeContext({
+        [`${GTWC}/calendar`]: "gtwc-calendar-2026.html",
+        [`${GTWC}/event/254/barcelona`]: "gtwc-event-barcelona-2026.html",
+        [`${GTWC}/event/255/portimao`]: "gtwc-event-portimao-2026.html",
+      });
+      const schedule = await fetchSeriesSchedule("gtwc-europe", JANUARY, ctx);
+      expect(schedule.rounds.map((r) => r.round.id)).toEqual(["gtwc-europe-2026-catalunya", "gtwc-europe-2026-portimao"]);
+      expect(schedule.completeSeasons.every((s) => s === 2026)).toBe(true);
+      expect(schedule.warnings[0]).toBe("No 2027 data yet; reading 2026");
+    });
+
+    it("still fails a source that errors for another reason", async () => {
+      const { ctx } = fakeContext({ "https://raw.githubusercontent.com/sportstimes/f1/main/_db/f2/2027.json": 503 });
+      await expect(fetchSeriesSchedule("f2", JANUARY, ctx)).rejects.toThrow("HTTP 503");
+    });
+
+    it("fails when last season is not there either", async () => {
+      const { ctx } = fakeContext({});
+      await expect(fetchSeriesSchedule("f2", JANUARY, ctx)).rejects.toThrow("HTTP 404");
+    });
+  });
+
+  // Outside the first quarter a missing current season is a real failure, not a calendar that has not moved on.
   it("fails GT World Challenge Europe when the calendar lists neither season", async () => {
     const { ctx } = fakeContext({ [`${GTWC}/calendar`]: { body: fixture("gtwc-calendar-2026.html").replaceAll("2026", "2025") } });
     await expect(fetchSeriesSchedule("gtwc-europe", NOW, ctx)).rejects.toThrow("No Rounds for 2026");

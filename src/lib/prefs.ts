@@ -4,7 +4,8 @@
 //   msi.time   → JSON { "mode": "viewer" | "track" | "custom", "tz"?: string }
 //   msi.units  → JSON { "temp": "c" | "f", "wind": "kmh" | "mph" }
 //   msi.oss-note → "dismissed" once the open-source note is closed (not part of the alerts contract)
-//   msi.announcement → the id of the last announcement closed (not part of the alerts contract)
+//   msi.announcement → comma-joined ids of the announcements closed (an older single id still reads; not part of
+//                      the alerts contract)
 //   msi.alerts → JSON { "follows": { [SeriesId]: SessionType[] }, "leadMinutes": 15 | 60 | 1440,
 //                "documentAlerts": { [FiaDocumentSeries]: "stewards" | "all" } }, the Alerts page's choices
 // Every storage access is wrapped in try/catch; without storage the choice lives in memory for the visit.
@@ -98,6 +99,21 @@ export function parseSavedAlerts(raw: string | null | undefined): SavedAlerts | 
     // Saved before Document Alerts existed: none chosen.
     documentAlerts: normalizeDocumentAlerts(documentAlerts),
   };
+}
+
+/** The closed announcements' ids. An older value holds one id (no comma), which reads as a one-item list. */
+export function parseDismissedAnnouncements(raw: string | null | undefined): string[] {
+  if (typeof raw !== "string") return [];
+  return [...new Set(raw.split(",").map((id) => id.trim()).filter(Boolean))];
+}
+
+/**
+ * `dismissed` plus `id`, keeping only ids still in `known` (the announcements list), so the stored value cannot
+ * grow without limit.
+ */
+export function addDismissedAnnouncement(dismissed: readonly string[], id: string, known: readonly string[]): string[] {
+  const keep = new Set(known);
+  return [...new Set([...dismissed, id])].filter((d) => keep.has(d));
 }
 
 const FAHRENHEIT_REGIONS = new Set(["US", "LR", "MM", "BS", "BZ", "KY", "PW", "FM", "MH"]);
@@ -236,15 +252,16 @@ export function useOpenSourceNoteDismissed(): PrefState<boolean> {
 }
 
 /**
- * The id of the announcement the viewer last closed; null when none, and while hydrating, so a closed
- * announcement never flashes. A newer announcement has a new id, so it shows again.
+ * The ids of the announcements the viewer closed; empty when none, and while hydrating (ready false), so a closed
+ * announcement never flashes. A newer announcement has a new id, so it shows.
  */
-export function useDismissedAnnouncement(): PrefState<string | null> {
+export function useDismissedAnnouncements(): PrefState<string[]> {
   const raw = useStoredString(PREF_KEYS.announcement);
-  const set = useCallback((next: string | null) => {
-    writePref(PREF_KEYS.announcement, next ?? "");
+  const value = useMemo(() => parseDismissedAnnouncements(raw), [raw]);
+  const set = useCallback((next: string[]) => {
+    writePref(PREF_KEYS.announcement, next.join(","));
   }, []);
-  return { value: raw || null, ready: raw !== undefined, set };
+  return { value, ready: raw !== undefined, set };
 }
 
 /** What the Alerts page saved on this device; null when nothing was saved, and while hydrating. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type PointerEvent } from "react";
+import { useState, type KeyboardEvent, type PointerEvent } from "react";
 import type { TelemetryDriver, TelemetryLap } from "@/domain/types";
 import { formatLapTime } from "@/lib/lap-time";
 import { cn } from "@/lib/utils";
@@ -58,8 +58,20 @@ export function LapTimesChart({ a, b, lapsA, lapsB, comparedA, comparedB }: LapT
     setHover(f < -0.05 || f > 1.05 ? null : Math.min(maxLap, Math.max(1, Math.round(1 + f * (maxLap - 1)))));
   }
 
+  // The keyboard moves the crosshair a lap at a time, as on the lap traces above.
+  function onKey(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "ArrowRight") setHover((h) => Math.min(maxLap, (h ?? 0) + 1));
+    else if (e.key === "ArrowLeft") setHover((h) => Math.max(1, (h ?? maxLap + 1) - 1));
+    else if (e.key === "Home") setHover(1);
+    else if (e.key === "End") setHover(maxLap);
+    else if (e.key === "Escape") setHover(null);
+    else return;
+    e.preventDefault();
+  }
+
   const timeOf = (laps: TelemetryLap[], lap: number) => laps.find((l) => l.lap === lap);
   const label = (l: TelemetryLap | undefined) => (!l ? "—" : l.pitOut ? "Out lap" : l.time === null ? "No time" : formatLapTime(l.time));
+  const spoken = (l: TelemetryLap | undefined) => (label(l) === "—" ? "no lap" : label(l));
 
   return (
     <figure className="space-y-2">
@@ -81,11 +93,18 @@ export function LapTimesChart({ a, b, lapsA, lapsB, comparedA, comparedB }: LapT
       </figcaption>
       <div
         ref={ref}
-        className="relative isolate touch-pan-y select-none"
+        tabIndex={0}
+        role="group"
+        aria-label={`Lap times for ${a.code} and ${b.code}. Use the left and right arrow keys to move from lap to lap.`}
+        className="relative isolate touch-pan-y rounded-md outline-none select-none focus-visible:ring-2 focus-visible:ring-ring"
         onPointerMove={onPointer}
         onPointerDown={onPointer}
         onPointerLeave={() => setHover(null)}
+        onKeyDown={onKey}
       >
+        <p aria-live="polite" className="sr-only">
+          {hover !== null && `Lap ${hover}: ${a.code} ${spoken(timeOf(lapsA, hover))}, ${b.code} ${spoken(timeOf(lapsB, hover))}.`}
+        </p>
         <Watermark />
         {width > 0 && (
           <svg

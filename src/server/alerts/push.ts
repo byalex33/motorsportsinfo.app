@@ -13,8 +13,8 @@ export const MAX_PUSH_FAILURES = 5;
  * - "sent": the push service accepted it.
  * - "gone": the browser dropped the subscription for good (404/410); it is deleted.
  * - "failed": the push service refused this subscription (another 4xx); it counts towards MAX_PUSH_FAILURES.
- * - "error": the send never got an answer about this subscription (no HTTP status, 429 or 5xx): a config,
- *   network or push service fault that says nothing about the subscription, so it never counts against it.
+ * - "error": the send never got an answer about this subscription (no HTTP status, 401/403, 429 or 5xx): a
+ *   config, network or push service fault that says nothing about the subscription, so it never counts against it.
  */
 export type PushOutcome = "sent" | "gone" | "failed" | "error";
 
@@ -33,11 +33,13 @@ export function getVapidConfig(): VapidConfig | null {
 
 /**
  * 404/410 mean the browser dropped the subscription for good; another 4xx is the push service refusing this
- * subscription. No status (bad VAPID config, DNS or egress fault), 429 and 5xx are faults outside it.
+ * subscription. No status (bad VAPID config, DNS or egress fault), 429 and 5xx are faults outside it, and so
+ * are 401/403: they refuse the site's VAPID credentials (a wrong key in a deploy), not the device.
  */
 export function classifyPushError(error: unknown): Exclude<PushOutcome, "sent"> {
   const status = typeof error === "object" && error !== null ? (error as { statusCode?: unknown }).statusCode : undefined;
   if (status === 404 || status === 410) return "gone";
+  if (status === 401 || status === 403) return "error";
   if (typeof status === "number" && status >= 400 && status < 500 && status !== 429) return "failed";
   return "error";
 }

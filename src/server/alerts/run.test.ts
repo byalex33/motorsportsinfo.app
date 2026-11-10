@@ -19,6 +19,13 @@ type Rows = {
   subscriptions?: unknown[][];
   /** What claiming a waiting FIA Document returns as how far an earlier run got. */
   documentSentThrough?: string | null;
+  /**
+   * Keep Session Reminder claims across runs on this database, as reminders_sent would: a claim is taken
+   * once and held until released. Without it, every reminder offered is claimed.
+   */
+  trackClaims?: boolean;
+  /** Statements matching this throw, as a database fault would. */
+  failOn?: RegExp;
 };
 
 /**
@@ -30,10 +37,27 @@ function fakeDb(rows: Rows = {}) {
   const statements: string[] = [];
   const calls: { sql: string; params: unknown[] }[] = [];
   const progress: string[] = [];
+  /** reminders_sent claims held (trackClaims), as "subscription|Session|start". */
+  const held = new Set<string>();
+  /** daily_runs: the UTC days a daily run was claimed for. */
+  const dailyRuns = new Set<string>();
+  /** Each subscription's failure_count, as counted by the run. */
+  const failureCounts = new Map<string, number>();
   const db = drizzle(
     async (sql, params) => {
       statements.push(sql);
       calls.push({ sql, params });
+      if (rows.failOn?.test(sql)) throw new Error("connection lost");
+      if (/^insert into "daily_runs"/.test(sql)) {
+        const day = String(params[0]);
+        if (dailyRuns.has(day)) return { rows: [] };
+        dailyRuns.add(day);
+        return { rows: [[day]] };
+      }
+      if (/^delete from "daily_runs"/.test(sql)) dailyRuns.delete(String(params[0]));
+      if (/^update "push_subscriptions" set "failure_count" = "push_subscriptions"."failure_count" \+ 1/.test(sql)) {
+        for (const id of params) failureCounts.set(String(id), (failureCounts.get(String(id)) ?? 0) + 1);
+      }
       if (/^select .* from "sessions" inner join "rounds" .*"sessions"."status" = /.test(sql)) {
         return { rows: rows.sessions ?? [] };
       }
@@ -48,8 +72,22 @@ function fakeDb(rows: Rows = {}) {
       if (/^insert into "reminders_sent"/.test(sql)) {
         // Three parameters per row (subscription id, Session id, start time), echoed back as claimed.
         const claimed: unknown[][] = [];
-        for (let i = 0; i < params.length; i += 3) claimed.push(params.slice(i, i + 3));
+        for (let i = 0; i < params.length; i += 3) {
+          const key = params.slice(i, i + 3).join("|");
+          if (rows.trackClaims && held.has(key)) continue;
+          held.add(key);
+          claimed.push(params.slice(i, i + 3));
+        }
         return { rows: claimed };
+      }
+      if (/^delete from "push_subscriptions" where "push_subscriptions"."id" in \([^)]*\) returning/.test(sql)) {
+        // Gone subscriptions: every one is deleted.
+        return { rows: params.map((id) => [id]) };
+      }
+      if (rows.trackClaims && /^delete from "reminders_sent"/.test(sql)) {
+        // One Session start: its id, its start time, then the subscriptions released.
+        const [sessionId, startsAt, ...subscriptionIds] = params;
+        for (const id of subscriptionIds) held.delete([id, sessionId, startsAt].join("|"));
       }
       return { rows: [] };
     },
@@ -61,7 +99,18 @@ function fakeDb(rows: Rows = {}) {
     statements.filter((s) => /^(insert into "reminders_sent"|update "schedule_changes"|update "fia_documents")/.test(s));
   const matching = (pattern: RegExp) => calls.filter((c) => pattern.test(c.sql));
   const documentFinishes = () => statements.filter((s) => /^update "fia_documents" set "(notified_at|pending_until)" = \$/.test(s));
-  return { db: db as unknown as Db, statements, calls, matching, subscriptionReads, reminderClaims, claims, progress, documentFinishes };
+  return {
+    db: db as unknown as Db,
+    statements,
+    calls,
+    matching,
+    subscriptionReads,
+    reminderClaims,
+    claims,
+    progress,
+    documentFinishes,
+    failureCounts,
+  };
 }
 
 const DUE_RACE = [
@@ -84,6 +133,8 @@ const WAITING_DOCUMENT = [
   "other",
   "doc_1.pdf",
   null,
+  // First seen a minute ago, as the documents sync records it.
+  new Date(NOW.getTime() - 60_000).toISOString(),
 ];
 
 /** A subscription following F1 Races with a 15-minute lead, so it is due a Session Reminder for DUE_RACE. */
@@ -128,14 +179,30 @@ describe("runAlerts", () => {
     expect(statements.some((s) => /^select .* from "schedule_changes"/.test(s))).toBe(true);
   });
 
-  it("does its housekeeping only in the 07:00 UTC run", async () => {
-    const deletes = (statements: string[]) => statements.filter((s) => /^delete from "(reminders_sent|fia_documents|push_signup_attempts)"/.test(s));
+  it("does its housekeeping once a day, in the first run of the 07:00 UTC hour", async () => {
+    const deletes = (statements: string[]) =>
+      statements.filter((s) => /^delete from "(reminders_sent|fia_documents|push_signup_attempts|push_subscriptions)"/.test(s));
     const onTheHour = fakeDb();
     await runAlerts(onTheHour.db, vapid, new Date("2026-10-11T12:00:00Z"), { ownerEndpoint: null });
     expect(deletes(onTheHour.statements)).toEqual([]);
     const daily = fakeDb();
-    await runAlerts(daily.db, vapid, new Date("2026-10-11T07:00:00Z"), { ownerEndpoint: null });
-    expect(deletes(daily.statements)).toHaveLength(3);
+    await runAlerts(daily.db, vapid, new Date("2026-10-11T07:03:00Z"), { ownerEndpoint: null });
+    expect(deletes(daily.statements)).toHaveLength(4);
+    daily.statements.length = 0;
+    await runAlerts(daily.db, vapid, new Date("2026-10-11T07:04:00Z"), { ownerEndpoint: null });
+    expect(deletes(daily.statements)).toEqual([]);
+  });
+
+  it("prunes subscriptions not saved or pushed to for 400 days", async () => {
+    const { matching } = await (async () => {
+      const f = fakeDb();
+      await runAlerts(f.db, vapid, new Date("2026-10-11T07:00:00Z"), { ownerEndpoint: null });
+      return f;
+    })();
+    const prune = matching(/^delete from "push_subscriptions"/);
+    expect(prune).toHaveLength(1);
+    expect(prune[0].sql).toMatch(/"updated_at" < now\(\) - interval '400 days'/);
+    expect(prune[0].sql).toMatch(/"last_sent_at" is null or "push_subscriptions"."last_sent_at" < now\(\) - interval '400 days'/);
   });
 
   it("reads the subscriptions once when a Session is due for reminders", async () => {
@@ -295,14 +362,54 @@ describe("runAlerts owner alert", () => {
     expect(result.ownerAlert).toBe("sent");
   });
 
-  it("does nothing at other times", async () => {
+  it("does nothing outside the 07:00 UTC hour", async () => {
+    for (const at of ["2026-10-11T06:59:00Z", "2026-10-11T08:00:00Z"]) {
+      const { db, statements } = owner();
+      const result = await runAlerts(db, vapid, new Date(at), { ownerEndpoint: OWNER, send: async () => "sent" });
+      expect(statusReads(statements)).toBe(0);
+      expect(result.ownerAlert).toBeNull();
+    }
+  });
+
+  it("is sent by a late run in the 07:00 hour when no daily run is recorded, and only once that day", async () => {
     const { db, statements } = owner();
-    const result = await runAlerts(db, vapid, new Date("2026-10-11T07:01:00Z"), {
+    const sent: string[] = [];
+    const send = async (push: { payload: { tag: string } }) => {
+      sent.push(push.payload.tag);
+      return "sent" as const;
+    };
+    const first = await runAlerts(db, vapid, new Date("2026-10-11T07:03:00Z"), { ownerEndpoint: OWNER, send });
+    expect(first.ownerAlert).toBe("sent");
+    const second = await runAlerts(db, vapid, new Date("2026-10-11T07:04:00Z"), { ownerEndpoint: OWNER, send });
+    expect(second.ownerAlert).toBeNull();
+    expect(sent).toEqual(["owner:sync-status"]);
+    expect(statusReads(statements)).toBe(1);
+  });
+
+  it("is sent before the reminders pass, so a database fault there does not lose it", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { db } = fakeDb({ subscriptions: [raceFollower(0, OWNER)], failOn: /from "sessions" inner join "rounds"/ });
+    const sent: string[] = [];
+    const run = runAlerts(db, vapid, new Date("2026-10-11T07:00:00Z"), {
       ownerEndpoint: OWNER,
-      send: async () => "sent",
+      send: async (push) => {
+        sent.push(push.payload.tag);
+        return "sent";
+      },
     });
-    expect(statusReads(statements)).toBe(0);
+    await expect(run).rejects.toThrow(/Failed query/);
+    expect(sent).toEqual(["owner:sync-status"]);
+    vi.restoreAllMocks();
+  });
+
+  it("logs a failed daily pass, releases the day for the next run, and goes on to the reminders", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { db, statements } = fakeDb({ sessions: [DUE_RACE], subscriptions: raceFollowers(1), failOn: /from "schedule_flags"/ });
+    const result = await runAlerts(db, vapid, new Date("2026-10-11T07:00:00Z"), { ownerEndpoint: OWNER, send: async () => "sent" });
+    expect(error).toHaveBeenCalledWith("[alerts] the daily pass failed; the next run tries again", expect.any(Error));
+    expect(statements.some((s) => /^delete from "daily_runs"/.test(s))).toBe(true);
     expect(result.ownerAlert).toBeNull();
+    vi.restoreAllMocks();
   });
 
   it("does nothing without an owner endpoint", async () => {
@@ -397,14 +504,15 @@ describe("runAlerts push outcomes", () => {
 describe("runAlerts Session Reminder retry", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("releases the claims of reminders whose send did not go through, so the next run retries them", async () => {
+  it("releases the claims of reminders whose send got no answer, so the next run retries them", async () => {
     const { db, matching } = fakeDb({ sessions: [DUE_RACE], subscriptions: raceFollowers(4) });
     await runAlerts(db, vapid, NOW, { send: sendOutcomes(["sent", "error", "failed", "gone"]) });
     const release = matching(REMINDER_RELEASE);
     expect(release).toHaveLength(1);
     // Keyed like the claim: Session id, start time and the subscriptions that missed it.
-    expect(release[0].sql).toMatch(/"session_id" = \$1 and "reminders_sent"."starts_at" = \$2 and "reminders_sent"."subscription_id" in \(\$3, \$4\)/);
-    expect(release[0].params).toEqual([DUE_RACE[0], DUE_RACE[4], followerId(1), followerId(2)]);
+    // Only the error: a failed send is a strike, and is not retried (see "a refused Session Reminder").
+    expect(release[0].sql).toMatch(/"session_id" = \$1 and "reminders_sent"."starts_at" = \$2 and "reminders_sent"."subscription_id" in \(\$3\)/);
+    expect(release[0].params).toEqual([DUE_RACE[0], DUE_RACE[4], followerId(1)]);
   });
 
   it("releases nothing when every reminder went out", async () => {
@@ -431,5 +539,105 @@ describe("runAlerts Session Reminder retry", () => {
     expect(result.reminders.sent).toBe(1);
     expect(matching(REMINDER_RELEASE)).toEqual([]);
     expect(error).toHaveBeenCalledWith("[alerts] could not release unsent Session Reminders for a retry", expect.any(Error));
+  });
+});
+
+describe("runAlerts a refused Session Reminder", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("costs its subscription one strike, however many runs it stays due for", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { db, matching, failureCounts } = fakeDb({ sessions: [DUE_RACE], subscriptions: raceFollowers(1), trackClaims: true });
+    // Five runs a minute apart, all inside the reminder's catch-up window, each refused by the push service.
+    for (let minute = 0; minute < 5; minute++) {
+      await runAlerts(db, vapid, new Date(NOW.getTime() + minute * 60_000), { send: async () => "failed" });
+    }
+    expect(failureCounts.get(followerId(0))).toBe(1);
+    expect(matching(REMINDER_RELEASE)).toEqual([]);
+  });
+
+  it("is still retried after an error, which says nothing about the subscription", async () => {
+    const { db, reminderClaims } = fakeDb({ sessions: [DUE_RACE], subscriptions: raceFollowers(1), trackClaims: true });
+    const outcomes: PushOutcome[] = ["error", "sent", "sent"];
+    const results = [];
+    for (let minute = 0; minute < 3; minute++) {
+      const send = async () => outcomes[minute];
+      results.push(await runAlerts(db, vapid, new Date(NOW.getTime() + minute * 60_000), { send }));
+    }
+    expect(results.map((r) => r.reminders.claimed)).toEqual([1, 1, 0]);
+    expect(reminderClaims()).toBe(3);
+  });
+});
+
+describe("runAlerts late work", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("marks an FIA Document recorded too long ago as notified without pushing it", async () => {
+    const info = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // The alerts cron was down: the document was recorded two hours ago.
+    const old = [...WAITING_DOCUMENT.slice(0, 8), new Date(NOW.getTime() - 2 * 60 * 60_000).toISOString()];
+    const { db, matching } = fakeDb({ documents: [old], subscriptions: [[followerId(0), "https://fcm.googleapis.com/fcm/send/d", "p256dh", "auth", 15, {}, { f1: "all" }, "UTC", 0]] });
+    const sent: string[] = [];
+    const result = await runAlerts(db, vapid, NOW, {
+      work: { reminders: false, pushes: true },
+      send: async (push) => {
+        sent.push(push.subscription.id);
+        return "sent";
+      },
+    });
+    expect(sent).toEqual([]);
+    const skipped = matching(/^update "fia_documents" set "notified_at" = \$1, "pending_until" = \$2 where/);
+    expect(skipped).toHaveLength(1);
+    expect(skipped[0].params).toContain(WAITING_DOCUMENT[0]);
+    expect(result.documents).toEqual({ processed: 1, pushes: 0, sent: 0 });
+    expect(info).toHaveBeenCalledWith("[alerts] 1 FIA Documents were recorded too long ago to push: marked notified");
+  });
+
+  it("still pushes an FIA Document recorded a minute ago", async () => {
+    const { db } = fakeDb({ documents: [WAITING_DOCUMENT], subscriptions: [[followerId(0), "https://fcm.googleapis.com/fcm/send/d", "p256dh", "auth", 15, {}, { f1: "all" }, "UTC", 0]] });
+    const result = await runAlerts(db, vapid, NOW, { work: { reminders: false, pushes: true }, send: async () => "sent" });
+    expect(result.documents).toEqual({ processed: 1, pushes: 1, sent: 1 });
+  });
+
+  it("logs how many due Session Reminders it had no time to send", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const followers = REMINDER_CHUNK * 2 + 5;
+    const { db } = fakeDb({ sessions: [DUE_RACE], subscriptions: raceFollowers(followers) });
+    let t = 0;
+    await runAlerts(db, vapid, NOW, {
+      deadline: 1,
+      clock: () => t,
+      send: async () => {
+        t = 2;
+        return "sent";
+      },
+    });
+    expect(warn).toHaveBeenCalledWith(`[alerts] ${followers - REMINDER_CHUNK} reminders not sent this run`);
+  });
+
+  it("does not claim reminders for a subscription an earlier chunk found gone", async () => {
+    const DUE_QUALIFYING = ["f1-2026-x-qualifying", "f1", "qualifying", "Qualifying", DUE_RACE[4], "scheduled", "Mexico City Grand Prix", true];
+    // Follower 0 follows Qualifying only and the rest both Sessions, so follower 50's two reminders straddle
+    // the first chunk's end: one in it, one in the next.
+    const subscriptions = raceFollowers(REMINDER_CHUNK).map((row, i) => {
+      const copy = [...row];
+      copy[5] = i === 0 ? { f1: ["qualifying"] } : { f1: ["qualifying", "race"] };
+      return copy;
+    });
+    const gone = followerId(REMINDER_CHUNK / 2);
+    const { db, matching } = fakeDb({ sessions: [DUE_RACE, DUE_QUALIFYING], subscriptions });
+    await runAlerts(db, vapid, NOW, { send: async (push) => (push.subscription.id === gone ? "gone" : "sent") });
+    const claims = matching(/^insert into "reminders_sent"/);
+    expect(claims.length).toBeGreaterThan(1);
+    expect(claims[0].params).toContain(gone);
+    for (const later of claims.slice(1)) expect(later.params).not.toContain(gone);
+  });
+
+  it("records when the push service last accepted a push to a subscription", async () => {
+    const { db, matching } = fakeDb({ sessions: [DUE_RACE], subscriptions: raceFollowers(2) });
+    await runAlerts(db, vapid, NOW, { send: sendOutcomes(["sent", "failed"]) });
+    const seen = matching(/^update "push_subscriptions" set "last_sent_at" = now\(\)/);
+    expect(seen).toHaveLength(1);
+    expect(seen[0].params).toEqual([followerId(0)]);
   });
 });

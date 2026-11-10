@@ -2,7 +2,8 @@
 //
 // With a database (DATABASE_URL set) reads come from the published schedule only, cached per Series
 // and revalidated by the sync. Without one (local dev), or when the database can't be read (an outage,
-// a spent quota), the sources are fetched live with the same parsers and memoised in-process for 15 minutes.
+// a spent quota), the sources are fetched live with the same parsers and memoised in-process for 15 minutes
+// (live.ts bounds that fallback).
 //
 // When `now` is omitted the current time is read after `io()`, so under Cache Components the caller's
 // component becomes request-time (wrap it in <Suspense>) instead of freezing the time into the shell.
@@ -10,7 +11,7 @@ import { io } from "next/cache";
 import { getDb } from "@/db/client";
 import { SERIES_IDS, type Circuit, type FeaturedRoundResult, type Round, type SeriesId, type Session } from "@/domain/types";
 import { loadPublishedSchedule, loadRoundUpdatedAt, loadScheduleUpdatedAt } from "./db-read";
-import { getLiveSchedule } from "./live";
+import { getLiveSchedule, LIVE_WAIT_MS } from "./live";
 import { selectCalendarSessions, selectFeaturedRound, selectScheduleRounds, selectUpcomingRounds, withCircuits, type UpcomingRound } from "./select";
 import type { RoundWithContext } from "./types";
 
@@ -20,13 +21,15 @@ export { listAnnouncements, type Announcement } from "./announcements";
 export { getSpecialEvent, listSpecialEvents } from "./special-events";
 
 async function loadRounds(series: SeriesId): Promise<RoundWithContext[]> {
-  if (getDb()) {
+  const db = getDb();
+  if (db) {
     const published = await loadPublishedSchedule(series);
     if (published) return withCircuits(published);
     // The database can't be read: pages keep updating from the sources instead of serving their last render.
   }
   await io();
-  return withCircuits(await getLiveSchedule(series));
+  // During an outage a page request waits at most LIVE_WAIT_MS for a crawl; local dev waits for the whole crawl.
+  return withCircuits(await getLiveSchedule(series, db ? { waitMs: LIVE_WAIT_MS } : {}));
 }
 
 /** Whether every Series' published schedule can be read: false without a database or while it is down. */

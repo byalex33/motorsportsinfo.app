@@ -14,7 +14,6 @@ import {
 } from "./units";
 
 export type { TempUnit, WindUnit } from "./units";
-export { WeatherCredit } from "./weather-credit";
 
 export interface SessionForecastViewProps {
   forecast: ForecastResult;

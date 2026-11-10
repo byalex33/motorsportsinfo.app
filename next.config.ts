@@ -31,6 +31,8 @@ const contentSecurityPolicy = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  // The build's own time, inlined at build: the sitemap's lastmod for pages that change only with a deploy.
+  env: { BUILT_AT: new Date().toISOString() },
   cacheComponents: true,
   poweredByHeader: false,
   partialPrefetching: true,

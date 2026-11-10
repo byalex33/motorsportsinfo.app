@@ -12,7 +12,6 @@ function openF1Session(session_key: number, session_name: string, date_start: st
     meeting_key: 1296,
     circuit_short_name: "Singapore",
     location: "Marina Bay",
-    gmt_offset: "08:00:00",
     year: 2026,
   };
 }

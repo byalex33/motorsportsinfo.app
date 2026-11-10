@@ -3,14 +3,11 @@
 import { GlobeIcon } from "lucide-react";
 import { useState } from "react";
 import type { CalendarRound } from "@/app/calendar/data";
-import { SegmentPill } from "@/components/motion/segment-pill";
-import { SegmentButton, segmentTrack } from "@/components/round/display-controls";
-import { TimeZonePicker } from "@/components/round/time-zone-picker";
+import { TimeModeControl } from "@/components/round/display-controls";
 import { FEATURED_ROUND_GRACE_MINUTES, SERIES } from "@/domain/series";
 import { SERIES_IDS, type SeriesId } from "@/domain/types";
-import { track } from "@/lib/analytics";
 import { useNow } from "@/lib/client-stores";
-import { useTimePref, type TimeMode } from "@/lib/prefs";
+import { useTimePref } from "@/lib/prefs";
 import { deviceTimeZone } from "@/lib/time-format";
 import { cn } from "@/lib/utils";
 import { CalendarRoundCard } from "./calendar-round-card";
@@ -31,12 +28,6 @@ function ZoneControls() {
   const time = useTimePref();
   const mode = time.ready ? time.value.mode : null;
 
-  function setMode(next: TimeMode, tz?: string) {
-    if (next === time.value.mode && tz === time.value.tz) return;
-    time.set(next === "custom" ? { mode: next, tz } : { mode: next });
-    track("timezone_mode_changed", { mode: next });
-  }
-
   const label =
     mode === "track"
       ? { heading: "Track time", detail: "each Circuit's own zone" }
@@ -56,23 +47,26 @@ function ZoneControls() {
           <span className="font-mono text-xs text-muted-foreground"> · {label ? label.detail : "each Circuit's own zone"}</span>
         </span>
       </p>
-      <div role="group" aria-label="Show times in" className={cn(segmentTrack, "min-w-0 self-start md:self-auto")}>
-        <SegmentPill />
-        <SegmentButton active={mode === "viewer"} onClick={() => setMode("viewer")}>
-          Your time
-        </SegmentButton>
-        <SegmentButton active={mode === "track"} onClick={() => setMode("track")}>
-          Track time
-        </SegmentButton>
-        <TimeZonePicker
-          active={mode === "custom"}
-          value={time.value.mode === "custom" ? (time.value.tz ?? null) : null}
-          onSelect={(tz) => setMode("custom", tz)}
-          className="max-w-36"
-        />
-      </div>
+      <TimeModeControl mode={mode} className="min-w-0 self-start md:self-auto" />
     </div>
   );
+}
+
+/**
+ * What a card needs from the clock, as values that change only when a Session starts or ends, so the
+ * memoised cards skip the minute ticks in between.
+ */
+function roundClock(round: CalendarRound, now: number | null): { live: boolean; endedBy: number | null } {
+  if (now === null) return { live: false, endedBy: null };
+  const first = round.sessions[0];
+  const last = round.sessions.at(-1);
+  const live = !!first && !!last && !round.cancelled && Date.parse(first.startsAt) <= now && now < Date.parse(last.endsAt);
+  let endedBy = 0;
+  for (const s of round.sessions) {
+    const end = Date.parse(s.endsAt);
+    if (end <= now && end > endedBy) endedBy = end;
+  }
+  return { live, endedBy };
 }
 
 /** Every unfinished Round as a card, grouped by month, with a Series filter. */
@@ -143,7 +137,7 @@ export function CalendarList({ rounds, renderedAt }: { rounds: CalendarRound[]; 
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {month.rounds.map((round) => (
-                <CalendarRoundCard key={round.id} round={round} now={clock} />
+                <CalendarRoundCard key={round.id} round={round} {...roundClock(round, clock)} />
               ))}
             </div>
           </section>

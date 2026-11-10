@@ -3,7 +3,8 @@
 // bar or reached from the TELEMETRY chip, would otherwise give the result away to everyone in a chat before
 // they choose to look.
 // Also the one spelling of the share image's and the comparison data's query: both redirect any other to it,
-// so made-up parameters can't make the CDN miss and the server render again.
+// so made-up parameters can't make the CDN miss and the server render again. Colour picks are snapped to a
+// 4,096-colour palette, and a driver code the Session doesn't have is dropped (unknownDriverRedirect).
 import { colorParam } from "@/lib/team-colors";
 import { channelParam } from "@/lib/telemetry-channels";
 
@@ -35,7 +36,7 @@ export function canonicalTelemetryQuery(query: Query, keys: readonly TelemetryQu
       if (channel !== "speed") canonical.set(key, channel);
     } else {
       const color = colorParam(value);
-      if (color) canonical.set(key, color.slice(1));
+      if (color) canonical.set(key, paletteColor(color));
     }
   }
   return canonical;
@@ -58,6 +59,37 @@ export function canonicalTelemetryRedirect(request: Request, keys: readonly Tele
     status: 308,
     headers: { Location: canonical.pathname + canonical.search, "Cache-Control": "public, max-age=3600", "X-Robots-Tag": "noindex" },
   });
+}
+
+/**
+ * A 308 to the same URL without `a` or `b` when it names a driver the comparison didn't resolve to (a made-up
+ * or absent code, which falls back to the default pair), or null. Called after resolveTelemetry, so any
+ * three letters can't each make a new CDN entry for the same comparison.
+ */
+export function unknownDriverRedirect(request: Request, resolved: { a: string; b: string }): Response | null {
+  const url = new URL(request.url);
+  let changed = false;
+  for (const key of ["a", "b"] as const) {
+    const value = url.searchParams.get(key);
+    if (value !== null && value.toUpperCase() !== resolved[key]) {
+      url.searchParams.delete(key);
+      changed = true;
+    }
+  }
+  if (!changed) return null;
+  const search = url.searchParams.toString();
+  return new Response(null, {
+    status: 308,
+    headers: { Location: url.pathname + (search ? `?${search}` : ""), "Cache-Control": "public, max-age=3600", "X-Robots-Tag": "noindex" },
+  });
+}
+
+/**
+ * "#e8002d" as the nearest colour whose channels are each a doubled hex digit ("ee0033"). At most 8/255 off
+ * per channel, which no one sees on a chart line, and 4,096 colours instead of 16.7 million.
+ */
+function paletteColor(color: string): string {
+  return [1, 3, 5].map((i) => (Math.round(parseInt(color.slice(i, i + 2), 16) / 17) * 0x11).toString(16).padStart(2, "0")).join("");
 }
 
 /** The share image's query for a link that names both drivers (?a=VER&b=LEC, with its colours and channel), else null. */

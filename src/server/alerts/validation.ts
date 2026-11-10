@@ -29,6 +29,13 @@ const base64url = z
   .max(512)
   .regex(/^[A-Za-z0-9_-]+=*$/, "Expected base64url");
 
+/**
+ * A base64url key that decodes to exactly `bytes` bytes. web-push throws on any other length before it sends,
+ * which the cron counts as an "error", never a failure, so such a row would be retried forever and never pruned.
+ */
+const keyOfLength = (bytes: number, name: string) =>
+  base64url.refine((value) => Buffer.from(value, "base64url").length === bytes, `${name} must be ${bytes} bytes`);
+
 const httpsUrl = z
   .string()
   .max(2048)
@@ -72,7 +79,8 @@ const pushEndpoint = z.string().max(2048).refine(isPushServiceEndpoint, "Unknown
 
 export const browserSubscriptionSchema = z.object({
   endpoint: pushEndpoint,
-  keys: z.object({ p256dh: base64url, auth: base64url }),
+  // An uncompressed P-256 public key, and the 16-byte auth secret (RFC 8291).
+  keys: z.object({ p256dh: keyOfLength(65, "p256dh"), auth: keyOfLength(16, "auth") }),
 });
 
 const followsShape = Object.fromEntries(

@@ -6,7 +6,7 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import { getDb } from "@/db/client";
 import { fiaDocuments } from "@/db/schema";
-import { fiaDocumentId, fiaEventSlug } from "@/lib/fia-document-path";
+import { fiaDocumentId, fiaDocumentPageSlug } from "@/lib/fia-document-path";
 import { FIA_DOCUMENT_SERIES, type Circuit, type FiaDocumentSeries, type Round, type RoundDocumentsResult, type SeriesId } from "@/domain/types";
 import { defaultContext, errorMessage } from "@/server/schedule/sources/http";
 import { eventMatchesRound, fetchFiaDocuments, FIA_DOCUMENT_PAGES, type FiaEventDocuments } from "./fia";
@@ -73,19 +73,35 @@ export async function fiaDocumentLink(series: FiaDocumentSeries, slug: string): 
   const match = matchDocumentLink(slug, loaded.ok ? loaded.listing : null);
   if (match.kind === "file") return fiaDocumentSource(match.file);
   if (match.kind === "unknown") return null;
+  const file = (await storedDocumentFiles(series))[`${match.event}-${match.id}`];
+  return file ? fiaDocumentSource(file) : null;
+}
 
+/**
+ * The files of a Series' stored documents by document link slug ("singapore-grand-prix-73"). One read per
+ * Series, shared by every instance and revalidated by the sync's tag, so a made-up slug never reaches the
+ * database. Empty without a database; a failed read is cached briefly.
+ */
+async function storedDocumentFiles(series: FiaDocumentSeries): Promise<Record<string, string>> {
+  "use cache: remote";
+  cacheTag(fiaDocumentsTag(series));
   const db = getDb();
-  if (!db) return null;
+  if (!db) return {};
   try {
-    const number = /^\d+$/.test(match.id) ? Number(match.id) : null;
     const rows = await db
       .select({ event: fiaDocuments.event, number: fiaDocuments.number, file: fiaDocuments.file })
       .from(fiaDocuments)
-      .where(and(eq(fiaDocuments.series, series), isNotNull(fiaDocuments.file), number === null ? undefined : eq(fiaDocuments.number, number)));
-    const row = rows.find((r) => fiaEventSlug(r.event) === match.event && fiaDocumentId(r) === match.id);
-    return row?.file ? fiaDocumentSource(row.file) : null;
+      .where(and(eq(fiaDocuments.series, series), isNotNull(fiaDocuments.file)));
+    const files: Record<string, string> = {};
+    for (const row of rows) {
+      const key = fiaDocumentPageSlug(row.event, fiaDocumentId(row));
+      if (row.file && !(key in files)) files[key] = row.file;
+    }
+    cacheLife("hours");
+    return files;
   } catch (error) {
     console.warn(`[documents] fia_documents lookup failed: ${errorMessage(error)}`);
-    return null;
+    cacheLife(FAILURE_LIFE);
+    return {};
   }
 }

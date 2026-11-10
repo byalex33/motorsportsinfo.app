@@ -5,26 +5,29 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useNow } from "@/lib/client-stores";
-import { useDismissedAnnouncement } from "@/lib/prefs";
+import { addDismissedAnnouncement, useDismissedAnnouncements } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
 import type { Announcement } from "@/server/schedule";
 
 /**
  * A strip under the header announcing a Special Event or a Celebration, linking onwards. It shows the one ending
- * soonest that has not ended, opens a moment after load (never during hydration, so it can't flash for a viewer
+ * soonest that has not ended and was not closed on this device, opens a moment after load (never during hydration, so it can't flash for a viewer
  * who closed it), stays closed on this device once dismissed, hides itself on a Special Event's own page and goes
  * away for everyone at its `until`. It takes the announcement's accent; a Celebration can make a name glow and throw confetti as it opens.
  */
 export function AnnouncementBanner({ announcements }: { announcements: Announcement[] }) {
   const now = useNow(60_000);
-  const dismissed = useDismissedAnnouncement();
+  const dismissed = useDismissedAnnouncements();
   const pathname = usePathname();
   // The id being closed, not a flag: the banner stays mounted across navigations, so a later Special Event must
   // not inherit the previous one's exit animation (and be stored as dismissed when it ends).
   const [closingId, setClosingId] = useState<string | null>(null);
 
-  const current = now === null ? undefined : announcements.find((a) => Date.parse(a.until) > now);
-  if (!current || !dismissed.ready || dismissed.value === current.id) return null;
+  const current =
+    now === null || !dismissed.ready
+      ? undefined
+      : announcements.find((a) => Date.parse(a.until) > now && !dismissed.value.includes(a.id));
+  if (!current) return null;
   if (current.kind === "special-event" && pathname === current.href) return null;
   const closing = closingId === current.id;
   const Icon = current.kind === "celebration" ? TrophyIcon : SparklesIcon;
@@ -33,7 +36,7 @@ export function AnnouncementBanner({ announcements }: { announcements: Announcem
     <div
       onAnimationEnd={(e) => {
         if (e.target !== e.currentTarget) return;
-        if (closing) dismissed.set(current.id);
+        if (closing) dismissed.set(addDismissedAnnouncement(dismissed.value, current.id, announcements.map((a) => a.id)));
         else if (current.confetti.length > 0) void throwConfetti(current.id, current.confetti);
       }}
       className={cn(

@@ -1,5 +1,4 @@
 import type { MetadataRoute } from "next";
-import { cacheLife } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { SERIES_IDS, type SeriesId } from "@/domain/types";
 import { seriesLastModified } from "@/lib/seo/last-modified";
@@ -9,12 +8,11 @@ import { absoluteUrl } from "@/lib/site";
 import { getRoundUpdatedAt, getScheduleUpdatedAt, listScheduleRounds, listSpecialEvents } from "@/server/schedule";
 import { getSeriesPageData } from "./[series]/data";
 
-/** When this deployment was built (first rendered, then cached for good). Pages without data change only with a deploy. */
-async function builtAt(): Promise<string> {
-  "use cache";
-  cacheLife("max");
-  return new Date().toISOString();
-}
+/**
+ * When this deployment was built: BUILT_AT is fixed by next.config.ts at build time, so every instance and
+ * every regeneration gives the same date. Pages without data change only with a deploy.
+ */
+const BUILT_AT = process.env.BUILT_AT ?? new Date().toISOString();
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
@@ -33,7 +31,7 @@ async function seriesUpdatedAt(series: SeriesId, built: Date): Promise<Date> {
 // A Series whose schedule can't be read (a source down, no database locally) still gets its Series page,
 // dated `built`, but no Round entries: one Series never fails the whole sitemap.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const built = new Date(await builtAt());
+  const built = new Date(BUILT_AT);
   const series = await Promise.all(
     SERIES_IDS.map(async (id) => ({
       url: absoluteUrl(`/${id}`),

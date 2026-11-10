@@ -259,13 +259,18 @@ export function itinerarySlug(tabs: { data?: { tabs?: { label: string; url: stri
 /**
  * Every WRC rally starting in `year`, with its itinerary where wrc.com has one. After a rally the Itinerary
  * tab may turn into the results, so a finished rally can read as "Times TBC" again; only its Round row
- * changes, its Sessions stay (diff.ts never removes Sessions that have ended).
+ * changes, its Sessions stay (diff.ts never removes Sessions that have ended). A rally whose itinerary
+ * request fails is skipped and the season is not complete, so its Round stays as published.
  */
-export async function fetchWrcSeason(ctx: SourceContext, year: number): Promise<{ rounds: RawRound[]; warnings: string[] }> {
+export async function fetchWrcSeason(
+  ctx: SourceContext,
+  year: number,
+): Promise<{ rounds: RawRound[]; complete: boolean; warnings: string[] }> {
   const feed = await getJson<{ data?: WrcEvent[] }>(ctx, wrcSeasonUrl(year));
   const events = (feed.data ?? []).filter((e) => e.reference.isWRC !== false && e.reference.uriSlug.startsWith("wrc-"));
   const warnings: string[] = [];
   const rounds: RawRound[] = [];
+  let complete = true;
   for (const event of events) {
     if (/cancel/i.test(event.status ?? "")) {
       warnings.push(`wrc.com ${event.reference.uriSlug} is ${event.status}; skipped`);
@@ -280,9 +285,11 @@ export async function fetchWrcSeason(ctx: SourceContext, year: number): Promise<
         itinerary = await getJson(ctx, detailsUrl(slug));
       }
     } catch (error) {
-      warnings.push(`wrc.com ${event.reference.uriSlug} itinerary failed: ${errorMessage(error)}`);
+      warnings.push(`wrc.com ${event.reference.uriSlug} itinerary failed: ${errorMessage(error)}; Round skipped`);
+      complete = false;
+      continue;
     }
     rounds.push(parseWrcRally(event, itinerary, year, warnings));
   }
-  return { rounds, warnings };
+  return { rounds, complete, warnings };
 }

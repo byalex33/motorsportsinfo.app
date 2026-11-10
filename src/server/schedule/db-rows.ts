@@ -1,13 +1,21 @@
 // Maps between database rows and domain objects.
 import { getCircuit } from "@/data/circuits";
 import type { Round, Session } from "@/domain/types";
-import type { rounds, sessions } from "@/db/schema";
+import type { pendingSessionChanges, rounds, sessions } from "@/db/schema";
 import { everySessionCancelled } from "@/lib/round-status";
 import { assignRoundPageSlugs, type RoundPageSource } from "@/lib/seo/round-page";
+import type { PendingChange } from "./diff";
 import type { RoundWithSessions } from "./types";
 
 type RoundRow = typeof rounds.$inferSelect;
 type SessionRow = typeof sessions.$inferSelect;
+type PendingRow = typeof pendingSessionChanges.$inferSelect;
+
+/**
+ * pending_session_changes has no status column, so a pending cancellation is stored with this seen_count.
+ * A pending time change is always stored with 1: the second sighting publishes it and deletes the row.
+ */
+export const PENDING_CANCELLATION_SEEN_COUNT = -1;
 
 const iso = (d: Date | string) => new Date(d).toISOString();
 
@@ -92,6 +100,26 @@ export function pageSlugsToStore(
 
 export function sessionToRow(session: Session, now: Date): typeof sessions.$inferInsert {
   return { ...session, startsAt: new Date(session.startsAt), endsAt: new Date(session.endsAt), updatedAt: now };
+}
+
+export function pendingFromRow(row: PendingRow): PendingChange {
+  const pending: PendingChange = {
+    sessionId: row.sessionId,
+    observedStartsAt: iso(row.observedStartsAt),
+    observedEndsAt: iso(row.observedEndsAt),
+    seenCount: row.seenCount,
+  };
+  return row.seenCount === PENDING_CANCELLATION_SEEN_COUNT ? { ...pending, seenCount: 1, cancelled: true } : pending;
+}
+
+export function pendingToRow(pending: PendingChange, now: Date): typeof pendingSessionChanges.$inferInsert {
+  return {
+    sessionId: pending.sessionId,
+    observedStartsAt: new Date(pending.observedStartsAt),
+    observedEndsAt: new Date(pending.observedEndsAt),
+    seenCount: pending.cancelled ? PENDING_CANCELLATION_SEEN_COUNT : pending.seenCount,
+    firstSeenAt: now,
+  };
 }
 
 export function groupSessions(roundRows: RoundRow[], sessionRows: SessionRow[]): RoundWithSessions[] {

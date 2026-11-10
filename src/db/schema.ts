@@ -13,7 +13,15 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { DocumentAlertLevel, FiaDocumentKind, FiaDocumentSeries, SeriesId, SessionStatus, SessionType } from "@/domain/types";
+import type {
+  DocumentAlertLevel,
+  FiaDocumentKind,
+  FiaDocumentSeries,
+  ScheduleChangeKind,
+  SeriesId,
+  SessionStatus,
+  SessionType,
+} from "@/domain/types";
 
 // ── Schedule (owned by the schedule sync) ──────────────────────────────────
 
@@ -57,8 +65,9 @@ export const sessions = pgTable(
 );
 
 /**
- * A change seen in a source but not yet published. A time change is published
- * once two checks in a row agree (seenCount >= 2).
+ * A change seen in a source but not yet published: a new time, or a cancellation. It is published when
+ * the next check sees the same, which deletes the row, so seenCount is always 1 for a time change. A
+ * pending cancellation has seenCount -1 (see PENDING_CANCELLATION_SEEN_COUNT in server/schedule/db-rows.ts).
  */
 export const pendingSessionChanges = pgTable("pending_session_changes", {
   sessionId: text("session_id").primaryKey(),
@@ -75,7 +84,7 @@ export const scheduleChanges = pgTable(
     id: serial("id").primaryKey(),
     sessionId: text("session_id").notNull(),
     series: text("series").$type<SeriesId>().notNull(),
-    kind: text("kind").$type<"time" | "cancelled">().notNull(),
+    kind: text("kind").$type<ScheduleChangeKind>().notNull(),
     previousStartsAt: timestamp("previous_starts_at", { withTimezone: true }).notNull(),
     newStartsAt: timestamp("new_starts_at", { withTimezone: true }),
     detectedAt: timestamp("detected_at", { withTimezone: true }).notNull().defaultNow(),
@@ -133,6 +142,11 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   failureCount: integer("failure_count").notNull().default(0),
+  /**
+   * When the push service last accepted a push to this device (to the day). With updatedAt, it tells a device
+   * still in use from one nobody has saved or reached for a long time, which the alerts cron prunes.
+   */
+  lastSentAt: timestamp("last_sent_at", { withTimezone: true }),
 });
 
 /**
@@ -169,6 +183,15 @@ export const remindersSent = pgTable(
   },
   (t) => [primaryKey({ columns: [t.subscriptionId, t.sessionId, t.startsAt] })],
 );
+
+/**
+ * The UTC days whose daily alerts run (the owner's sync alert and housekeeping) was claimed. The first run of
+ * the 07:00 UTC hour to insert the day does it, so a late or failed run is made up and none does it twice.
+ */
+export const dailyRuns = pgTable("daily_runs", {
+  day: date("day").primaryKey(),
+  ranAt: timestamp("ran_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 // ── FIA Documents (owned by the documents work) ────────────────────────────
 

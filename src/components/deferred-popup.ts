@@ -55,7 +55,7 @@ function whenIdle(run: () => void): () => void {
 /**
  * Loads the module when the browser is idle, or sooner through `request` (hover, focus, click). Null until
  * it arrives, including during hydration, so the server markup matches. `onLoad` runs as it arrives, before
- * the render that uses it.
+ * the render that uses it. `request` resolves to false when the load failed, so a click can drop its open request.
  */
 function useLoaded<M, T>(loader: DeferredLoader<M>, onLoad: (module: M) => T) {
   const [loaded, setLoaded] = useState<T | null>(null);
@@ -64,25 +64,29 @@ function useLoaded<M, T>(loader: DeferredLoader<M>, onLoad: (module: M) => T) {
     onLoadRef.current = onLoad;
   });
 
-  const request = useCallback(() => {
-    loader().then(
-      (module) => {
-        const value = onLoadRef.current(module);
-        setLoaded((current) => current ?? value);
-      },
-      () => {
-        // Offline or a failed chunk: keep waiting, and the next hover, focus or click tries again.
-      },
-    );
-  }, [loader]);
+  const request = useCallback(
+    (): Promise<boolean> =>
+      loader().then(
+        (module) => {
+          const value = onLoadRef.current(module);
+          setLoaded((current) => current ?? value);
+          return true;
+        },
+        () => {
+          // Offline or a failed chunk: keep waiting, and the next hover, focus or click tries again.
+          return false;
+        },
+      ),
+    [loader],
+  );
 
   useEffect(() => {
     if (loaded !== null) return;
     if (loader.loaded) {
-      request();
+      void request();
       return;
     }
-    return whenIdle(request);
+    return whenIdle(() => void request());
   }, [loaded, loader, request]);
 
   return [loaded, request] as const;
@@ -110,11 +114,14 @@ export function useDeferredPopup<M>(loader: DeferredLoader<M>) {
     type: "button" as const,
     "aria-haspopup": "dialog" as const,
     "aria-expanded": false,
-    onPointerEnter: request,
-    onFocus: request,
+    onPointerEnter: () => void request(),
+    onFocus: () => void request(),
     onClick: () => {
       wantsOpen.current = true;
-      request();
+      // A failed load drops the click: a later hover that loads it must not open the popup by itself.
+      void request().then((ok) => {
+        if (!ok) wantsOpen.current = false;
+      });
     },
   };
 

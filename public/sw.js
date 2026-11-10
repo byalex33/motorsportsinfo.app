@@ -3,9 +3,9 @@ importScripts("/sw-push.js");
 // motorsportsinfo.app service worker — offline copy of visited pages.
 // - Navigations: network first, falling back to the last cached copy of that page (then the home page).
 // - Same-origin static assets: stale-while-revalidate.
-// - Never cached: /api/*, FIA Documents (the /documents/* PDFs and the /<series>/documents/* viewer
-//   pages), RSC/data requests, non-GET requests and anything cross-origin (map tiles, radar frames,
-//   weather APIs).
+// - Never cached: /api/*, FIA Document links (/documents/* and /<series>/documents/*, which redirect to
+//   the PDFs on fia.com), RSC/data requests, non-GET requests and anything cross-origin (map tiles, radar
+//   frames, weather APIs).
 // Push handlers live in /sw-push.js (owned by the alerts work).
 
 const VERSION = "v1";

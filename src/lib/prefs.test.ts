@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_TIME_PREF,
   PREF_KEYS,
+  addDismissedAnnouncement,
   defaultUnitsForLocale,
+  parseDismissedAnnouncements,
   parseSavedAlerts,
   parseSeriesPref,
   parseTimePref,
@@ -73,6 +75,25 @@ describe("parseSavedAlerts", () => {
     expect(parseSavedAlerts("not json")).toBeNull();
     expect(parseSavedAlerts("null")).toBeNull();
     expect(parseSavedAlerts(JSON.stringify({ leadMinutes: 15 }))).toBeNull();
+  });
+});
+
+describe("dismissed announcements", () => {
+  it("parses a comma-joined list", () => {
+    expect(parseDismissedAnnouncements("special-2026-a,celebration-b")).toEqual(["special-2026-a", "celebration-b"]);
+    expect(parseDismissedAnnouncements("a,,a, b")).toEqual(["a", "b"]);
+  });
+  it("reads the older single-id form as a one-item list", () => {
+    expect(parseDismissedAnnouncements("celebration-2026-f1-champion-antonelli")).toEqual(["celebration-2026-f1-champion-antonelli"]);
+  });
+  it("reads nothing stored as an empty list", () => {
+    for (const raw of [null, undefined, ""]) expect(parseDismissedAnnouncements(raw)).toEqual([]);
+  });
+  it("appends an id once and drops ids no longer announced", () => {
+    expect(addDismissedAnnouncement(["a"], "b", ["a", "b", "c"])).toEqual(["a", "b"]);
+    expect(addDismissedAnnouncement(["a", "b"], "b", ["a", "b"])).toEqual(["a", "b"]);
+    expect(addDismissedAnnouncement(["gone", "a"], "b", ["a", "b"])).toEqual(["a", "b"]);
+    expect(addDismissedAnnouncement([], "b", ["b"])).toEqual(["b"]);
   });
 });
 

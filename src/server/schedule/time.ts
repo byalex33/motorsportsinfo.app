@@ -65,23 +65,6 @@ export function addDays(date: string, days: number): string {
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
-/** "+04:00", "-08:00:00", "08:00:00" → minutes east of UTC. */
-export function parseGmtOffset(offset: string): number | null {
-  const m = /^([+-])?(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(offset.trim());
-  if (!m) return null;
-  const sign = m[1] === "-" ? -1 : 1;
-  return sign * (Number(m[2]) * 60 + Number(m[3]));
-}
-
-/** A local wall-clock time without offset ("2026-09-24T10:00:00") plus a GMT offset → ISO UTC. */
-export function localWithOffsetToIso(local: string, gmtOffset: string): string | null {
-  const offset = parseGmtOffset(gmtOffset);
-  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(local);
-  if (offset === null || !m) return null;
-  const utc = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), Number(m[6] ?? 0));
-  return new Date(utc - offset * 60000).toISOString();
-}
-
 /** Normalises any parseable timestamp to ISO 8601 UTC with milliseconds, or null. */
 export function toIso(value: string | number | Date | null | undefined): string | null {
   if (value === null || value === undefined || value === "") return null;

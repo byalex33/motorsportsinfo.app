@@ -1,5 +1,6 @@
-export type TempUnit = "c" | "f";
-export type WindUnit = "kmh" | "mph";
+import type { TempUnit, WindUnit } from "@/lib/prefs";
+
+export type { TempUnit, WindUnit };
 
 const KM_PER_MILE = 1.609344;
 

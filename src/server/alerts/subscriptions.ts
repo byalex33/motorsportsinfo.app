@@ -1,6 +1,6 @@
 // Database writes for push subscriptions (subscribe / unsubscribe / browser rotation).
 import { createHmac } from "node:crypto";
-import { and, count, eq, gt, sql } from "drizzle-orm";
+import { and, count, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { pushSignupAttempts, pushSubscriptions } from "@/db/schema";
 import type { ConfirmOutcome } from "./push";
@@ -15,7 +15,10 @@ export const MAX_SUBSCRIPTIONS = 50_000;
 /** New devices one client may sign up in an hour. Generous for a shared network, small for a script. */
 export const NEW_DEVICES_PER_HOUR = 10;
 
-/** What must hold before a new device is saved. Existing devices skip both, so they can always update. */
+/**
+ * What must hold before a new device, or a known device's new endpoint, is saved. Existing devices skip
+ * both, so they can always update.
+ */
 export interface NewDeviceChecks {
   /** The client asking, as an HMAC of its IP address (see clientKey), or null when it is not known. */
   client: string | null;
@@ -25,6 +28,8 @@ export interface NewDeviceChecks {
 
 export type UpsertResult =
   | "saved"
+  /** The selection follows nothing and wants no Document Alerts: the device was deleted, as an unsubscribe. */
+  | "removed"
   /** The table holds MAX_SUBSCRIPTIONS rows. */
   | "full"
   /** The client signed up NEW_DEVICES_PER_HOUR new devices in the last hour. */
@@ -35,32 +40,55 @@ export type UpsertResult =
   | "unavailable";
 
 /**
- * Saves a device's choices. A device already saved is updated. A new one is saved only when its client is
- * under the hourly limit, the table has room, and the push service accepts a confirmation push to it, so a
- * made-up endpoint (or one created for another site) never takes a row.
+ * Whether a new endpoint may be stored: its client is under the hourly limit (this attempt counts), the table
+ * has room when `needsRoom`, and the push service accepts a confirmation push to it. A sign-up and a rotation
+ * to a new endpoint both go through it, so neither can store a made-up endpoint, nor more than
+ * NEW_DEVICES_PER_HOUR an hour.
  */
-export async function upsertSubscription(db: Db, input: SubscribeInput, checks: NewDeviceChecks): Promise<UpsertResult> {
-  const [existing] = await db
-    .select({ id: pushSubscriptions.id })
-    .from(pushSubscriptions)
-    .where(eq(pushSubscriptions.endpoint, input.subscription.endpoint));
-  if (!existing) {
-    if (checks.client !== null) {
-      const [{ recent }] = await db
-        .select({ recent: count() })
-        .from(pushSignupAttempts)
-        .where(and(eq(pushSignupAttempts.client, checks.client), gt(pushSignupAttempts.attemptedAt, sql`now() - interval '1 hour'`)));
-      if (recent >= NEW_DEVICES_PER_HOUR) return "limited";
-      // Counted before the confirmation push, so refused attempts count too.
-      await db.insert(pushSignupAttempts).values({ client: checks.client });
-    }
+async function admitEndpoint(
+  db: Db,
+  subscription: SubscribeInput["subscription"],
+  checks: NewDeviceChecks,
+  needsRoom: boolean,
+): Promise<"ok" | "full" | "limited" | "refused" | "unavailable"> {
+  if (checks.client !== null) {
+    const [{ recent }] = await db
+      .select({ recent: count() })
+      .from(pushSignupAttempts)
+      .where(and(eq(pushSignupAttempts.client, checks.client), gt(pushSignupAttempts.attemptedAt, sql`now() - interval '1 hour'`)));
+    if (recent >= NEW_DEVICES_PER_HOUR) return "limited";
+    // Counted before the confirmation push, so refused attempts count too.
+    await db.insert(pushSignupAttempts).values({ client: checks.client });
+  }
+  if (needsRoom) {
     const [{ total }] = await db.select({ total: count() }).from(pushSubscriptions);
     if (total >= MAX_SUBSCRIPTIONS) {
       console.warn(`[alerts] push_subscriptions is full (${total} rows): refused a new subscription`);
       return "full";
     }
-    const confirmed = await checks.confirm(input.subscription);
-    if (confirmed !== "sent") return confirmed;
+  }
+  const confirmed = await checks.confirm(subscription);
+  return confirmed === "sent" ? "ok" : confirmed;
+}
+
+/**
+ * Saves a device's choices. A device already saved is updated. A new one is saved only when its client is
+ * under the hourly limit, the table has room, and the push service accepts a confirmation push to it, so a
+ * made-up endpoint (or one created for another site) never takes a row. A selection of nothing deletes the
+ * device instead: it would never be pushed, so no push service would ever report it gone.
+ */
+export async function upsertSubscription(db: Db, input: SubscribeInput, checks: NewDeviceChecks): Promise<UpsertResult> {
+  if (Object.keys(input.follows).length === 0 && Object.keys(input.documentAlerts).length === 0) {
+    await deleteSubscription(db, input.subscription.endpoint);
+    return "removed";
+  }
+  const [existing] = await db
+    .select({ id: pushSubscriptions.id })
+    .from(pushSubscriptions)
+    .where(eq(pushSubscriptions.endpoint, input.subscription.endpoint));
+  if (!existing) {
+    const admitted = await admitEndpoint(db, input.subscription, checks, true);
+    if (admitted !== "ok") return admitted;
   }
   const values = {
     endpoint: input.subscription.endpoint,
@@ -96,23 +124,61 @@ export async function pruneSignupAttempts(db: Db): Promise<void> {
   await db.delete(pushSignupAttempts).where(sql`${pushSignupAttempts.attemptedAt} < now() - interval '1 day'`);
 }
 
+/** A subscription neither saved nor pushed to for this long is pruned (the alerts cron's daily housekeeping). */
+export const STALE_SUBSCRIPTION_DAYS = 400;
+
+/**
+ * Deletes subscriptions that no device has saved, and no push service has accepted a push for, in
+ * STALE_SUBSCRIPTION_DAYS: rows that nothing would otherwise remove, since only a push can find them gone.
+ * The Alerts page saves once per visit and every accepted push sets lastSentAt, so a device in use stays.
+ */
+export async function pruneStaleSubscriptions(db: Db): Promise<number> {
+  const cutoff = sql`now() - interval '${sql.raw(String(STALE_SUBSCRIPTION_DAYS))} days'`;
+  const dropped = await db
+    .delete(pushSubscriptions)
+    .where(
+      and(
+        lt(pushSubscriptions.updatedAt, cutoff),
+        or(isNull(pushSubscriptions.lastSentAt), lt(pushSubscriptions.lastSentAt, cutoff)),
+      ),
+    )
+    .returning({ id: pushSubscriptions.id });
+  return dropped.length;
+}
+
 export async function deleteSubscription(db: Db, endpoint: string): Promise<void> {
   await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
 }
 
-/** Moves a device's settings to the endpoint the browser replaced it with. Returns false if the old one is unknown. */
+export type RotateResult =
+  | "saved"
+  /** No device is saved with the old endpoint. */
+  | "unknown"
+  /** As for a new device (UpsertResult): the old endpoint stays. */
+  | "limited"
+  | "refused"
+  | "unavailable";
+
+/**
+ * Moves a device's settings to the endpoint the browser replaced it with. A new endpoint goes through the
+ * same hourly limit and confirmation push as a new device (admitEndpoint): otherwise a client could move its
+ * row to a made-up endpoint, sign up again, and repeat. The table needs no room: the row only moves.
+ */
 export async function rotateSubscription(
   db: Db,
   oldEndpoint: string,
-  next: { endpoint: string; keys: { p256dh: string; auth: string } },
-): Promise<boolean> {
+  next: SubscribeInput["subscription"],
+  checks: NewDeviceChecks,
+): Promise<RotateResult> {
   if (oldEndpoint !== next.endpoint) {
     // A row may already exist for the new endpoint (e.g. the page re-saved first); the old row's settings win.
     const [old] = await db
       .select({ id: pushSubscriptions.id })
       .from(pushSubscriptions)
       .where(eq(pushSubscriptions.endpoint, oldEndpoint));
-    if (!old) return false;
+    if (!old) return "unknown";
+    const admitted = await admitEndpoint(db, next, checks, false);
+    if (admitted !== "ok") return admitted === "full" ? "unavailable" : admitted;
     await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, next.endpoint));
   }
   const updated = await db
@@ -126,5 +192,5 @@ export async function rotateSubscription(
     })
     .where(eq(pushSubscriptions.endpoint, oldEndpoint))
     .returning({ id: pushSubscriptions.id });
-  return updated.length > 0;
+  return updated.length > 0 ? "saved" : "unknown";
 }

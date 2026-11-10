@@ -25,6 +25,9 @@ export function AlertsPanel() {
   const follows = followsOverride ?? storedAlerts?.follows ?? defaultFollows(rememberedSeries);
   const leadMinutes = leadOverride ?? storedAlerts?.leadMinutes ?? REMINDER_LEAD_MINUTES[0];
   const documentAlerts = documentAlertsOverride ?? storedAlerts?.documentAlerts ?? {};
+  // False while only defaults show: a subscribed device whose storage was cleared must not have its saved
+  // choices on the server replaced by them until the viewer changes something.
+  const chosen = storedAlerts !== null || followsOverride !== null || leadOverride !== null || documentAlertsOverride !== null;
 
   function toggle(series: SeriesId, type: SessionType, on: boolean) {
     const next = toggleFollow(follows, series, type, on);
@@ -60,7 +63,13 @@ export function AlertsPanel() {
       </div>
       <div className="grid gap-14 md:grid-cols-2 md:gap-10">
         <div className="enter-rise min-w-0" style={staggerDelay(2, ENTER.body, 60)}>
-          <RemindersCard follows={follows} leadMinutes={leadMinutes} documentAlerts={documentAlerts} onLeadChange={changeLead} />
+          <RemindersCard
+            follows={follows}
+            leadMinutes={leadMinutes}
+            documentAlerts={documentAlerts}
+            chosen={chosen}
+            onLeadChange={changeLead}
+          />
         </div>
         <div className="enter-rise min-w-0" style={staggerDelay(3, ENTER.body, 60)}>
           <CalendarFeedCard follows={follows} />

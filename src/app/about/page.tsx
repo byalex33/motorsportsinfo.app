@@ -58,7 +58,7 @@ export default function AboutPage() {
               zone by default; you can switch to Track Time (the Circuit&apos;s time zone) or any other zone, and choose
               °C or °F and km/h or mph. Cancelled Sessions stay in the list, marked as cancelled. For F1, F2 and F3
               the page also lists the FIA&apos;s documents for the Round as they are published — stewards&apos;
-              decisions, classifications and notes — each opening right here on the site.
+              decisions, classifications and notes.
             </p>
             <p>
               <Link href="/alerts" className={a}>

@@ -2,9 +2,10 @@
 
 import { Radio as RadioPrimitive } from "@base-ui/react/radio";
 import { RadioGroup as RadioGroupPrimitive } from "@base-ui/react/radio-group";
-import { SegmentPill } from "@/components/motion/segment-pill";
+import { SegmentPill, segmentRadioItem, segmentTrack } from "@/components/motion/segment-pill";
 import { SERIES } from "@/domain/series";
 import { FIA_DOCUMENT_SERIES, type DocumentAlertLevel, type FiaDocumentSeries } from "@/domain/types";
+import { cn } from "@/lib/utils";
 import type { DocumentAlerts } from "@/server/alerts/document-alerts";
 import { AlertsSection } from "./alerts-section";
 
@@ -53,7 +54,7 @@ export function DocumentAlertsSection({ documentAlerts, onChange }: DocumentAler
                 aria-labelledby={`document-alerts-${series}`}
                 value={value}
                 onValueChange={(next) => onChange(series, next === "off" ? null : (next as DocumentAlertLevel))}
-                className="group/seg relative inline-flex w-fit max-w-full items-center rounded-full bg-muted p-0.5"
+                className={cn(segmentTrack, "inline-flex w-fit max-w-full")}
               >
                 <SegmentPill />
                 {CHOICES.map((choice) => (
@@ -61,7 +62,7 @@ export function DocumentAlertsSection({ documentAlerts, onChange }: DocumentAler
                     key={choice.value}
                     value={choice.value}
                     aria-label={`${choice.label}: ${choice.description}`}
-                    className="relative flex h-7 cursor-pointer items-center rounded-full px-3 text-[0.8125rem] font-medium whitespace-nowrap text-muted-foreground transition-colors duration-300 ease-expo outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-checked:bg-foreground data-checked:text-background group-data-[pill=ready]/seg:data-checked:bg-transparent!"
+                    className={segmentRadioItem}
                   >
                     {choice.label}
                   </RadioPrimitive.Root>

@@ -1,15 +1,15 @@
 // CONTRACT — owned by the radar work. Routes under /api/radar import only from here.
-// Forecast rain radar from Rainbow.ai (see ADR 0001). Without RAINBOW_API_KEY, past the monthly tile cap,
-// or when Rainbow fails, the snapshot is null and the map falls back to RainViewer's past radar.
+// Forecast rain radar from Rainbow.ai (see ADR 0001). Without RAINBOW_API_KEY, past the monthly tile cap or
+// the daily sub-cap, or when Rainbow fails, the snapshot is null and the map falls back to RainViewer's past radar.
 import "server-only";
-import { eq, sql } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 import { cacheLife } from "next/cache";
 import { getDb } from "@/db/client";
 import { radarTileUsage } from "@/db/schema";
 import { SERIES } from "@/domain/series";
 import { SERIES_IDS, type Circuit } from "@/domain/types";
 import { getFeaturedRound } from "@/server/schedule";
-import { parseForecastTile, parseSnapshot, rainbowSnapshotUrl, rainbowTileUrl, usageMonth, type ForecastTile } from "./rainbow";
+import { parseForecastTile, parseSnapshot, rainbowSnapshotUrl, rainbowTileUrl, usageDay, usageMonth, type ForecastTile } from "./rainbow";
 
 /** Rainbow's free tier is 30,000 tiles a month; past the cap the map shows the past radar instead. */
 const DEFAULT_MONTHLY_TILE_CAP = 30_000;
@@ -27,36 +27,54 @@ function monthlyCap(): number {
   return Number.isFinite(cap) && cap >= 0 ? cap : DEFAULT_MONTHLY_TILE_CAP;
 }
 
-/** Whether this month's tiles are used up. Fails closed: if the count can't be read, no forecast. */
+/** A UTC day's share of the month (default a twentieth), so one day of scripted requests can't spend it all. */
+function dailyCap(): number {
+  const cap = Number(process.env.RAINBOW_DAILY_TILE_CAP || NaN);
+  return Number.isFinite(cap) && cap >= 0 ? cap : Math.floor(monthlyCap() / 20);
+}
+
+/** The radar_tile_usage keys counted for `now`: the month's row and, beside it, the UTC day's. */
+function usageKeys(now: Date): { month: string; day: string } {
+  return { month: usageMonth(now), day: usageDay(now) };
+}
+
+/** Whether this month's or today's tiles are used up. Fails closed: if the count can't be read, no forecast. */
 async function overCap(): Promise<boolean> {
   const db = getDb();
   if (!db) return false; // Local dev without a database: no cap.
+  const { month, day } = usageKeys(new Date());
   try {
-    const [row] = await db
-      .select({ tiles: radarTileUsage.tiles })
+    const rows = await db
+      .select({ month: radarTileUsage.month, tiles: radarTileUsage.tiles })
       .from(radarTileUsage)
-      .where(eq(radarTileUsage.month, usageMonth(new Date())));
-    return (row?.tiles ?? 0) >= monthlyCap();
+      .where(inArray(radarTileUsage.month, [month, day]));
+    const used = (key: string) => rows.find((row) => row.month === key)?.tiles ?? 0;
+    return used(month) >= monthlyCap() || used(day) >= dailyCap();
   } catch (error) {
     console.warn("[radar] could not read the tile count:", error);
     return true;
   }
 }
 
-/** Counts one upstream tile fetch; false when the cap is reached or the count can't be written. */
-async function takeTile(): Promise<boolean> {
+/**
+ * Counts one tile Rainbow sent (after its 200, so an outage or a retry spends nothing) against the month and
+ * the day. Tiles fetched at the same moment can each pass overCap first, so a cap can be passed by the few in
+ * flight; the remote cache fetches each tile once.
+ */
+async function countTile(): Promise<void> {
   const db = getDb();
-  if (!db) return true;
+  if (!db) return;
+  const { month, day } = usageKeys(new Date());
   try {
-    const [row] = await db
+    await db
       .insert(radarTileUsage)
-      .values({ month: usageMonth(new Date()), tiles: 1 })
-      .onConflictDoUpdate({ target: radarTileUsage.month, set: { tiles: sql`${radarTileUsage.tiles} + 1` } })
-      .returning({ tiles: radarTileUsage.tiles });
-    return row.tiles <= monthlyCap();
+      .values([
+        { month, tiles: 1 },
+        { month: day, tiles: 1 },
+      ])
+      .onConflictDoUpdate({ target: radarTileUsage.month, set: { tiles: sql`${radarTileUsage.tiles} + 1` } });
   } catch (error) {
     console.warn("[radar] could not count a tile:", error);
-    return false;
   }
 }
 
@@ -127,11 +145,12 @@ export async function getForecastTile(tile: ForecastTile): Promise<ForecastTileR
 }
 
 // A tile for a given snapshot and offset never changes. The remote cache is shared by every instance,
-// so each tile is fetched (and counted) once, however many CDN regions ask for it.
+// so each tile is fetched (and counted) once, however many CDN regions ask for it. Only a tile Rainbow sent
+// is counted.
 async function cachedForecastTile(snapshot: number, offset: number, z: number, x: number, y: number): Promise<ForecastTileResult> {
   "use cache: remote";
   const key = apiKey();
-  if (!key || !(await takeTile())) {
+  if (!key || (await overCap())) {
     cacheLife({ stale: 60, revalidate: 60, expire: 300 });
     return { kind: "unavailable" };
   }
@@ -143,8 +162,10 @@ async function cachedForecastTile(snapshot: number, offset: number, z: number, x
     });
     const isPng = /^image\/png\b/i.test(res.headers.get("content-type") ?? "");
     if (res.ok && isPng) {
+      const png = new Uint8Array(await res.arrayBuffer());
+      await countTile();
       cacheLife({ stale: 3600, revalidate: 7200, expire: 7200 });
-      return { kind: "ok", png: new Uint8Array(await res.arrayBuffer()) };
+      return { kind: "ok", png };
     }
     await res.body?.cancel();
     cacheLife({ stale: 60, revalidate: 60, expire: 300 });

@@ -1,4 +1,5 @@
-// HTTP helpers for the schedule sources: descriptive User-Agent, timeouts and polite delays.
+// HTTP helpers for the schedule sources: descriptive User-Agent, timeouts, polite delays, and limits that keep
+// a request on its own site and its body to a bounded size.
 import { withDeadline } from "@/server/deadline";
 
 /** A source request gives up after this, including when the socket ignores the abort signal. */
@@ -25,13 +26,36 @@ export const defaultContext: SourceContext = {
   sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 };
 
+/** A source response body larger than this is refused: the biggest real one is well under 1 MB. */
+export const MAX_BODY_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Only the origin of a URL, for messages: errors are logged, stored in source_checks.last_error and shown
+ * by /api/status, and some source URLs carry a secret in their path or query (IMSA_CALENDAR_URL).
+ */
+export function urlOrigin(url: string): string {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return "(unreadable URL)";
+  }
+}
+
 export class HttpError extends Error {
   constructor(
     readonly url: string,
     readonly status: number,
   ) {
-    super(`HTTP ${status} for ${url}`);
+    super(`HTTP ${status} for ${urlOrigin(url)}`);
   }
+}
+
+/** A source has nothing for the season asked for (a calendar without it). See loadSeasons in index.ts. */
+export class NoRoundsError extends Error {}
+
+/** "www.fiawec.com" and "fiawec.com" are one host for the redirect check. */
+function siteHost(url: string): string {
+  return new URL(url).hostname.replace(/^www\./, "");
 }
 
 async function request(ctx: SourceContext, url: string, userAgent: string, accept: string): Promise<Response> {
@@ -39,11 +63,41 @@ async function request(ctx: SourceContext, url: string, userAgent: string, accep
     headers: { "User-Agent": userAgent, Accept: accept, "Accept-Language": "en" },
     signal: ctx.signal ? AbortSignal.any([AbortSignal.timeout(UPSTREAM_TIMEOUT_MS), ctx.signal]) : AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
   });
+  // A redirect may not take a source request off its own site (fetch reports the final URL in `res.url`).
+  if (res.url && siteHost(res.url) !== siteHost(url)) {
+    await res.body?.cancel();
+    throw new Error(`${urlOrigin(url)} redirected to another host (${urlOrigin(res.url)})`);
+  }
   if (!res.ok) {
     await res.body?.cancel();
     throw new HttpError(url, res.status);
   }
   return res;
+}
+
+/** The body as text, refusing one over MAX_BODY_BYTES (declared or streamed) before it fills memory. */
+async function readText(res: Response, url: string): Promise<string> {
+  const tooLarge = () => new Error(`${urlOrigin(url)} body is larger than ${MAX_BODY_BYTES} bytes`);
+  if (Number(res.headers.get("content-length")) > MAX_BODY_BYTES) {
+    await res.body?.cancel();
+    throw tooLarge();
+  }
+  if (!res.body) return "";
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let size = 0;
+  let text = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_BODY_BYTES) {
+      await reader.cancel();
+      throw tooLarge();
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  return text + decoder.decode();
 }
 
 /**
@@ -58,14 +112,14 @@ function bounded<T>(work: Promise<T>): Promise<T> {
 export async function getJson<T>(ctx: SourceContext, url: string): Promise<T> {
   return bounded((async () => {
     const res = await request(ctx, url, API_USER_AGENT, "application/json");
-    return (await res.json()) as T;
+    return JSON.parse(await readText(res, url)) as T;
   })());
 }
 
 export async function getPage(ctx: SourceContext, url: string, userAgent = BROWSER_USER_AGENT): Promise<string> {
   return bounded((async () => {
     const res = await request(ctx, url, userAgent, "text/html,application/xhtml+xml");
-    return res.text();
+    return readText(res, url);
   })());
 }
 

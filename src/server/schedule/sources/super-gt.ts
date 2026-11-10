@@ -41,8 +41,8 @@ export function superGtSession(label: string): { name: string; type: SessionType
   return { name: label.trim(), type: null };
 }
 
-/** The season's Rounds from the calendar table, in page order. */
-export function parseSuperGtCalendar(html: string, season: number): SuperGtRoundLink[] {
+/** The season's Rounds from the calendar table, in page order. A race link off supergt.net is skipped. */
+export function parseSuperGtCalendar(html: string, season: number, warnings: string[] = []): SuperGtRoundLink[] {
   const $ = cheerio.load(html);
   const rounds: SuperGtRoundLink[] = [];
   $("tr").each((_, row) => {
@@ -57,7 +57,13 @@ export function parseSuperGtCalendar(html: string, season: number): SuperGtRound
     // "30-01" runs into the next month.
     const endDate =
       endDay >= startDay ? isoDate(season, month, endDay) : new Date(Date.UTC(season, month, endDay)).toISOString().slice(0, 10);
-    const url = new URL(link.attr("href")!, SITE).toString();
+    const target = new URL(link.attr("href")!, SITE);
+    // Only supergt.net's own pages are fetched, whatever the page links to.
+    if (target.origin !== new URL(SITE).origin) {
+      warnings.push(`Round ${label[1]} links off supergt.net (${target.origin}); skipped`);
+      return;
+    }
+    const url = target.toString();
     if (rounds.some((r) => r.url === url)) return;
     rounds.push({ url, roundNumber: Number(label[1]), place: label[2].trim(), startDate, endDate });
   });
@@ -121,9 +127,9 @@ export async function fetchSuperGtSeason(
   ctx: SourceContext,
   year: number,
 ): Promise<{ rounds: RawRound[]; complete: boolean; warnings: string[] }> {
-  const links = parseSuperGtCalendar(await getPage(ctx, `${SITE}/calendar?series=${year}`), year);
-  const rounds: RawRound[] = [];
   const warnings: string[] = [];
+  const links = parseSuperGtCalendar(await getPage(ctx, `${SITE}/calendar?series=${year}`), year, warnings);
+  const rounds: RawRound[] = [];
   for (const link of links) {
     await ctx.sleep(300);
     try {

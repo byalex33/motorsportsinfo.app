@@ -13,7 +13,6 @@ export interface OpenF1Meeting {
   circuit_short_name: string;
   date_start: string;
   date_end: string;
-  gmt_offset: string;
   year: number;
   is_cancelled?: boolean;
 }
@@ -27,7 +26,6 @@ export interface OpenF1Session {
   meeting_key: number;
   circuit_short_name: string;
   location: string;
-  gmt_offset: string;
   year: number;
   is_cancelled?: boolean;
 }

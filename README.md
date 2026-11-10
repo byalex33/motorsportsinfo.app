@@ -178,7 +178,7 @@ Open http://localhost:3000. That's enough to browse every Series with real data.
 | `npm run db:generate` | Generate a Drizzle migration from `src/db/schema.ts` |
 | `npm run db:migrate` | Apply the migrations in `drizzle/` |
 
-CI runs typecheck, lint and tests on every pull request and every push to `main`. Vercel builds the previews.
+CI runs typecheck, lint, tests and a production build on every pull request and every push to `main`. Vercel builds the previews.
 
 ## Where things live
 

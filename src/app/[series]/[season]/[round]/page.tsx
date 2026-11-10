@@ -58,7 +58,7 @@ export async function generateMetadata({ params }: PageProps<"/[series]/[season]
   const { series, season, round } = canonicalRoundParams(raw.series, raw.season, raw.round);
   const data = await loadRoundPage(series, season, round);
   const cancelled = everySessionCancelled(data.sessions);
-  const { title, description } = roundPageSeo(series, data.round, data.circuit, data.pageSlug, cancelled);
+  const { title, description } = roundPageSeo(series, data.round, data.circuit, data.pageSlug, cancelled, data.renderedAt);
   const calendar = calendarFeedPath({ [series]: SERIES[series].defaultReminderTypes });
   return pageMetadata({
     title,
@@ -81,7 +81,7 @@ export default async function RoundPage({ params }: PageProps<"/[series]/[season
   // by Session slug, "race"). On any other Round the chips would open the Featured Round's data, so its
   // RESULTS chips link to the official results instead and there is no TELEMETRY chip.
   const isFeatured = featured.kind === "round" && featured.round.id === round.id;
-  const seo = roundPageSeo(series, round, circuit, data.pageSlug, everySessionCancelled(sessions));
+  const seo = roundPageSeo(series, round, circuit, data.pageSlug, everySessionCancelled(sessions), renderedAt);
   // A Round page for a past Round has no FIA listing of its own (fia.com shows the current Round). Hide
   // the empty state there; still show a failure to load, and the documents when they match this Round.
   const documentsForRound = documents?.kind === "none" ? null : documents;

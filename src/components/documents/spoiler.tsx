@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { usePrefersReducedMotion } from "@/components/radar/use-client-state";
 import { CAR_NUMBER } from "@/lib/fia-document-title";
 import { cn } from "@/lib/utils";
@@ -19,12 +19,14 @@ type Grain = { x: number; y: number; a: number; phase: number; speed: number; si
 type Phase = "hidden" | "dissolving" | "revealed";
 
 /**
- * Hides `children` until clicked. It sits inside a link, so the first click only reveals and is kept from
- * navigating; the text stays readable to screen readers, since a control can't nest inside a link.
+ * Hides `children` until clicked, or until `revealAll` turns true (the list's "Show car numbers" button, the
+ * keyboard route). It sits inside a link, so the first click only reveals and is kept from navigating; the text
+ * stays readable to screen readers, since a control can't nest inside a link.
  */
-export function Spoiler({ children, className }: { children: string; className?: string }) {
+export function Spoiler({ children, className, revealAll = false }: { children: string; className?: string; revealAll?: boolean }) {
   const reduceMotion = usePrefersReducedMotion();
-  const [revealed, setRevealed] = useState(false);
+  const [clicked, setClicked] = useState(false);
+  const revealed = clicked || revealAll;
   const [measured, setMeasured] = useState(false);
   const probeRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
@@ -191,20 +193,33 @@ export function Spoiler({ children, className }: { children: string; className?:
     };
   }, [reduceMotion]);
 
+  /** Blows the grain away from `origin` (canvas pixels). */
+  const dissolve = useCallback((origin: { x: number; y: number }) => {
+    const e = engine.current;
+    if (e.phase !== "hidden") return;
+    e.origin = origin;
+    e.maxDistance = Math.max(1, ...e.grains.map((g) => Math.hypot(g.x - e.origin.x, g.y - e.origin.y)));
+    e.phase = "dissolving";
+    e.phaseStart = performance.now();
+    e.kick();
+  }, []);
+
+  // Revealed from outside: dissolve from the middle.
+  useEffect(() => {
+    if (!revealAll) return;
+    const e = engine.current;
+    dissolve({ x: e.width / 2, y: e.height / 2 });
+  }, [revealAll, dissolve]);
+
   const onClick = (event: MouseEvent) => {
     if (revealed) return;
     // Keep the first click from following the link around it.
     event.preventDefault();
     event.stopPropagation();
-    setRevealed(true);
-    const e = engine.current;
+    setClicked(true);
     const box = canvasRef.current?.getBoundingClientRect();
     if (!box) return;
-    e.origin = { x: event.clientX - box.left, y: event.clientY - box.top };
-    e.maxDistance = Math.max(1, ...e.grains.map((g) => Math.hypot(g.x - e.origin.x, g.y - e.origin.y)));
-    e.phase = "dissolving";
-    e.phaseStart = performance.now();
-    e.kick();
+    dissolve({ x: event.clientX - box.left, y: event.clientY - box.top });
   };
 
   return (
@@ -234,9 +249,22 @@ export function Spoiler({ children, className }: { children: string; className?:
   );
 }
 
+/** True when the title names a car number that SpoilerTitle hides. */
+export function hasCarNumber(title: string): boolean {
+  return CAR_NUMBER.test(title);
+}
+
 /** An FIA Document title in the list with every car number ("Car 27") behind a Spoiler. */
-export function SpoilerTitle({ title }: { title: string }) {
+export function SpoilerTitle({ title, revealAll = false }: { title: string; revealAll?: boolean }) {
   const parts = title.split(CAR_NUMBER);
   if (parts.length === 1) return title;
-  return parts.map((part, i) => (i % 2 === 1 ? <Spoiler key={i}>{part}</Spoiler> : part));
+  return parts.map((part, i) =>
+    i % 2 === 1 ? (
+      <Spoiler key={i} revealAll={revealAll}>
+        {part}
+      </Spoiler>
+    ) : (
+      part
+    ),
+  );
 }

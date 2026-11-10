@@ -62,6 +62,21 @@ describe("Super GT 2026", () => {
   });
 });
 
+describe("parseSuperGtCalendar", () => {
+  it("skips, with a warning, a race link that leaves supergt.net", () => {
+    const html = fixture("super-gt-calendar-2026.html")
+      .replace('href="https://supergt.net/races/round1-okayama-2"', 'href="https://other.example/races/round1-okayama-2"')
+      .replace('href="https://supergt.net/races/round2-fuji-2"', 'href="//evil.example/races/round2-fuji-2"');
+    const warnings: string[] = [];
+    const links = parseSuperGtCalendar(html, 2026, warnings);
+    expect(links.map((l) => l.roundNumber)).toEqual([4, 5, 6, 7, 3, 8]);
+    expect(warnings).toEqual([
+      "Round 1 links off supergt.net (https://other.example); skipped",
+      "Round 2 links off supergt.net (https://evil.example); skipped",
+    ]);
+  });
+});
+
 describe("superGtSession", () => {
   it.each([
     ["公式練習", "Practice", "practice"],

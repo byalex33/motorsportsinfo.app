@@ -68,6 +68,20 @@ describe("planChangePushes targeting", () => {
     expect(plan.pushes[0].payload.body).toBe("Round 12 · was due Sat 13:15");
   });
 
+  it("pushes a reinstatement with the Session's start", () => {
+    const row = change({ id: 22, kind: "reinstated", previousStartsAt: moved, newStartsAt: moved });
+    const plan = planChangePushes([row], sessions, subs, now);
+    expect(plan.pushes.map((p) => p.subscription.id)).toEqual(["follows-f1-quali", "follows-both"]);
+    expect(plan.pushes[0].payload).toEqual({
+      title: "F1 Qualifying back on",
+      body: "Las Vegas Grand Prix · starts Sat 14:00",
+      url: "/f1",
+      tag: "session:f1-2026-x:qualifying",
+    });
+    expect(plan.pushes[0].ttlSeconds).toBe((moved.getTime() - now.getTime()) / 1000);
+    expect(planChangePushes([row], sessions, subs, new Date("2026-11-21T14:05:00Z")).pushes).toEqual([]);
+  });
+
   it("formats times in each subscriber's zone, with the weekday when the day changed", () => {
     const tokyo = sub("tokyo", { f1: ["qualifying"] }, "Asia/Tokyo");
     const plan = planChangePushes(
@@ -121,6 +135,30 @@ describe("coalesceChanges", () => {
     const rows = [change({ id: 12 }), change({ id: 13, previousStartsAt: moved, newStartsAt: previous })];
     expect(coalesceChanges(rows)[0].kind).toBe("unchanged");
     expect(planChangePushes(rows, sessions, [sub("x", { f1: ["qualifying"] })], now)).toEqual({ changeIds: [12, 13], pushes: [] });
+  });
+
+  it("ends as reinstated when a Session whose cancellation was pushed is back on", () => {
+    const rows = [change({ id: 16, kind: "reinstated", previousStartsAt: previous, newStartsAt: previous })];
+    expect(coalesceChanges(rows)).toEqual([
+      { changeIds: [16], sessionId: quali.id, kind: "reinstated", previousStartsAt: previous, newStartsAt: previous },
+    ]);
+    // Reinstated, then moved before the push: one notice, at the new time.
+    const movedToo = [...rows, change({ id: 17, previousStartsAt: previous, newStartsAt: moved })];
+    expect(coalesceChanges(movedToo)[0]).toMatchObject({ kind: "reinstated", newStartsAt: moved });
+  });
+
+  it("treats a cancellation and reinstatement nobody was told about as unchanged", () => {
+    const rows = [
+      change({ id: 18, kind: "cancelled", newStartsAt: null }),
+      change({ id: 19, kind: "reinstated", newStartsAt: previous }),
+    ];
+    expect(coalesceChanges(rows)[0].kind).toBe("unchanged");
+    // Reinstated at another time: a plain move.
+    const elsewhere = [rows[0], change({ id: 19, kind: "reinstated", newStartsAt: moved })];
+    expect(coalesceChanges(elsewhere)[0]).toMatchObject({ kind: "time", previousStartsAt: previous, newStartsAt: moved });
+    // Reinstated and cancelled again before the push: still cancelled, so nothing new to say.
+    const again = [change({ id: 20, kind: "reinstated", newStartsAt: previous }), change({ id: 21, kind: "cancelled", newStartsAt: null })];
+    expect(coalesceChanges(again)[0].kind).toBe("unchanged");
   });
 
   it("ends as cancelled when the last change is a cancellation", () => {
