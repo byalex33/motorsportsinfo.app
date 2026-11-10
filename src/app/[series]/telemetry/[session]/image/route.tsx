@@ -42,7 +42,7 @@ export async function GET(request: Request, ctx: RouteContext<"/[series]/telemet
 
   return new ImageResponse(
     (
-      <div style={{ width: W, height: H, display: "flex", flexDirection: "column", background: BG, color: FG, padding: "44px 52px 36px", position: "relative", fontFamily: fonts.length ? "Geist" : undefined }}>
+      <div style={{ width: W, height: H, display: "flex", flexDirection: "column", background: BG, color: FG, padding: "44px 52px 36px", position: "relative", fontFamily: fonts ? "Geist" : undefined }}>
         {/* Watermark, faint and diagonal behind everything. */}
         <div style={{ position: "absolute", left: 0, top: 0, width: W, height: H, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ fontSize: 128, fontWeight: 600, letterSpacing: -5, color: "rgba(237,237,237,0.045)", transform: "rotate(-9deg)" }}>motorsportsinfo.app</div>

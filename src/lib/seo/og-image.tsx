@@ -64,14 +64,17 @@ async function loadFontsBase64(): Promise<{ name: string; weight: 400 | 500 | 60
   );
 }
 
-/** Geist Regular and SemiBold and Geist Mono Medium for next/og, or none (the default font) when Google Fonts fails. */
-export async function loadOgFonts(): Promise<{ name: string; weight: 400 | 500 | 600; style: "normal"; data: Buffer }[]> {
+/**
+ * Geist Regular and SemiBold and Geist Mono Medium for next/og, or undefined when Google Fonts fails: next/og then
+ * uses its bundled font. (An empty array would replace that font too, and the render would throw.)
+ */
+export async function loadOgFonts(): Promise<{ name: string; weight: 400 | 500 | 600; style: "normal"; data: Buffer }[] | undefined> {
   try {
     const fonts = await loadFontsBase64();
     return fonts.map((f) => ({ name: f.name, weight: f.weight, style: "normal" as const, data: Buffer.from(f.data, "base64") }));
   } catch (error) {
     console.warn(`[og] Geist fonts unavailable, using the default font: ${error instanceof Error ? error.message : String(error)}`);
-    return [];
+    return undefined;
   }
 }
 
