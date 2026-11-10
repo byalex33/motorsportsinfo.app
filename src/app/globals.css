@@ -10,19 +10,6 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -48,11 +35,6 @@
   --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
   --radius-xl: var(--radius);
-  --radius-2xl: var(--radius);
-  --radius-3xl: var(--radius);
-  --radius-4xl: var(--radius);
-  --font-serif: Georgia, serif;
-  --color-destructive-foreground: var(--destructive-foreground);
   --color-series-accent: var(--series-accent);
   --color-series-accent-foreground: var(--series-accent-foreground);
 }
@@ -77,7 +59,6 @@
   --accent: #f5f5f5;
   --accent-foreground: #0a0a0a;
   --destructive: oklch(0.577 0.215 27.3);
-  --destructive-foreground: #fafafa;
   /* Session Results chip. Dark enough to pass 4.5:1 on its own /10 and /20 tints (see the notes below). */
   --success: oklch(0.48 0.13 152);
   /* TELEMETRY chip. */
@@ -88,20 +69,7 @@
   --border: #e5e5e5;
   --input: #d4d4d4;
   --ring: oklch(0.4865 0.2423 291.8661);
-  --chart-1: oklch(0.4865 0.2423 291.8661);
-  --chart-2: oklch(0.7216 0.1282 217.8676);
-  --chart-3: oklch(0.6356 0.1398 156.1492);
-  --chart-4: oklch(0.6192 0.2037 312.7283);
-  --chart-5: oklch(0.6532 0.2114 353.9392);
   --radius: 0.5rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #0a0a0a;
-  --sidebar-primary: oklch(0.4865 0.2423 291.8661);
-  --sidebar-primary-foreground: #fafafa;
-  --sidebar-accent: #f5f5f5;
-  --sidebar-accent-foreground: #0a0a0a;
-  --sidebar-border: #e5e5e5;
-  --sidebar-ring: oklch(0.4865 0.2423 291.8661);
 }
 
 .dark {
@@ -121,7 +89,6 @@
   --accent: #1f1f1f;
   --accent-foreground: #ededed;
   --destructive: oklch(0.704 0.191 22.2);
-  --destructive-foreground: #0a0a0a;
   --success: oklch(0.79 0.17 154);
   --telemetry: #f06595;
   --driver-a: #3987e5;
@@ -129,19 +96,6 @@
   --border: #262626;
   --input: #3a3a3a;
   --ring: oklch(0.6083 0.2172 297.1153);
-  --chart-1: oklch(0.6083 0.2172 297.1153);
-  --chart-2: oklch(0.7741 0.1272 215.0981);
-  --chart-3: oklch(0.7801 0.1859 154.5892);
-  --chart-4: oklch(0.7001 0.1882 313.2907);
-  --chart-5: oklch(0.6888 0.2092 353.1317);
-  --sidebar: #0a0a0a;
-  --sidebar-foreground: #ededed;
-  --sidebar-primary: oklch(0.6083 0.2172 297.1153);
-  --sidebar-primary-foreground: #0a0a0a;
-  --sidebar-accent: #1f1f1f;
-  --sidebar-accent-foreground: #ededed;
-  --sidebar-border: #262626;
-  --sidebar-ring: oklch(0.6083 0.2172 297.1153);
   color-scheme: dark;
 }
 
@@ -393,9 +347,6 @@
                           in OKLCH, keeping the hue, as F2 / F3 / IndyCar do
                  light: bg / subtle / muted · chip       dark: bg / subtle / muted · chip
      verstappen  #9e6202  5.00 / 4.79 / 4.58 · 5.00     #f59b06  9.03 / 8.61 / 8.17 · 8.64
-     antonelli   #23e4c5  Kimi Antonelli's 2026 title Celebration (given by the site owner); light mode
-                          darkens it in OKLCH, as above
-     antonelli   #027e6b  5.03 / 4.82 / 4.61 · 5.03     #23e4c5  12.23 / 11.67 / 11.08 · 11.35
    --------------------------------------------------------------------------- */
 [data-accent="verstappen"] {
   --series-accent: #9e6202;
@@ -405,16 +356,6 @@
 .dark[data-accent="verstappen"] {
   --series-accent: #f59b06;
   --series-accent-foreground: #180f02;
-}
-[data-accent="antonelli"] {
-  --series-accent: #027e6b;
-  --series-accent-foreground: #ffffff;
-  --accent-glow: #23e4c5;
-}
-.dark [data-accent="antonelli"],
-.dark[data-accent="antonelli"] {
-  --series-accent: #23e4c5;
-  --series-accent-foreground: #0a0a0a;
 }
 
 /* Decorative Series gradient (solid accent unless the Series has one). Horizontal and vertical. */
@@ -1006,64 +947,6 @@
    transition or animation, including library ones), except the explicit opacity-only
    fades below. Infinite ambient animations stop.
    --------------------------------------------------------------------------- */
-/* PDF.js text layer (src/components/documents/pdf-viewer.tsx): invisible text laid over each rendered
-   page, so a document can be selected, copied and searched with the browser's find. Adapted from
-   pdfjs-dist/web/pdf_viewer.css; PDF.js sets --min-font-size and the sizes, the page sets
-   --total-scale-factor. */
-.pdf-text-layer {
-  --scale-round-x: 1px;
-  --scale-round-y: 1px;
-  --min-font-size: 1;
-  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
-  --min-font-size-inv: calc(1 / var(--min-font-size));
-  position: absolute;
-  inset: 0;
-  overflow: clip;
-  opacity: 1;
-  line-height: 1;
-  letter-spacing: normal;
-  word-spacing: normal;
-  text-align: initial;
-  -webkit-text-size-adjust: none;
-  text-size-adjust: none;
-  forced-color-adjust: none;
-  transform-origin: 0 0;
-  caret-color: CanvasText;
-  z-index: 0;
-}
-.pdf-text-layer :is(span, br) {
-  color: transparent;
-  position: absolute;
-  white-space: pre;
-  cursor: text;
-  transform-origin: 0% 0%;
-  user-select: text;
-}
-.pdf-text-layer > :not(.markedContent),
-.pdf-text-layer .markedContent span:not(.markedContent) {
-  z-index: 1;
-  --font-height: 0;
-  font-size: calc(var(--text-scale-factor) * var(--font-height));
-  --scale-x: 1;
-  --rotate: 0deg;
-  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
-}
-.pdf-text-layer .markedContent {
-  display: contents;
-}
-.pdf-text-layer span[role="img"] {
-  user-select: none;
-  cursor: default;
-}
-.pdf-text-layer ::selection {
-  background: rgb(0 0 255 / 0.25);
-  background: color-mix(in srgb, AccentColor, transparent 75%);
-  color: transparent;
-}
-.pdf-text-layer br::selection {
-  background: transparent;
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,

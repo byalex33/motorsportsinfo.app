@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { canonicalTelemetryQuery, canonicalTelemetryRedirect, canonicalTelemetryUrl, comparisonCardQuery, DATA_QUERY_KEYS, IMAGE_QUERY_KEYS } from "./card";
+import {
+  canonicalTelemetryQuery,
+  canonicalTelemetryRedirect,
+  canonicalTelemetryUrl,
+  comparisonCardQuery,
+  DATA_QUERY_KEYS,
+  IMAGE_QUERY_KEYS,
+  unknownDriverRedirect,
+} from "./card";
 
 describe("comparisonCardQuery", () => {
   it("gives a bare link no comparison card, so its preview can't spoil the result", () => {
@@ -70,5 +78,36 @@ describe("canonicalTelemetryRedirect", () => {
 
   it("lets a canonical request through", () => {
     expect(canonicalTelemetryRedirect(new Request("https://motorsportsinfo.app/f1/telemetry/race/data?a=VER&b=LEC"), DATA_QUERY_KEYS)).toBeNull();
+  });
+});
+
+describe("colour picks", () => {
+  it("keeps a colour on the share palette (each channel a doubled hex digit)", () => {
+    expect(canonicalTelemetryQuery({ ca: "ff00aa", cb: "#3366CC" }, IMAGE_QUERY_KEYS).toString()).toBe("ca=ff00aa&cb=3366cc");
+  });
+
+  it("snaps any other colour to the nearest palette colour, so made-up colours can't each make a new image", () => {
+    expect(canonicalTelemetryQuery({ ca: "e8002d", cb: "123457" }, IMAGE_QUERY_KEYS).toString()).toBe("ca=ee0033&cb=113355");
+    const res = canonicalTelemetryRedirect(new Request("https://motorsportsinfo.app/f1/telemetry/race/image?a=VER&b=LEC&ca=e8002d"), IMAGE_QUERY_KEYS);
+    expect(res?.status).toBe(308);
+    expect(res?.headers.get("Location")).toBe("/f1/telemetry/race/image?a=VER&b=LEC&ca=ee0033");
+  });
+});
+
+describe("unknownDriverRedirect", () => {
+  const request = (search: string) => new Request(`https://motorsportsinfo.app/f1/telemetry/race/image${search}`);
+  const resolved = { a: "VER", b: "LEC" };
+
+  it("drops a driver code that isn't one of the Session's drivers", () => {
+    const res = unknownDriverRedirect(request("?a=QQQ&b=LEC&ch=brake"), { a: "NOR", b: "LEC" });
+    expect(res?.status).toBe(308);
+    expect(res?.headers.get("Location")).toBe("/f1/telemetry/race/image?b=LEC&ch=brake");
+    expect(unknownDriverRedirect(request("?a=QQQ&b=ZZZ"), resolved)?.headers.get("Location")).toBe("/f1/telemetry/race/image");
+  });
+
+  it("lets the drivers it resolved, or no drivers, through", () => {
+    expect(unknownDriverRedirect(request("?a=VER&b=LEC"), resolved)).toBeNull();
+    expect(unknownDriverRedirect(request(""), resolved)).toBeNull();
+    expect(unknownDriverRedirect(request("?b=LEC"), resolved)).toBeNull();
   });
 });

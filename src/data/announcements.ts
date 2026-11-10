@@ -20,15 +20,4 @@ export interface CelebrationEntry {
   until: string;
 }
 
-export const CELEBRATIONS: CelebrationEntry[] = [
-  {
-    id: "celebration-2026-f1-champion-antonelli",
-    chip: "Champion",
-    text: "Kimi Antonelli is the 2026 Formula 1 World Champion",
-    highlight: "Kimi Antonelli",
-    link: { label: "F1 schedule", href: "/f1" },
-    accent: "antonelli",
-    confetti: ["#ffffff", "#23e4c5"],
-    until: "2026-11-09T00:00:00Z",
-  },
-];
+export const CELEBRATIONS: CelebrationEntry[] = [];

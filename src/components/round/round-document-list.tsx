@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { ArrowUpRightIcon } from "lucide-react";
-import { SpoilerTitle } from "@/components/documents/spoiler";
+import { SpoilerTitle, hasCarNumber } from "@/components/documents/spoiler";
 import { InlineSkeleton } from "@/components/inline-skeleton";
-import { SegmentPill } from "@/components/motion/segment-pill";
+import { SegmentButton, SegmentPill, segmentTrack } from "@/components/motion/segment-pill";
 import type { FiaDocumentKind, SeriesId } from "@/domain/types";
 import { track } from "@/lib/analytics";
 import { useNow } from "@/lib/client-stores";
@@ -12,7 +12,6 @@ import type { DisplayZone } from "@/lib/display-zone";
 import { ENTER, enterDelay, staggerDelay } from "@/lib/motion";
 import { formatClock, formatSessionDay, zoneOffsetLabel } from "@/lib/time-format";
 import { cn } from "@/lib/utils";
-import { SegmentButton, segmentTrack } from "./display-controls";
 import { useDisplayZone } from "./use-display-zone";
 
 /** One FIA Document as the list shows it: just what a row renders (see RoundDocuments). */
@@ -48,6 +47,8 @@ export function RoundDocumentList({ series, rows, circuitTimeZone }: { series: S
   const zone = useDisplayZone(circuitTimeZone);
   const [filter, setFilter] = useState<Filter>("all");
   const [expanded, setExpanded] = useState(false);
+  // Reveals every car number at once: the keyboard's way in, since each Spoiler sits inside its row's link.
+  const [carNumbersShown, setCarNumbersShown] = useState(false);
   const now = useNow(60_000);
 
   const counts: Record<Filter, number> = { all: rows.length, stewards: 0, results: 0, other: 0 };
@@ -59,20 +60,36 @@ export function RoundDocumentList({ series, rows, circuitTimeZone }: { series: S
   // The zone's offset, as the Session list's TIME header shows it, at the newest document.
   const newest = rows.find((d) => d.publishedAt)?.publishedAt;
   const offset = zone && newest ? zoneOffsetLabel(zone.tz, new Date(newest)) : null;
+  const anyCarNumber = rows.some((d) => hasCarNumber(d.title));
 
   return (
     <>
-      {filters.length > 2 && (
-        <div className="enter-rise" style={enterDelay(ENTER.rows + 75)}>
-          <div role="group" aria-label="Show documents" className={cn(segmentTrack, "w-fit max-w-full overflow-x-auto")}>
-            <SegmentPill />
-            {filters.map((f) => (
-              <SegmentButton key={f.id} active={filter === f.id} onClick={() => setFilter(f.id)}>
-                {f.label}
-                <span className="ml-1.5 font-mono text-[0.6875rem] tabular opacity-60">{counts[f.id]}</span>
-              </SegmentButton>
-            ))}
-          </div>
+      {(filters.length > 2 || anyCarNumber) && (
+        <div className="enter-rise flex flex-wrap items-center justify-between gap-2" style={enterDelay(ENTER.rows + 75)}>
+          {filters.length > 2 ? (
+            <div role="group" aria-label="Show documents" className={cn(segmentTrack, "w-fit max-w-full overflow-x-auto")}>
+              <SegmentPill />
+              {filters.map((f) => (
+                <SegmentButton key={f.id} active={filter === f.id} onClick={() => setFilter(f.id)}>
+                  {f.label}
+                  <span className="ml-1.5 font-mono text-[0.6875rem] tabular opacity-60">{counts[f.id]}</span>
+                </SegmentButton>
+              ))}
+            </div>
+          ) : (
+            <span />
+          )}
+          {anyCarNumber && (
+            <button
+              type="button"
+              // aria-disabled, not disabled, so keyboard focus stays on the button once it has done its job.
+              aria-disabled={carNumbersShown}
+              onClick={() => setCarNumbersShown(true)}
+              className="rounded-full px-3 py-1.5 text-[0.8125rem] font-medium text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring aria-disabled:cursor-default aria-disabled:opacity-60 aria-disabled:hover:bg-transparent"
+            >
+              {carNumbersShown ? "Car numbers shown" : "Show car numbers"}
+            </button>
+          )}
         </div>
       )}
 
@@ -90,6 +107,7 @@ export function RoundDocumentList({ series, rows, circuitTimeZone }: { series: S
             doc={doc}
             index={index}
             zone={zone}
+            carNumbersShown={carNumbersShown}
             isNew={now !== null && !!doc.publishedAt && now - Date.parse(doc.publishedAt) < NEW_MS}
           />
         ))}
@@ -116,12 +134,14 @@ function DocumentRow({
   doc,
   index,
   zone,
+  carNumbersShown,
   isNew,
 }: {
   series: SeriesId;
   doc: DocumentListRow;
   index: number;
   zone: DisplayZone | null;
+  carNumbersShown: boolean;
   isNew: boolean;
 }) {
   const onOpen = () => track("fia_document_opened", { series, kind: doc.kind });
@@ -146,7 +166,7 @@ function DocumentRow({
       <span className="min-w-0">
         <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
           <span className="font-medium tracking-tight text-pretty">
-            <SpoilerTitle title={doc.title} />
+            <SpoilerTitle title={doc.title} revealAll={carNumbersShown} />
           </span>
           <span className="hidden sm:contents">{chips}</span>
         </span>

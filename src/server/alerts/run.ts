@@ -1,17 +1,18 @@
-// The alerts cron: sends due Session Reminders, unsent Schedule Change pushes and Document Alerts, and once a
-// day the owner's sync alert. Reads the database only — never the schedule sources or fia.com.
+// The alerts cron: once a day the owner's sync alert and housekeeping, then due Session Reminders, unsent
+// Schedule Change pushes and Document Alerts. Reads the database only — never the schedule sources or fia.com.
 import { and, eq, gt, gte, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import type { Db } from "@/db/client";
-import { fiaDocuments, pushSubscriptions, remindersSent, rounds, scheduleChanges, sessions } from "@/db/schema";
+import { dailyRuns, fiaDocuments, pushSubscriptions, remindersSent, rounds, scheduleChanges, sessions } from "@/db/schema";
 import { REMINDER_LEAD_MINUTES } from "@/domain/series";
+import { DOCUMENT_ALERT_FRESH_MINUTES } from "@/server/documents/sync";
 import { getSyncStatus } from "@/server/status";
 import { planChangePushes, type ScheduleChangeRow } from "./changes";
 import { planDocumentPushes, type DocumentAlertRow } from "./document-alerts";
-import { OWNER_ALERT_TTL_SECONDS, getOwnerPushEndpoint, isOwnerAlertDue, ownerAlertPayload } from "./owner";
+import { OWNER_ALERT_TTL_SECONDS, getOwnerPushEndpoint, isDailyRunHour, noteDailyRunDone, ownerAlertPayload, utcDay } from "./owner";
 import { MAX_PUSH_FAILURES, PUSH_CONCURRENCY, mapWithConcurrency, sendPush, type PushOutcome, type VapidConfig } from "./push";
 import { reminderKey, selectDueReminders, type DueReminder } from "./reminders";
-import { pruneSignupAttempts } from "./subscriptions";
+import { pruneSignupAttempts, pruneStaleSubscriptions } from "./subscriptions";
 import type { AlertSession, AlertSubscription, OutgoingPush } from "./types";
 import type { AlertsWork } from "./wake";
 
@@ -150,19 +151,20 @@ type Sent = { push: OutgoingPush; outcome: PushOutcome };
 export interface Sender {
   send(pushes: readonly OutgoingPush[]): Promise<Sent[]>;
   results: Sent[];
-  removed: number;
+  /** Ids of the subscriptions this run deleted (gone, or too many failures). */
+  removed: Set<string>;
 }
 
 function sender(db: Db, send: SendFn): Sender {
   const s: Sender = {
     results: [],
-    removed: 0,
+    removed: new Set(),
     async send(pushes) {
       if (pushes.length === 0) return [];
       const outcomes = await mapWithConcurrency(pushes, PUSH_CONCURRENCY, send);
       const sent = pushes.map((push, i) => ({ push, outcome: outcomes[i] }));
       s.results.push(...sent);
-      s.removed += await recordOutcomes(db, sent);
+      for (const id of await recordOutcomes(db, sent)) s.removed.add(id);
       return sent;
     },
   };
@@ -218,8 +220,9 @@ async function finishReminders(db: Db, done: readonly { subscription: AlertSubsc
 }
 
 /**
- * Deletes the claims of reminders whose send did not go through ("error" or "failed"), so the next run sends
- * them again. This never loops: selectDueReminders only offers a reminder inside its catch-up window
+ * Deletes the claims of reminders whose send got no answer about the subscription ("error"), so the next run
+ * sends them again. A "failed" one is not retried: each failure is a strike against the subscription
+ * (recordOutcomes), and one Session must not spend MAX_PUSH_FAILURES of them. This never loops: selectDueReminders only offers a reminder inside its catch-up window
  * (REMINDER_CATCH_UP_MINUTES after start − lead, and before the Session starts), so at most that many runs retry it.
  * A failed release only costs the retry, so it is logged and the run goes on.
  */
@@ -256,7 +259,7 @@ async function releaseReminders(db: Db, retry: readonly DueReminder[]): Promise<
  * Claims and sends due reminders a chunk at a time, and claims no new chunk once out of time: a reminder is
  * only claimed when it is about to be sent, so one left over is still due (within the catch-up window) next run.
  * A chunk whose run ends before it is marked sent is claimed again once its lease runs out, and a claimed
- * reminder whose send did not go through is released again (releaseReminders), so it is retried too.
+ * reminder whose send got no answer is released again (releaseReminders), so it is retried too.
  */
 async function runReminders(db: Db, subs: LoadSubscriptions, now: Date, out: Sender, time: Budget) {
   const reminderSessions = await loadReminderSessions(db, now);
@@ -264,13 +267,21 @@ async function runReminders(db: Db, subs: LoadSubscriptions, now: Date, out: Sen
   const due = selectDueReminders(await subs(), reminderSessions, now);
   let claimed = 0;
   const results: Sent[] = [];
-  for (const part of chunk(due, REMINDER_CHUNK)) {
-    if (!time.hasTime()) break;
-    const fresh = await claimReminders(db, part);
+  const parts = chunk(due, REMINDER_CHUNK);
+  for (const [i, part] of parts.entries()) {
+    // A subscription an earlier chunk deleted would fail the claim's foreign key, and the whole run with it.
+    const live = part.filter((d) => !out.removed.has(d.subscription.id));
+    if (!time.hasTime()) {
+      const left = live.length + parts.slice(i + 1).flat().filter((d) => !out.removed.has(d.subscription.id)).length;
+      // Still due next run if inside the catch-up window; past it, this line is the only record they were missed.
+      console.warn(`[alerts] ${left} reminders not sent this run`);
+      break;
+    }
+    const fresh = await claimReminders(db, live);
     claimed += fresh.length;
     const sent = await out.send(fresh);
     results.push(...sent);
-    const retry = new Set(sent.filter((r) => r.outcome === "error" || r.outcome === "failed").map((r) => r.push));
+    const retry = new Set(sent.filter((r) => r.outcome === "error").map((r) => r.push));
     await finishReminders(db, fresh.filter((d) => !retry.has(d)));
     await releaseReminders(db, fresh.filter((d) => retry.has(d)));
   }
@@ -390,10 +401,19 @@ async function runChanges(db: Db, subs: LoadSubscriptions, now: Date, out: Sende
   return { processed, results: out.results.slice(before) };
 }
 
+/**
+ * Whether a waiting FIA Document was recorded too long ago to push. The documents sync records one only when
+ * published within DOCUMENT_ALERT_FRESH_MINUTES, and this cron pushes it within a minute or so; one still
+ * waiting this much later means the cron was down, and a day-old stewards' decision is news to nobody.
+ */
+function isDocumentTooLate(firstSeenAt: Date, now: Date): boolean {
+  return firstSeenAt.getTime() < now.getTime() - DOCUMENT_ALERT_FRESH_MINUTES * MINUTE;
+}
+
 async function runDocuments(db: Db, subs: LoadSubscriptions, now: Date, out: Sender, time: Budget) {
   const none = { processed: 0, results: [] as Sent[] };
   if (!time.hasTime()) return none;
-  const rows: DocumentAlertRow[] = await db
+  const waiting: (DocumentAlertRow & { firstSeenAt: Date })[] = await db
     .select({
       url: fiaDocuments.url,
       series: fiaDocuments.series,
@@ -403,12 +423,32 @@ async function runDocuments(db: Db, subs: LoadSubscriptions, now: Date, out: Sen
       kind: fiaDocuments.kind,
       file: fiaDocuments.file,
       publishedAt: fiaDocuments.publishedAt,
+      firstSeenAt: fiaDocuments.firstSeenAt,
     })
     .from(fiaDocuments)
     .where(and(isNull(fiaDocuments.notifiedAt), unclaimed(fiaDocuments.pendingUntil)))
     .orderBy(fiaDocuments.firstSeenAt)
     .limit(DOCUMENTS_PER_RUN);
-  if (rows.length === 0) return none;
+  if (waiting.length === 0) return none;
+
+  const late = waiting.filter((r) => isDocumentTooLate(r.firstSeenAt, now));
+  let processed = 0;
+  if (late.length > 0) {
+    await db
+      .update(fiaDocuments)
+      .set({ notifiedAt: now, pendingUntil: null })
+      .where(
+        and(
+          inArray(fiaDocuments.url, late.map((r) => r.url)),
+          isNull(fiaDocuments.notifiedAt),
+          unclaimed(fiaDocuments.pendingUntil),
+        ),
+      );
+    processed += late.length;
+    console.warn(`[alerts] ${late.length} FIA Documents were recorded too long ago to push: marked notified`);
+  }
+  const rows = waiting.filter((r) => !isDocumentTooLate(r.firstSeenAt, now));
+  if (rows.length === 0) return { processed, results: [] as Sent[] };
   const subscriptions = await subs();
   if (!time.hasTime()) return none;
 
@@ -428,7 +468,6 @@ async function runDocuments(db: Db, subs: LoadSubscriptions, now: Date, out: Sen
   const mine = rows.filter((r) => sentThrough.has(r.url)).map((r) => ({ ...r, sentThrough: sentThrough.get(r.url) ?? null }));
 
   const before = out.results.length;
-  let processed = 0;
   for (const group of groupBySentThrough(mine)) {
     const urls = group.map((r) => r.url);
     const complete = await fanOut(
@@ -450,9 +489,9 @@ async function runDocuments(db: Db, subs: LoadSubscriptions, now: Date, out: Sen
   return { processed, results: out.results.slice(before) };
 }
 
-/** At 07:00 UTC, one push to the owner's own subscription if the schedule sync is unhealthy. */
+/** In the daily run, one push to the owner's own subscription if the schedule sync is unhealthy. */
 async function runOwnerAlert(db: Db, endpoint: string | null, now: Date, out: Sender, time: Budget) {
-  if (!endpoint || !isOwnerAlertDue(now) || !time.hasTime()) return [];
+  if (!endpoint || !time.hasTime()) return [];
   const payload = ownerAlertPayload(await getSyncStatus(db, now));
   if (!payload) return [];
   const [subscription] = await db
@@ -466,21 +505,72 @@ async function runOwnerAlert(db: Db, endpoint: string | null, now: Date, out: Se
   return out.send([{ subscription, payload, ttlSeconds: OWNER_ALERT_TTL_SECONDS }]);
 }
 
+/** Claims today's daily run in daily_runs. False when another run already has it. */
+async function claimDailyRun(db: Db, now: Date): Promise<boolean> {
+  const rows = await db.insert(dailyRuns).values({ day: utcDay(now) }).onConflictDoNothing().returning({ day: dailyRuns.day });
+  return rows.length > 0;
+}
+
+/**
+ * Once a day, in the first run of the 07:00 UTC hour to claim the day: the owner's sync alert, then the
+ * housekeeping (old reminder keys, documents, sign-up attempts and stale subscriptions are never needed again).
+ * It goes first and its faults are caught, so a fault in the other passes cannot lose the alert, nor this pass
+ * stop them. A failed pass gives the day back, so the next minute's run tries again.
+ */
+async function runDaily(db: Db, endpoint: string | null, now: Date, out: Sender, time: Budget): Promise<Sent[]> {
+  let claimed = false;
+  try {
+    claimed = await claimDailyRun(db, now);
+    if (!claimed) {
+      noteDailyRunDone(now);
+      return [];
+    }
+    const owner = await runOwnerAlert(db, endpoint, now, out, time);
+    await db
+      .delete(remindersSent)
+      .where(lt(remindersSent.startsAt, new Date(now.getTime() - REMINDER_RETENTION_DAYS * 24 * 60 * MINUTE)));
+    await db
+      .delete(fiaDocuments)
+      .where(lt(fiaDocuments.firstSeenAt, new Date(now.getTime() - DOCUMENT_RETENTION_DAYS * 24 * 60 * MINUTE)));
+    await pruneSignupAttempts(db);
+    const stale = await pruneStaleSubscriptions(db);
+    if (stale > 0) console.warn(`[alerts] pruned ${stale} push subscriptions not saved or pushed to in a long time`);
+    noteDailyRunDone(now);
+    return owner;
+  } catch (error) {
+    console.error("[alerts] the daily pass failed; the next run tries again", error);
+    if (claimed) {
+      await db
+        .delete(dailyRuns)
+        .where(eq(dailyRuns.day, utcDay(now)))
+        .catch((releaseError: unknown) => console.error("[alerts] could not release today's daily run", releaseError));
+    }
+    return [];
+  }
+}
+
 /**
  * Deletes gone subscriptions, counts "failed" sends (deleting after MAX_PUSH_FAILURES), resets the count on
- * success. An "error" says nothing about the subscription, so it neither counts nor resets. When every push of
- * a run went wrong, the fault is ours or the push service's (a bad VAPID key, an outage), not every device's:
- * nothing is counted, so a bad deploy cannot delete every subscription.
+ * success, and notes when a push was last accepted (lastSentAt, to the day). An "error" says nothing about the
+ * subscription, so it neither counts nor resets: a bad VAPID key (no status, or 401/403) is an "error", so a
+ * bad deploy costs no subscription a strike. When every push of a batch of two or more went wrong, the fault
+ * is ours or the push service's (an outage), not every device's: nothing is counted. A batch of one is counted,
+ * so a Session Reminder answered "failed" is never retried (runReminders): one Session costs one strike.
+ * Returns the ids of the subscriptions deleted.
  */
-async function recordOutcomes(db: Db, results: { push: OutgoingPush; outcome: PushOutcome }[]): Promise<number> {
+async function recordOutcomes(db: Db, results: { push: OutgoingPush; outcome: PushOutcome }[]): Promise<string[]> {
   const gone = new Set<string>();
   const failed = new Set<string>();
   const recovered = new Set<string>();
+  const accepted = new Set<string>();
   for (const { push, outcome } of results) {
     const sub = push.subscription;
     if (outcome === "gone") gone.add(sub.id);
     else if (outcome === "failed") failed.add(sub.id);
-    else if (outcome === "sent" && sub.failureCount > 0) recovered.add(sub.id);
+    else if (outcome === "sent") {
+      accepted.add(sub.id);
+      if (sub.failureCount > 0) recovered.add(sub.id);
+    }
   }
   const wrong = results.filter((r) => r.outcome === "error" || r.outcome === "failed").length;
   if (results.length > 1 && wrong === results.length) {
@@ -496,7 +586,7 @@ async function recordOutcomes(db: Db, results: { push: OutgoingPush; outcome: Pu
   }
   for (const id of failed) recovered.delete(id);
 
-  let removed = 0;
+  const removed: string[] = [];
   if (failed.size > 0) {
     await db
       .update(pushSubscriptions)
@@ -506,17 +596,29 @@ async function recordOutcomes(db: Db, results: { push: OutgoingPush; outcome: Pu
       .delete(pushSubscriptions)
       .where(and(inArray(pushSubscriptions.id, [...failed]), gte(pushSubscriptions.failureCount, MAX_PUSH_FAILURES)))
       .returning({ id: pushSubscriptions.id });
-    removed += dropped.length;
+    removed.push(...dropped.map((r) => r.id));
   }
   if (gone.size > 0) {
     const dropped = await db
       .delete(pushSubscriptions)
       .where(inArray(pushSubscriptions.id, [...gone]))
       .returning({ id: pushSubscriptions.id });
-    removed += dropped.length;
+    removed.push(...dropped.map((r) => r.id));
   }
   if (recovered.size > 0) {
     await db.update(pushSubscriptions).set({ failureCount: 0 }).where(inArray(pushSubscriptions.id, [...recovered]));
+  }
+  if (accepted.size > 0) {
+    // At most one write per device a day: rows already marked today are left alone.
+    await db
+      .update(pushSubscriptions)
+      .set({ lastSentAt: sql`now()` })
+      .where(
+        and(
+          inArray(pushSubscriptions.id, [...accepted]),
+          or(isNull(pushSubscriptions.lastSentAt), lt(pushSubscriptions.lastSentAt, sql`now() - interval '1 day'`)),
+        ),
+      );
   }
   return removed;
 }
@@ -531,32 +633,23 @@ export async function runAlerts(
   const time = budget(options.deadline ?? clock() + RUN_BUDGET_MS, clock);
   const out = sender(db, options.send ?? ((push) => sendPush(push, vapid)));
   const subs = lazySubscriptions(db);
-  const work: AlertsWork = { reminders: true, pushes: true, daily: isOwnerAlertDue(now), ...options.work };
+  // The planner's daily flag (isOwnerAlertDue) also skips the hour's runs once this instance did the day's;
+  // without a plan, any run in the hour asks daily_runs.
+  const work: AlertsWork = { reminders: true, pushes: true, daily: isDailyRunHour(now), ...options.work };
   const none = { due: 0, claimed: 0, processed: 0, results: [] };
 
+  const ownerEndpoint = options.ownerEndpoint === undefined ? getOwnerPushEndpoint() : options.ownerEndpoint;
+  const owner = work.daily ? await runDaily(db, ownerEndpoint, now, out, time) : [];
   const reminders = work.reminders ? await runReminders(db, subs, now, out, time) : none;
   const changes = work.pushes ? await runChanges(db, subs, now, out, time) : none;
   const documents = work.pushes ? await runDocuments(db, subs, now, out, time) : none;
-  const ownerEndpoint = options.ownerEndpoint === undefined ? getOwnerPushEndpoint() : options.ownerEndpoint;
-  const owner = await runOwnerAlert(db, ownerEndpoint, now, out, time);
-
-  // Daily housekeeping, in the 07:00 UTC run: old reminder keys and documents are never needed again.
-  if (work.daily) {
-    await db
-      .delete(remindersSent)
-      .where(lt(remindersSent.startsAt, new Date(now.getTime() - REMINDER_RETENTION_DAYS * 24 * 60 * MINUTE)));
-    await db
-      .delete(fiaDocuments)
-      .where(lt(fiaDocuments.firstSeenAt, new Date(now.getTime() - DOCUMENT_RETENTION_DAYS * 24 * 60 * MINUTE)));
-    await pruneSignupAttempts(db);
-  }
 
   const sentCount = (rs: { outcome: PushOutcome }[]) => rs.filter((r) => r.outcome === "sent").length;
   return {
     reminders: { due: reminders.due, claimed: reminders.claimed, sent: sentCount(reminders.results) },
     changes: { processed: changes.processed, pushes: changes.results.length, sent: sentCount(changes.results) },
     documents: { processed: documents.processed, pushes: documents.results.length, sent: sentCount(documents.results) },
-    subscriptionsRemoved: out.removed,
+    subscriptionsRemoved: out.removed.size,
     ownerAlert: owner[0]?.outcome ?? null,
     deadlineReached: time.reached,
   };

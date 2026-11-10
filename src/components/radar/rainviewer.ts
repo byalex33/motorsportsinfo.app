@@ -24,12 +24,22 @@ export interface RadarFrame {
   tileUrl: string;
 }
 
+/** Only https on rainviewer.com or a subdomain: the host comes from the API response and decides where tiles load from. */
+function isRainViewerHost(host: string): boolean {
+  try {
+    const url = new URL(host);
+    return url.protocol === "https:" && (url.hostname === "rainviewer.com" || url.hostname.endsWith(".rainviewer.com"));
+  } catch {
+    return false;
+  }
+}
+
 function isWeatherMaps(value: unknown): value is WeatherMaps {
   if (!value || typeof value !== "object") return false;
   const v = value as { host?: unknown; radar?: { past?: unknown } };
   return (
     typeof v.host === "string" &&
-    /^https:\/\//.test(v.host) &&
+    isRainViewerHost(v.host) &&
     Array.isArray(v.radar?.past) &&
     v.radar.past.every(
       (f: unknown) =>

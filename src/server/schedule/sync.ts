@@ -5,13 +5,13 @@
 import { and, eq, inArray, isNull, like } from "drizzle-orm";
 import { cacheLife, cacheTag, revalidateTag } from "next/cache";
 import { getDb, type Db } from "@/db/client";
-import { pendingSessionChanges, rounds, scheduleChanges, scheduleFlags, sessions, sourceChecks } from "@/db/schema";
+import { pendingSessionChanges, remindersSent, rounds, scheduleChanges, scheduleFlags, sessions, sourceChecks } from "@/db/schema";
 import { SCHEDULE_OVERRIDES, type ScheduleOverride } from "@/data/overrides";
 import type { SeriesId } from "@/domain/types";
 import { decideCheckDue, type CheckDecision } from "./check-due";
 import { loadPublishedSchedule } from "./db-read";
-import { groupSessions, pageSlugsToStore, roundToRow, sessionToRow } from "./db-rows";
-import { diffSchedule, planChangesPublished, type PendingChange, type SchedulePlan } from "./diff";
+import { groupSessions, pageSlugsToStore, pendingFromRow, pendingToRow, roundToRow, sessionToRow } from "./db-rows";
+import { diffSchedule, planChangesPublished, type SchedulePlan } from "./diff";
 import { isIdOfSeries, seriesIdLikePattern } from "./normalise";
 import { applyOverrides } from "./overrides";
 import { withCircuits } from "./select";
@@ -51,17 +51,27 @@ async function loadState(db: Db, series: SeriesId) {
       .where(and(eq(scheduleFlags.series, series), isNull(scheduleFlags.resolvedAt))),
     db.select().from(sourceChecks).where(eq(sourceChecks.series, series)),
   ]);
-  const pending: PendingChange[] = pendingRows.map((p) => ({
-    sessionId: p.sessionId,
-    observedStartsAt: p.observedStartsAt.toISOString(),
-    observedEndsAt: p.observedEndsAt.toISOString(),
-    seenCount: p.seenCount,
-  }));
+  const pending = pendingRows.map(pendingFromRow);
   return { published: groupSessions(roundRows, sessionRows), pending, openFlags: flagRows, check: checkRows[0] ?? null };
 }
 
-async function writePlan(db: Db, series: SeriesId, plan: SchedulePlan, now: Date, published: RoundWithSessions[]): Promise<void> {
-  // Built as an array of drizzle queries and sent as one neon-http batch (a single transaction).
+/** What a successful check records in source_checks. */
+interface CheckSuccess {
+  lastSource: string;
+  lastError: string | null;
+}
+
+async function writePlan(
+  db: Db,
+  series: SeriesId,
+  plan: SchedulePlan,
+  now: Date,
+  published: RoundWithSessions[],
+  check: CheckSuccess,
+): Promise<void> {
+  // Built as an array of drizzle queries and sent as one neon-http batch (a single transaction). The
+  // check's success is in the same batch: if it were written afterwards and failed, the retry would find
+  // the plan already applied, so nothing would revalidate the pages or wake the push pass.
   const queries = [];
   const written = [...plan.roundInserts, ...plan.roundUpdates];
   for (const r of written) {
@@ -71,10 +81,21 @@ async function writePlan(db: Db, series: SeriesId, plan: SchedulePlan, now: Date
   // A Round's page slug is stored once (new Rounds, and Rounds published before it was stored) and never
   // overwritten, so a rename keeps its URL. Same value as the page derived, so no revalidation is needed.
   const sessionsAfter = new Map(published.flatMap((r) => r.sessions).map((s) => [s.id, s]));
+  for (const { from, to } of plan.sessionRenames) {
+    const s = sessionsAfter.get(from);
+    sessionsAfter.delete(from);
+    if (s) sessionsAfter.set(to, { ...s, id: to });
+  }
   for (const s of [...plan.sessionInserts, ...plan.sessionUpdates]) sessionsAfter.set(s.id, s);
   const publishedRounds = published.map((r) => r.round);
   for (const [id, pageSlug] of pageSlugsToStore(publishedRounds, written, [...sessionsAfter.values()])) {
     queries.push(db.update(rounds).set({ pageSlug }).where(and(eq(rounds.id, id), isNull(rounds.pageSlug))));
+  }
+  // A renamed Session keeps its row, its sent Session Reminders and its Schedule Changes under the new id.
+  for (const { from, to } of plan.sessionRenames) {
+    queries.push(db.update(sessions).set({ id: to, updatedAt: now }).where(eq(sessions.id, from)));
+    queries.push(db.update(remindersSent).set({ sessionId: to }).where(eq(remindersSent.sessionId, from)));
+    queries.push(db.update(scheduleChanges).set({ sessionId: to }).where(eq(scheduleChanges.sessionId, from)));
   }
   if (plan.sessionInserts.length > 0) {
     queries.push(
@@ -92,13 +113,7 @@ async function writePlan(db: Db, series: SeriesId, plan: SchedulePlan, now: Date
     queries.push(db.delete(pendingSessionChanges).where(inArray(pendingSessionChanges.sessionId, plan.pendingDeletes)));
   }
   for (const p of plan.pendingUpserts) {
-    const values = {
-      sessionId: p.sessionId,
-      observedStartsAt: new Date(p.observedStartsAt),
-      observedEndsAt: new Date(p.observedEndsAt),
-      seenCount: p.seenCount,
-      firstSeenAt: now,
-    };
+    const values = pendingToRow(p, now);
     queries.push(
       db.insert(pendingSessionChanges).values(values).onConflictDoUpdate({ target: pendingSessionChanges.sessionId, set: values }),
     );
@@ -125,7 +140,12 @@ async function writePlan(db: Db, series: SeriesId, plan: SchedulePlan, now: Date
   if (plan.resolvedFlagIds.length > 0) {
     queries.push(db.update(scheduleFlags).set({ resolvedAt: now }).where(inArray(scheduleFlags.id, plan.resolvedFlagIds)));
   }
-  if (queries.length === 0) return;
+  queries.push(
+    db
+      .update(sourceChecks)
+      .set({ lastSucceededAt: now, lastSource: check.lastSource, lastError: check.lastError })
+      .where(eq(sourceChecks.series, series)),
+  );
   await db.batch(queries as unknown as Parameters<Db["batch"]>[0]);
 }
 
@@ -134,6 +154,7 @@ function summarise(plan: SchedulePlan): Record<string, number> {
     roundInserts: plan.roundInserts.length,
     roundUpdates: plan.roundUpdates.length,
     sessionInserts: plan.sessionInserts.length,
+    sessionRenames: plan.sessionRenames.length,
     sessionUpdates: plan.sessionUpdates.length,
     pendingUpserts: plan.pendingUpserts.length,
     pendingDeletes: plan.pendingDeletes.length,
@@ -275,15 +296,10 @@ async function runCheck(
   const warnings = [...schedule.warnings, ...applied.warnings];
   for (const w of warnings) console.warn(`[sync:${series}] ${w}`);
 
-  await writePlan(db, series, plan, now, state.published);
-  await db
-    .update(sourceChecks)
-    .set({
-      lastSucceededAt: now,
-      lastSource: schedule.isFallback ? `${schedule.source} (fallback)` : schedule.source,
-      lastError: warnings.length > 0 ? warnings.join(" | ").slice(0, 2000) : null,
-    })
-    .where(eq(sourceChecks.series, series));
+  await writePlan(db, series, plan, now, state.published, {
+    lastSource: schedule.isFallback ? `${schedule.source} (fallback)` : schedule.source,
+    lastError: warnings.length > 0 ? warnings.join(" | ").slice(0, 2000) : null,
+  });
 
   return {
     series,

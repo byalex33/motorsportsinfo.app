@@ -6,7 +6,7 @@
 import * as cheerio from "cheerio";
 import type { SessionType } from "@/domain/types";
 import { isoDate, monthNumber } from "./dates";
-import { getPage, type SourceContext } from "./http";
+import { getPage, NoRoundsError, type SourceContext } from "./http";
 import type { RawRound, RawSession } from "../types";
 
 const SITE = "https://www.fiawec.com";
@@ -112,7 +112,7 @@ export async function fetchWecSeasons(
   const completeSeasons: number[] = [];
   for (const season of [year, year + 1]) {
     const slugs = parseWecRaceLinks(seasonHtml, season);
-    if (season === year && slugs.length === 0) throw new Error(`No Rounds listed on ${SITE}/en/season/${year}`);
+    if (season === year && slugs.length === 0) throw new NoRoundsError(`No Rounds listed on ${SITE}/en/season/${year}`);
     let failures = 0;
     for (const slug of slugs) {
       await ctx.sleep(300);

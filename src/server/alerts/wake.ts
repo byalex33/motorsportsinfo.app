@@ -24,7 +24,7 @@ export interface AlertsWork {
   reminders: boolean;
   /** Schedule Changes or FIA Documents wait to be pushed. */
   pushes: boolean;
-  /** The 07:00 UTC run: the owner's sync alert and housekeeping. */
+  /** A run in the 07:00 UTC hour before this instance has done today's daily pass (owner's sync alert and housekeeping). */
   daily: boolean;
 }
 

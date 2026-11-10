@@ -249,4 +249,24 @@ describe("roundPageSeo", () => {
     expect(seo.title).toContain("9–11 Oct 2026");
     expect(roundPageSeo("f1", singaporeRound, singapore, "singapore-grand-prix").title).not.toContain("9–11 Oct");
   });
+
+  it("keeps the dates out of the title when the Round's own name ends in a number", () => {
+    const daytona = { ...singaporeRound, series: "nascar" as const, name: "Daytona 500", slug: "daytona", startDate: "2026-02-15", endDate: "2026-02-15" };
+    const speedway = { ...singapore, id: "daytona", name: "Daytona International Speedway", location: "Daytona Beach, United States" };
+    expect(roundPageSeo("nascar", daytona, speedway, "daytona-500").title).not.toContain("15 Feb");
+    expect(roundPageSeo("nascar", daytona, speedway, "daytona-500-2").title).toContain("15 Feb 2026");
+    const indy = { ...daytona, series: "indycar" as const, name: "Indianapolis 500" };
+    expect(roundPageSeo("indycar", indy, speedway, "indianapolis-500").title).toBe("IndyCar Indianapolis 500 2026 schedule – session times & weather");
+  });
+
+  it("does not promise a finished Round's times 'once published'", () => {
+    const unconfirmed = { ...singaporeRound, sessionTimesConfirmed: false };
+    const after = roundPageSeo("f1", unconfirmed, singapore, "singapore-grand-prix", false, "2026-10-20T12:00:00.000Z");
+    for (const text of [after.title, after.description, after.lead]) {
+      expect(text).not.toMatch(/TBC|once published/);
+    }
+    expect(after.lead).toContain("has finished");
+    const before = roundPageSeo("f1", unconfirmed, singapore, "singapore-grand-prix", false, "2026-10-01T12:00:00.000Z");
+    expect(before.title).toContain("times TBC");
+  });
 });

@@ -2,6 +2,7 @@
 
 import { ChevronDownIcon } from "lucide-react";
 import { deferredLoader, useDeferredPopup } from "@/components/deferred-popup";
+import { segmentItem, segmentItemState } from "@/components/motion/segment-pill";
 import { cn } from "@/lib/utils";
 import { zoneCity } from "@/lib/time-format";
 
@@ -18,11 +19,7 @@ export function timeZoneTrigger({ value, active, className }: TimeZonePickerProp
   return {
     "aria-pressed": active,
     "aria-label": active && value ? `Time zone: ${value}. Choose another time zone` : "Choose another time zone",
-    className: cn(
-      "relative flex h-7 min-w-0 items-center gap-1 rounded-full px-3 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-300 ease-expo outline-none focus-visible:ring-2 focus-visible:ring-ring",
-      active ? "bg-foreground text-background group-data-[pill=ready]/seg:bg-transparent!" : "text-muted-foreground hover:text-foreground",
-      className,
-    ),
+    className: cn(segmentItem, "min-w-0 gap-1", segmentItemState(active), className),
     children: (
       <>
         <span className="truncate">{active && value ? zoneCity(value) : "Other zone"}</span>

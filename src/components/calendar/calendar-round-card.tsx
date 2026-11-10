@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { MapPinIcon } from "lucide-react";
+import { memo } from "react";
 import type { CalendarRound } from "@/app/calendar/data";
 import { useDisplayZone } from "@/components/round/use-display-zone";
 import { SERIES } from "@/domain/series";
@@ -16,12 +17,20 @@ const meta = "font-mono text-[0.6875rem] tracking-[0.06em] text-muted-foreground
  * hydration render show Track Time (from props, so the two match); after hydration the times switch to the
  * viewer's chosen zone.
  */
-export function CalendarRoundCard({ round, now }: { round: CalendarRound; now: number | null }) {
+export const CalendarRoundCard = memo(function CalendarRoundCard({
+  round,
+  live,
+  endedBy,
+}: {
+  round: CalendarRound;
+  /** Between the first Session's start and the last one's end (and not cancelled). */
+  live: boolean;
+  /** The latest Session end that has passed (0 for none), or null before the clock is known: a Session has
+   *  finished when it ends at or before this. Changes only when a Session ends, unlike the clock. */
+  endedBy: number | null;
+}) {
   const zone = useDisplayZone(round.circuitTimeZone);
   const info = SERIES[round.series];
-  const first = round.sessions[0];
-  const last = round.sessions.at(-1);
-  const live = now !== null && first && last && !round.cancelled && Date.parse(first.startsAt) <= now && now < Date.parse(last.endsAt);
   // Both offsets ("GMT+1 / GMT+0") when the Round crosses a clock change in the zone shown.
   const offsets = zone
     ? zoneOffsetLabels(zone.tz, round.sessions.map((s) => s.startsAt))
@@ -89,7 +98,7 @@ export function CalendarRoundCard({ round, now }: { round: CalendarRound; now: n
               const day = parts ? `${parts.weekday} ${parts.day}` : track?.day;
               const clock = zone ? formatClock(s.startsAt, zone.tz) : track?.clock;
               const cancelled = s.status === "cancelled";
-              const finished = now !== null && Date.parse(s.endsAt) <= now;
+              const finished = endedBy !== null && Date.parse(s.endsAt) <= endedBy;
               const isRace = s.type === "race" || s.type === "feature-race";
               return (
                 <li
@@ -117,4 +126,4 @@ export function CalendarRoundCard({ round, now }: { round: CalendarRound; now: n
 
     </article>
   );
-}
+});

@@ -6,7 +6,7 @@ const getLiveSchedule = vi.fn();
 vi.mock("next/cache", () => ({ io: vi.fn(async () => {}) }));
 vi.mock("@/db/client", () => ({ getDb: () => ({}) }));
 vi.mock("./db-read", () => ({ loadPublishedSchedule }));
-vi.mock("./live", () => ({ getLiveSchedule }));
+vi.mock("./live", () => ({ getLiveSchedule, LIVE_WAIT_MS: 10_000 }));
 
 const { getFeaturedRound } = await import("./index");
 
@@ -29,7 +29,7 @@ describe("schedule reads with a database", () => {
     getLiveSchedule.mockResolvedValue(schedule);
     const featured = await getFeaturedRound("f1", NOW);
     expect(featured.kind === "round" && featured.round.id).toBe(round.id);
-    expect(getLiveSchedule).toHaveBeenCalledWith("f1");
+    expect(getLiveSchedule).toHaveBeenCalledWith("f1", { waitMs: 10_000 });
   });
 
   it("still throw when the live sources fail too, so pages keep their last good render", async () => {

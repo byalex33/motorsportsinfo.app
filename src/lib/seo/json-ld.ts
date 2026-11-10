@@ -135,12 +135,18 @@ const SPORT: Record<SeriesId, string> = {
   "super-gt": "Sports car racing",
 };
 
-const isNumbered = (round: Round) => /^Round \d+$/.test(round.name);
+/** A Round named only by its number ("Round 13"), which needs the place to say which Round it is. */
+export const NUMBERED = /^Round \d+$/;
 
-/** "Baku" from the Circuit's "Baku, Azerbaijan". */
-export function circuitLocality(circuit: Circuit): string {
+const isNumbered = (round: Pick<Round, "name">) => NUMBERED.test(round.name);
+
+/** "Baku" from the Circuit's "Baku, Azerbaijan". Page slugs and names both use it, so they agree. */
+export function locality(circuit: Pick<Circuit, "name" | "location">): string {
   return circuit.location.split(",")[0]?.trim() || circuit.name;
 }
+
+/** "Baku" from the Circuit's "Baku, Azerbaijan". */
+export const circuitLocality: (circuit: Circuit) => string = locality;
 
 /** The Round's name, with the place where the name is only a number ("Round 13 · Baku"). */
 export function roundShortName(round: Round, circuit: Circuit): string {

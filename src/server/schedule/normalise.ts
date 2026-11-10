@@ -33,15 +33,25 @@ export function seriesIdLikePattern(series: SeriesId): string {
   return `${series}-____-%`;
 }
 
-function firstStart(raw: RawRound): string {
+/**
+ * A Round's place in its season, for the "-2" suffix: always a date, so a Round that gains Session times
+ * does not move past a "Times TBC" Round on the same day (a full timestamp sorts after a bare date).
+ */
+function firstDate(raw: RawRound): string {
+  if (raw.startDate) return raw.startDate;
   const starts = raw.sessions.map((s) => s.startsAt).sort();
-  return starts[0] ?? raw.startDate ?? "9999";
+  return starts[0]?.slice(0, 10) ?? "9999";
+}
+
+/** Rounds on the same date keep the source's own order: its Round number or URL, compared numerically. */
+function bySourceRef(a: RawRound, b: RawRound): number {
+  return a.sourceRef.localeCompare(b.sourceRef, "en", { numeric: true });
 }
 
 /**
  * Normalises RawRounds from one source.
  * - The Round slug is the Circuit id, so ids agree between a primary source and its fallback.
- *   A second Round at the same Circuit in one season gets "-2".
+ *   A second Round at the same Circuit in one season gets "-2", by date, then by the source's sourceRef.
  * - Session slugs come from the source's Session name ("Practice 1" → "practice-1").
  * - Missing end times use the Series' default Session length and set endIsEstimated, as does a source's own
  *   estimated end.
@@ -56,7 +66,7 @@ export function normaliseRounds(
   const rounds: RoundWithSessions[] = [];
   const usedSlugs = new Set<string>();
 
-  const ordered = [...raws].sort((a, b) => a.season - b.season || firstStart(a).localeCompare(firstStart(b)));
+  const ordered = [...raws].sort((a, b) => a.season - b.season || firstDate(a).localeCompare(firstDate(b)) || bySourceRef(a, b));
 
   for (const raw of ordered) {
     const circuit =

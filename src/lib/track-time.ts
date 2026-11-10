@@ -2,11 +2,10 @@
 // before hydration) see. The client shows these exact strings until it knows the viewer's zone, then
 // switches to Viewer Time — the strings travel as props, so server HTML and hydration always match.
 import type { TimedSession } from "@/domain/types";
-import { formatClock, formatSessionDay, formatTimeRange, zoneOffsetLabel } from "@/lib/time-format";
+import { MONTHS, formatClock, formatSessionDay, formatTimeRange, zoneOffsetLabel } from "@/lib/time-format";
 
 /** Fixed locale for server-rendered text: 24-hour clock, "Sat 10 Oct". */
 const LOCALE = "en-GB";
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export interface TrackTimeText {
   /** "Sat" */

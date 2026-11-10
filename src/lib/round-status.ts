@@ -71,10 +71,23 @@ export function formatCountdown(parts: CountdownParts): string {
   return `${parts.minutes}m ${pad(parts.seconds)}s`;
 }
 
-/** True while the rain radar would be shown (RADAR_LEAD_MINUTES before a Session until it ends). */
-export function isRadarWindow(sessions: Session[], now: number): boolean {
+/**
+ * The Session that keeps the rain radar open at `now`: a non-cancelled Session with
+ * now ∈ [startsAt − RADAR_LEAD_MINUTES, endsAt). Null when the radar should be hidden.
+ */
+export function radarWindowSession<S extends Session>(sessions: readonly S[], now: number): S | null {
   const lead = RADAR_LEAD_MINUTES * 60_000;
-  return sessions.some(
-    (s) => s.status !== "cancelled" && now >= Date.parse(s.startsAt) - lead && now < Date.parse(s.endsAt),
-  );
+  for (const session of sessions) {
+    if (session.status === "cancelled") continue;
+    const start = Date.parse(session.startsAt);
+    const end = Date.parse(session.endsAt);
+    if (Number.isNaN(start) || Number.isNaN(end)) continue;
+    if (now >= start - lead && now < end) return session;
+  }
+  return null;
+}
+
+/** True while the rain radar would be shown (RADAR_LEAD_MINUTES before a Session until it ends). */
+export function isRadarWindow(sessions: readonly Session[], now: number): boolean {
+  return radarWindowSession(sessions, now) !== null;
 }

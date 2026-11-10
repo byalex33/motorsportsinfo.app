@@ -68,8 +68,11 @@ describe("classifyPushError", () => {
   });
   it("treats another 4xx as the push service refusing this subscription", () => {
     expect(classifyPushError({ statusCode: 400 })).toBe("failed");
-    expect(classifyPushError({ statusCode: 403 })).toBe("failed");
     expect(classifyPushError({ statusCode: 413 })).toBe("failed");
+  });
+  it("treats 401 and 403 as a fault in the site's VAPID credentials, not the subscription", () => {
+    expect(classifyPushError({ statusCode: 401 })).toBe("error");
+    expect(classifyPushError({ statusCode: 403 })).toBe("error");
   });
   it("treats rate limits, push service outages and errors without a status as faults outside the subscription", () => {
     expect(classifyPushError({ statusCode: 429 })).toBe("error");

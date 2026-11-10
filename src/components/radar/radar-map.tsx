@@ -28,9 +28,12 @@ const FRAMES_REFRESH_MS = 5 * 60_000;
 const RADAR_OPACITY = 0.75;
 const RADAR_LAYER_PREFIX = "radar-frame-";
 
-/** Adds/removes one raster layer per frame (all preloaded) and shows only the active one. Idempotent. */
+/**
+ * Adds/removes one raster layer per frame (all preloaded) and shows only the active one. Idempotent.
+ * Call it only once the style has fired `style.load`: `map.isStyleLoaded()` is false while any tile loads,
+ * so it cannot gate this (the overlay would freeze until every tile of every frame is in).
+ */
 function syncRadarLayers(map: MapLibreMap, feed: RadarFeed | null, activeIndex: number) {
-  if (!map.isStyleLoaded()) return;
   const frames = feed?.frames ?? [];
   const wanted = new Set(frames.map((f) => RADAR_LAYER_PREFIX + f.id));
   const layers = map.getStyle().layers;
@@ -83,6 +86,8 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
   const mapRef = useRef<MapLibreMap | null>(null);
   const styleRef = useRef<string | null>(null);
   const radarRef = useRef<{ feed: RadarFeed | null; index: number }>({ feed: null, index: 0 });
+  // True between `style.load` and the next setStyle: layers can be added even while tiles still load.
+  const styleReadyRef = useRef(false);
   const feedKeyRef = useRef("");
 
   const dark = useIsDarkMode();
@@ -139,8 +144,9 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
       marker.setAttribute("aria-label", name);
       new maplibre.Marker({ element: marker }).setLngLat([lon, lat]).addTo(map);
 
-      // Fires on first load and after every theme switch (setStyle drops our layers).
+      // Fires on first load and after every theme switch, also on setStyle's diff path (which drops our layers).
       map.on("style.load", () => {
+        styleReadyRef.current = true;
         if (map) syncRadarLayers(map, radarRef.current.feed, radarRef.current.index);
       });
       map.once("load", () => {
@@ -154,6 +160,7 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
       cancelled = true;
       map?.remove();
       mapRef.current = null;
+      styleReadyRef.current = false;
     };
   }, [lat, lon, name]);
 
@@ -163,6 +170,8 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
     const style = styleUrl(dark);
     if (!map || styleRef.current === style) return;
     styleRef.current = style;
+    // The `style.load` handler syncs the radar layers once the new style is in.
+    styleReadyRef.current = false;
     map.setStyle(style);
   }, [dark, mapState]);
 
@@ -201,7 +210,7 @@ export default function RadarMap({ circuit, nowMs }: RadarMapProps) {
   useEffect(() => {
     radarRef.current = { feed, index: activeIndex };
     const map = mapRef.current;
-    if (map && mapState === "ready") syncRadarLayers(map, feed, activeIndex);
+    if (map && mapState === "ready" && styleReadyRef.current) syncRadarLayers(map, feed, activeIndex);
   }, [feed, activeIndex, mapState]);
 
   // Animate: 500 ms per frame, hold on the last, loop.

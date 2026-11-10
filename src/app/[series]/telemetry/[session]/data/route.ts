@@ -3,7 +3,7 @@
 // so laps and lap times are never in the page's HTML. Built from the same cached data as the page and the
 // share image, so viewers never reach OpenF1 directly.
 import type { TelemetryComparisonData } from "@/components/telemetry/telemetry-comparison";
-import { canonicalTelemetryRedirect, DATA_QUERY_KEYS } from "../card";
+import { canonicalTelemetryRedirect, DATA_QUERY_KEYS, unknownDriverRedirect } from "../card";
 import { resolveTelemetry } from "../comparison";
 
 const SHORT = "public, max-age=60, s-maxage=60";
@@ -18,6 +18,9 @@ export async function GET(request: Request, ctx: RouteContext<"/[series]/telemet
   const view = await resolveTelemetry(series, slug, { a: searchParams.get("a") ?? undefined, b: searchParams.get("b") ?? undefined });
   if (view.kind === "not-found") return json({ error: "No such Telemetry" }, SHORT, 404);
   if (view.kind !== "ready") return json({ kind: view.kind } satisfies TelemetryComparisonData, SHORT);
+  // A code the Session has no such driver for falls back to the default pair: send it to that URL instead.
+  const unknown = unknownDriverRedirect(request, { a: view.a.code, b: view.b.code });
+  if (unknown) return unknown;
 
   const { drivers, a, b, lapsA, lapsB, lapA, lapB, comparison, offPace } = view;
   const data: TelemetryComparisonData = { kind: "ready", drivers, a, b, lapsA, lapsB, lapA, lapB, comparison, offPace };

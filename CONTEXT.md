@@ -85,7 +85,7 @@ A notification sent shortly before a Session the viewer follows begins.
 _Avoid_: Alert, notification (as the specific term)
 
 **Schedule Change**:
-A Session's start time moves or the Session is cancelled after it was first published.
+A Session's start time moves, the Session is cancelled, or a cancelled Session is reinstated (back on), after it was first published. A source's new time or cancellation is published only once two checks in a row agree; a Schedule Override's is published at once.
 _Avoid_: Update, delay
 
 **Document Alert**:

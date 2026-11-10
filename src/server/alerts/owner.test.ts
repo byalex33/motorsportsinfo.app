@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SERIES_IDS } from "@/domain/types";
 import type { SyncStatus } from "@/server/status";
-import { isOwnerAlertDue, ownerAlertPayload } from "./owner";
+import { isDailyRunHour, isOwnerAlertDue, noteDailyRunDone, ownerAlertPayload, utcDay } from "./owner";
 
 const NOW = "2026-10-15T07:00:00.000Z";
 
@@ -24,19 +24,37 @@ function status(failing: string[], flags: { series: string; message: string }[] 
   return { ok: failing.length === 0 && flags.length === 0, now: NOW, openFlags, series };
 }
 
-describe("isOwnerAlertDue", () => {
-  it("is due only on the 07:00 UTC run", () => {
-    expect(isOwnerAlertDue(new Date("2026-10-15T07:00:00Z"))).toBe(true);
-    expect(isOwnerAlertDue(new Date("2026-10-15T07:00:59Z"))).toBe(true);
-    expect(isOwnerAlertDue(new Date("2026-10-15T07:01:00Z"))).toBe(false);
-    expect(isOwnerAlertDue(new Date("2026-10-15T06:59:00Z"))).toBe(false);
-    expect(isOwnerAlertDue(new Date("2026-10-15T19:00:00Z"))).toBe(false);
+describe("isDailyRunHour", () => {
+  it("is true for every run in the 07:00 UTC hour, so a late or failed 07:00 run is made up", () => {
+    expect(isDailyRunHour(new Date("2026-10-15T07:00:00Z"))).toBe(true);
+    expect(isDailyRunHour(new Date("2026-10-15T07:03:00Z"))).toBe(true);
+    expect(isDailyRunHour(new Date("2026-10-15T07:59:59Z"))).toBe(true);
+    expect(isDailyRunHour(new Date("2026-10-15T08:00:00Z"))).toBe(false);
+    expect(isDailyRunHour(new Date("2026-10-15T06:59:00Z"))).toBe(false);
+    expect(isDailyRunHour(new Date("2026-10-15T19:00:00Z"))).toBe(false);
   });
 
   it("goes by UTC, not the server's time zone", () => {
     // 07:00 in Paris is 05:00 UTC; 09:00 in Paris is 07:00 UTC.
-    expect(isOwnerAlertDue(new Date("2026-10-15T07:00:00+02:00"))).toBe(false);
-    expect(isOwnerAlertDue(new Date("2026-10-15T09:00:00+02:00"))).toBe(true);
+    expect(isDailyRunHour(new Date("2026-10-15T07:00:00+02:00"))).toBe(false);
+    expect(isDailyRunHour(new Date("2026-10-15T09:00:00+02:00"))).toBe(true);
+  });
+});
+
+describe("utcDay", () => {
+  it("is the UTC date", () => {
+    expect(utcDay(new Date("2026-10-15T07:03:00Z"))).toBe("2026-10-15");
+    expect(utcDay(new Date("2026-10-16T01:00:00+02:00"))).toBe("2026-10-15");
+  });
+});
+
+describe("isOwnerAlertDue", () => {
+  it("stops being due once this instance has done today's daily run, and is due again the next day", () => {
+    expect(isOwnerAlertDue(new Date("2026-10-15T07:01:00Z"))).toBe(true);
+    noteDailyRunDone(new Date("2026-10-15T07:01:00Z"));
+    expect(isOwnerAlertDue(new Date("2026-10-15T07:02:00Z"))).toBe(false);
+    expect(isOwnerAlertDue(new Date("2026-10-16T07:00:00Z"))).toBe(true);
+    expect(isOwnerAlertDue(new Date("2026-10-16T08:00:00Z"))).toBe(false);
   });
 });
 

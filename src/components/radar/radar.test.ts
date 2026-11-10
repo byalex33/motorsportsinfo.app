@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Session } from "@/domain/types";
 import sample from "./fixtures/weather-maps.sample.json";
+import { radarWindowSession } from "@/lib/round-status";
 import { buildForecastFrames } from "./feed";
-import { radarWindowSession } from "./radar-window";
 import { buildRadarFrames, formatFrameAge, formatFrameClock } from "./rainviewer";
 
 const MIN = 60_000;
@@ -38,10 +38,11 @@ describe("radar window", () => {
 
   it("stays open during the Session until it ends", () => {
     expect(radarWindowSession([race], start + 45 * MIN)).toBe(race);
-    expect(radarWindowSession([race], end)).toBe(race);
+    expect(radarWindowSession([race], end - 1)).toBe(race);
   });
 
-  it("closes after the end", () => {
+  it("closes when the Session ends", () => {
+    expect(radarWindowSession([race], end)).toBeNull();
     expect(radarWindowSession([race], end + 1)).toBeNull();
   });
 
@@ -97,7 +98,17 @@ describe("RainViewer frames", () => {
   it("rejects unexpected payloads", () => {
     expect(() => buildRadarFrames({})).toThrow();
     expect(() => buildRadarFrames({ host: "http://insecure", radar: { past: [] } })).toThrow();
-    expect(() => buildRadarFrames({ host: "https://x", radar: { past: [{ time: "1" }] } })).toThrow();
+    expect(() => buildRadarFrames({ host: "https://tilecache.rainviewer.com", radar: { past: [{ time: "1" }] } })).toThrow();
+  });
+
+  it("accepts tiles only from a rainviewer.com host", () => {
+    const past = [{ time: 1, path: "/v2/radar/abc" }];
+    expect(() => buildRadarFrames({ host: "https://other.example", radar: { past } })).toThrow();
+    expect(() => buildRadarFrames({ host: "https://evilrainviewer.com", radar: { past } })).toThrow();
+    expect(() => buildRadarFrames({ host: "https://rainviewer.com.evil.example", radar: { past } })).toThrow();
+    expect(() => buildRadarFrames({ host: "not a url", radar: { past } })).toThrow();
+    expect(buildRadarFrames({ host: "https://rainviewer.com", radar: { past } })).toHaveLength(1);
+    expect(buildRadarFrames({ host: "https://tilecache.rainviewer.com", radar: { past } })).toHaveLength(1);
   });
 
   it("formats the frame label", () => {

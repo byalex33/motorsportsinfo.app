@@ -17,19 +17,13 @@ import { SERIES } from "@/domain/series";
 import { everySessionCancelled } from "@/lib/round-status";
 import { slugify } from "@/server/schedule/normalise";
 import { formatRoundDates } from "@/lib/time-format";
-import { roundDisplayName, roundEventName } from "./json-ld";
+import { locality, NUMBERED, roundDisplayName, roundEventName } from "./json-ld";
 
 export interface RoundPageSource {
   round: Pick<Round, "id" | "series" | "season" | "slug" | "name" | "startDate" | "pageSlug">;
   circuit: Pick<Circuit, "name" | "location">;
   /** When present, a Round whose every Session is cancelled is kept off the plain slug. */
   sessions?: readonly { status: string }[];
-}
-
-const NUMBERED = /^Round \d+$/;
-
-function locality(circuit: Pick<Circuit, "name" | "location">): string {
-  return circuit.location.split(",")[0]?.trim() || circuit.name;
 }
 
 /** "united-states-grand-prix", or "round-13-baku" when the name is only a number. */
@@ -240,9 +234,19 @@ function addedWords(shorter: string, longer: string): string[] {
 }
 
 /**
+ * Whether a page slug is a collision suffix of the Round's own slug ("daytona-500-2"), not just a name that
+ * ends in a number ("daytona-500").
+ */
+function isSuffixedSlug(pageSlug: string, round: Round, circuit: Circuit): boolean {
+  const base = roundPageSlug({ round, circuit });
+  return pageSlug.startsWith(`${base}-`) && /^\d+$/.test(pageSlug.slice(base.length + 1));
+}
+
+/**
  * Search-facing title and description for a Round page. Stable for that Round, unlike the Series page.
  * `pageSlug` is the URL slug: when a season has two Rounds with the same name, the later one's slug ends
- * in "-2" and the dates go in the title so the two pages are not identical.
+ * in "-2" and the dates go in the title so the two pages are not identical. `renderedAt` (ISO) tells a
+ * finished Round apart, so one without published Session times is not promised them "once published".
  */
 export function roundPageSeo(
   series: SeriesId,
@@ -250,17 +254,26 @@ export function roundPageSeo(
   circuit: Circuit,
   pageSlug?: string,
   cancelled = false,
+  renderedAt?: string,
 ): { title: string; description: string; lead: string } {
   const info = SERIES[series];
   const name = roundEventName(series, round, circuit);
   const dates = formatRoundDates(round.startDate, round.endDate);
-  const heading = pageSlug && /-\d+$/.test(pageSlug) ? `${name} (${dates})` : name;
+  const heading = pageSlug && isSuffixedSlug(pageSlug, round, circuit) ? `${name} (${dates})` : name;
   const place = `${roundDisplayName(series, round, circuit)}, ${dates} at ${circuit.name}`;
   if (cancelled) {
     return {
       title: `${name} cancelled`,
       description: `${place} was cancelled. It is not a completed ${info.shortName} Round; the season's timetable is on the ${info.shortName} page.`,
       lead: `${name} at ${circuit.name}, ${dates}, was cancelled.`,
+    };
+  }
+  const finished = renderedAt !== undefined && round.endDate < renderedAt.slice(0, 10);
+  if (!round.sessionTimesConfirmed && finished) {
+    return {
+      title: `${heading} – dates & Circuit`,
+      description: `${place}. This ${info.shortName} Round has finished; the ${info.shortName} page has the next Round's Session times and forecast.`,
+      lead: `${name} at ${circuit.name}, ${dates}. This Round has finished.`,
     };
   }
   if (!round.sessionTimesConfirmed) {

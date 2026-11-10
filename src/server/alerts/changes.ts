@@ -1,6 +1,6 @@
 // Schedule Change push planning. Pure: the cron passes in what it read from the database.
 import { SERIES } from "@/domain/series";
-import type { SeriesId } from "@/domain/types";
+import type { ScheduleChangeKind, SeriesId } from "@/domain/types";
 import { dayKey, formatClock, formatDayClock } from "./format";
 import { isFollowing } from "./selection";
 import { sessionTag, type AlertSession, type AlertSubscription, type OutgoingPush, type PushPayload } from "./types";
@@ -15,7 +15,7 @@ export interface ScheduleChangeRow {
   id: number;
   sessionId: string;
   series: SeriesId;
-  kind: "time" | "cancelled";
+  kind: ScheduleChangeKind;
   previousStartsAt: Date;
   newStartsAt: Date | null;
 }
@@ -24,16 +24,18 @@ export interface ScheduleChangeRow {
 export interface ChangeNotice {
   changeIds: number[];
   sessionId: string;
-  kind: "time" | "cancelled" | "unchanged";
+  kind: "time" | "cancelled" | "reinstated" | "unchanged";
   /** Start time before the first unnotified change. */
   previousStartsAt: Date;
-  /** Start time after the last change (null when cancelled). */
+  /** Start time after the last change (null when cancelled, and when unchanged after a cancellation). */
   newStartsAt: Date | null;
 }
 
 /**
  * Merges several unnotified changes to the same Session so a subscriber gets one push
  * describing where it ended up: moved twice → one "moved" push; moved back → nothing.
+ * The Session was cancelled before the first change when that change reinstates it, so
+ * cancelled and reinstated at the same time → nothing; reinstated → one "back on" push.
  */
 export function coalesceChanges(rows: readonly ScheduleChangeRow[]): ChangeNotice[] {
   const bySession = new Map<string, ScheduleChangeRow[]>();
@@ -45,15 +47,18 @@ export function coalesceChanges(rows: readonly ScheduleChangeRow[]): ChangeNotic
   return [...bySession.values()].map((list) => {
     const first = list[0];
     const last = list[list.length - 1];
+    const changeIds = list.map((r) => r.id);
     const previousStartsAt = first.previousStartsAt;
+    const wasCancelled = first.kind === "reinstated";
     if (last.kind === "cancelled" || !last.newStartsAt) {
-      return { changeIds: list.map((r) => r.id), sessionId: first.sessionId, kind: "cancelled", previousStartsAt, newStartsAt: null };
+      const kind = wasCancelled ? "unchanged" : "cancelled";
+      return { changeIds, sessionId: first.sessionId, kind, previousStartsAt, newStartsAt: null };
     }
     const unchanged = last.newStartsAt.getTime() === previousStartsAt.getTime();
     return {
-      changeIds: list.map((r) => r.id),
+      changeIds,
       sessionId: first.sessionId,
-      kind: unchanged ? "unchanged" : "time",
+      kind: wasCancelled ? "reinstated" : unchanged ? "unchanged" : "time",
       previousStartsAt,
       newStartsAt: last.newStartsAt,
     };
@@ -68,6 +73,13 @@ export function changePayload(notice: ChangeNotice, session: AlertSession, timeZ
       ...base,
       title: `${label} cancelled`,
       body: `${session.roundName} · was due ${formatDayClock(notice.previousStartsAt, timeZone)}`,
+    };
+  }
+  if (notice.kind === "reinstated") {
+    return {
+      ...base,
+      title: `${label} back on`,
+      body: `${session.roundName} · starts ${formatDayClock(notice.newStartsAt, timeZone)}`,
     };
   }
   const sameDay = dayKey(notice.newStartsAt, timeZone) === dayKey(notice.previousStartsAt, timeZone);

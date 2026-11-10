@@ -40,35 +40,39 @@ const MUTED = "#a1a1a1";
 const BORDER = "#262626";
 
 // --- Fonts -------------------------------------------------------------------------------------
-// Geist (the site's font) from Google Fonts as TTF, which next/og can read. Cached for good; if the
-// fetch fails the image still renders in next/og's bundled Geist Regular.
+// Geist (the site's font) from Google Fonts as TTF, which next/og can read. Shared by every card and the
+// Telemetry share image. Cached for good once it loads; a failed fetch throws inside the cached scope, so it
+// is not stored, and the next render tries again. Meanwhile the image renders in next/og's bundled font.
 
 const FONT_CSS = "https://fonts.googleapis.com/css2?family=Geist:wght@400;600&family=Geist+Mono:wght@500";
 
 async function loadFontsBase64(): Promise<{ name: string; weight: 400 | 500 | 600; data: string }[]> {
   "use cache";
   cacheLife("max");
+  // A plain user agent gets TrueType URLs (browsers get WOFF2, which next/og cannot read).
+  const res = await fetch(FONT_CSS, { headers: { "User-Agent": "msi-og" } });
+  if (!res.ok) throw new Error(`font CSS: ${res.status}`);
+  const css = await res.text();
+  const faces = [...css.matchAll(/font-family:\s*'([^']+)';[^}]*?font-weight:\s*(\d+);[^}]*?src:\s*url\(([^)]+)\)/g)];
+  if (faces.length === 0) throw new Error("font CSS lists no TrueType faces");
+  return Promise.all(
+    faces.map(async ([, name, weight, url]) => {
+      const font = await fetch(url);
+      if (!font.ok) throw new Error(`font ${url}: ${font.status}`);
+      return { name, weight: Number(weight) as 400 | 500 | 600, data: Buffer.from(await font.arrayBuffer()).toString("base64") };
+    }),
+  );
+}
+
+/** Geist Regular and SemiBold and Geist Mono Medium for next/og, or none (the default font) when Google Fonts fails. */
+export async function loadOgFonts(): Promise<{ name: string; weight: 400 | 500 | 600; style: "normal"; data: Buffer }[]> {
   try {
-    // A plain user agent gets TrueType URLs (browsers get WOFF2, which next/og cannot read).
-    const css = await (await fetch(FONT_CSS, { headers: { "User-Agent": "msi-og" } })).text();
-    const faces = [...css.matchAll(/font-family:\s*'([^']+)';[^}]*?font-weight:\s*(\d+);[^}]*?src:\s*url\(([^)]+)\)/g)];
-    const fonts = await Promise.all(
-      faces.map(async ([, name, weight, url]) => {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`font ${url}: ${res.status}`);
-        return { name, weight: Number(weight) as 400 | 500 | 600, data: Buffer.from(await res.arrayBuffer()).toString("base64") };
-      }),
-    );
-    return fonts;
+    const fonts = await loadFontsBase64();
+    return fonts.map((f) => ({ name: f.name, weight: f.weight, style: "normal" as const, data: Buffer.from(f.data, "base64") }));
   } catch (error) {
     console.warn(`[og] Geist fonts unavailable, using the default font: ${error instanceof Error ? error.message : String(error)}`);
     return [];
   }
-}
-
-async function loadFonts() {
-  const fonts = await loadFontsBase64();
-  return fonts.map((f) => ({ name: f.name, weight: f.weight, style: "normal" as const, data: Buffer.from(f.data, "base64") }));
 }
 
 // --- Pieces ------------------------------------------------------------------------------------
@@ -204,7 +208,7 @@ export async function seriesOgImage(series: SeriesId, text: OgText): Promise<Ima
         )}
       </Frame>
     ),
-    { ...OG_SIZE, fonts: await loadFonts() },
+    { ...OG_SIZE, fonts: await loadOgFonts() },
   );
 }
 
@@ -222,6 +226,6 @@ export async function brandOgImage(): Promise<ImageResponse> {
         </div>
       </Frame>
     ),
-    { ...OG_SIZE, fonts: await loadFonts() },
+    { ...OG_SIZE, fonts: await loadOgFonts() },
   );
 }

@@ -4,8 +4,9 @@
 import { ImageResponse } from "next/og";
 import type { LapComparison } from "@/domain/types";
 import { formatLapTime } from "@/lib/lap-time";
+import { loadOgFonts } from "@/lib/seo/og-image";
 import { CHANNEL_LABELS, type TelemetryChannel } from "@/lib/telemetry-channels";
-import { canonicalTelemetryRedirect, IMAGE_QUERY_KEYS } from "../card";
+import { canonicalTelemetryRedirect, IMAGE_QUERY_KEYS, unknownDriverRedirect } from "../card";
 import { resolveTelemetry } from "../comparison";
 
 const W = 1200;
@@ -22,7 +23,13 @@ export async function GET(request: Request, ctx: RouteContext<"/[series]/telemet
   const { series, session: slug } = await ctx.params;
   const query = Object.fromEntries(new URL(request.url).searchParams);
   const view = await resolveTelemetry(series, slug, query);
-  if (view.kind !== "ready" || !view.comparison) return new Response("No telemetry to draw yet", { status: 404 });
+  if (view.kind !== "ready" || !view.comparison) {
+    // Cached briefly, so repeated requests for a Session without Telemetry don't each run the function.
+    return new Response("No telemetry to draw yet", { status: 404, headers: { "Cache-Control": "public, max-age=60, s-maxage=60" } });
+  }
+  // A code the Session has no such driver for falls back to the default pair: send it to that URL instead.
+  const unknown = unknownDriverRedirect(request, { a: view.a.code, b: view.b.code });
+  if (unknown) return unknown;
 
   const { round, session, a, b, lapA, lapB, comparison, palette, channel } = view;
   const colorA = palette.a.dark;
@@ -31,7 +38,7 @@ export async function GET(request: Request, ctx: RouteContext<"/[series]/telemet
   const gap = lapB.time! - lapA.time!;
   const quicker = gap >= 0 ? a.code : b.code;
   const aFaster = comparison.miniSectors.filter((m) => m.gain > 0).length;
-  const fonts = await loadFonts();
+  const fonts = await loadOgFonts();
 
   return new ImageResponse(
     (
@@ -227,31 +234,4 @@ function path(values: number[], x: (i: number) => number, y: (v: number) => numb
     d += i === 0 ? `M${px},${py}` : step ? `H${px}V${py}` : `L${px},${py}`;
   }
   return d;
-}
-
-/**
- * Geist (the site's typeface) as TTF from Google Fonts, regular and semibold. Satori can't read woff2, and
- * Google serves TTF to a client that doesn't ask for anything newer. Without it the default font is used.
- */
-async function loadFonts(): Promise<{ name: string; data: ArrayBuffer; weight: 400 | 600; style: "normal" }[]> {
-  try {
-    const css = await fetch("https://fonts.googleapis.com/css2?family=Geist:wght@400;600", {
-      headers: { "User-Agent": "Mozilla/5.0" },
-      next: { revalidate: 60 * 60 * 24 * 7 },
-    }).then((r) => r.text());
-    const urls = [...css.matchAll(/font-weight:\s*(\d+);[\s\S]*?src:\s*url\(([^)]+)\)/g)].map((m) => ({ weight: Number(m[1]), url: m[2] }));
-    const fonts = await Promise.all(
-      urls
-        .filter((f) => f.weight === 400 || f.weight === 600)
-        .map(async (f) => ({
-          name: "Geist",
-          data: await fetch(f.url, { next: { revalidate: 60 * 60 * 24 * 30 } }).then((r) => r.arrayBuffer()),
-          weight: f.weight as 400 | 600,
-          style: "normal" as const,
-        })),
-    );
-    return fonts;
-  } catch {
-    return [];
-  }
 }

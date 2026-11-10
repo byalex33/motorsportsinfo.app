@@ -105,3 +105,8 @@ export function parseSnapshot(payload: unknown): number | null {
 export function usageMonth(date: Date): string {
   return date.toISOString().slice(0, 7);
 }
+
+/** The radar_tile_usage key for a UTC day's count ("2026-11-10"), kept beside the month's ("2026-11"). */
+export function usageDay(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}

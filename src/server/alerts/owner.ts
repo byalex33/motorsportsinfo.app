@@ -1,11 +1,11 @@
 // The owner's daily sync alert: one push to the site owner's own device when the schedule sync is unhealthy,
 // so a broken source shows up without anyone polling /api/status. Off unless OWNER_PUSH_ENDPOINT is set.
-// Pure: the cron reads the status and the owner's subscription.
+// The cron reads the status and the owner's subscription; daily_runs records which UTC days had their run.
 import { SERIES } from "@/domain/series";
 import { MAX_SINCE_SUCCESS_MS, type SyncStatus } from "@/server/status";
 import type { PushPayload } from "./types";
 
-/** The alert goes with the cron run at this hour, UTC, on the hour. */
+/** The alert (and the daily housekeeping) goes with the first cron run in this hour, UTC. */
 export const OWNER_ALERT_HOUR_UTC = 7;
 /** Long enough to reach a phone that is off overnight, short enough not to arrive after the next one. */
 export const OWNER_ALERT_TTL_SECONDS = 12 * 60 * 60;
@@ -16,9 +16,32 @@ export function getOwnerPushEndpoint(): string | null {
   return process.env.OWNER_PUSH_ENDPOINT?.trim() || null;
 }
 
-/** Once a day: only the every-minute cron's 07:00 UTC run sends it. */
+/** The UTC date a daily run is for, e.g. "2026-10-15": the daily_runs key. */
+export function utcDay(now: Date): string {
+  return now.toISOString().slice(0, 10);
+}
+
+/**
+ * Whether a run falls in the daily run's hour. Any run in the hour may do it (the first to claim the day in
+ * daily_runs does), so a 07:00 run that is late, skipped or fails is made up a minute later.
+ */
+export function isDailyRunHour(now: Date): boolean {
+  return now.getUTCHours() === OWNER_ALERT_HOUR_UTC;
+}
+
+/**
+ * The last UTC day this instance knows had its daily run. Only a hint, so the alerts cron's planner does not
+ * wake the database for the rest of the hour once the run is done; daily_runs decides.
+ */
+let lastDailyRunDay: string | null = null;
+
+export function noteDailyRunDone(now: Date): void {
+  lastDailyRunDay = utcDay(now);
+}
+
+/** Whether this run may have the daily pass to do: in its hour, and not yet done today as far as this instance knows. */
 export function isOwnerAlertDue(now: Date): boolean {
-  return now.getUTCHours() === OWNER_ALERT_HOUR_UTC && now.getUTCMinutes() === 0;
+  return isDailyRunHour(now) && lastDailyRunDay !== utcDay(now);
 }
 
 function truncate(text: string, max: number): string {

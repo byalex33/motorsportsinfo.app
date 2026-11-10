@@ -33,6 +33,9 @@ export type SessionType =
 
 export type SessionStatus = "scheduled" | "cancelled";
 
+/** What a Schedule Change did: moved the Session, cancelled it, or put a cancelled Session back on. */
+export type ScheduleChangeKind = "time" | "cancelled" | "reinstated";
+
 export interface Circuit {
   /** Stable slug, e.g. "silverstone". */
   id: string;

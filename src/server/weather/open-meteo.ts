@@ -159,7 +159,9 @@ function isComplete(h: HourlyForecast, i: number): boolean {
 }
 
 /**
- * The forecast for a Session: the hourly value nearest its start.
+ * The forecast for a Session: the hourly value nearest its start. The rain chance is the exception: Open-Meteo
+ * gives hourly precipitation_probability for the preceding hour, so it comes from the slot that ends after
+ * the start (see rainChanceHour).
  *
  * - Beyond the last hour with complete data → `not-yet`. `availableFrom` is the Session start minus the
  *   horizon Open-Meteo currently provides for this location (at most 16 days). Regional models end a little
@@ -195,10 +197,21 @@ export function resolveSessionForecast(hourly: HourlyForecast, startsAt: string,
     weatherCode: hourly.weatherCode[nearest]!,
     isDay: hourly.isDay[nearest] === 1,
     temperatureC: hourly.temperatureC[nearest]!,
-    precipitationProbability: hourly.precipitationProbability[nearest]!,
+    precipitationProbability: hourly.precipitationProbability[rainChanceHour(hourly, start, nearest)]!,
     windSpeedKmh: hourly.windSpeedKmh[nearest]!,
     windDirectionDeg: hourly.windDirectionDeg[nearest]!,
   };
+}
+
+/**
+ * Index of the hourly slot whose rain chance covers `startMs`: the first slot ending after it, within the hour
+ * (a 14:00 or 14:20 start reads the 15:00 slot, which covers 14:00–15:00). Falls back to `nearest` at the
+ * end of the data.
+ */
+function rainChanceHour(hourly: HourlyForecast, startMs: number, nearest: number): number {
+  const next = hourly.time.findIndex((t) => t * 1000 > startMs);
+  if (next < 0 || hourly.time[next] * 1000 > startMs + HOUR_MS || hourly.precipitationProbability[next] == null) return nearest;
+  return next;
 }
 
 /** Index of the complete hour nearest `startMs` (ties go to the later hour), or -1 if none is close enough. */

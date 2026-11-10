@@ -43,6 +43,13 @@
       "when": 1794101957978,
       "tag": "0005_round_page_slug",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794281240819,
+      "tag": "0006_daily_runs_and_last_sent_at",
+      "breakpoints": true
     }
   ]
 }

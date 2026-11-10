@@ -4,10 +4,11 @@ import { BellIcon, BellOffIcon } from "lucide-react";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Radio as RadioPrimitive } from "@base-ui/react/radio";
 import { RadioGroup as RadioGroupPrimitive } from "@base-ui/react/radio-group";
-import { SegmentPill } from "@/components/motion/segment-pill";
+import { SegmentPill, segmentRadioItem, segmentTrack } from "@/components/motion/segment-pill";
 import { Button } from "@/components/ui/button";
 import { REMINDER_LEAD_MINUTES, type ReminderLeadMinutes } from "@/domain/series";
 import { track } from "@/lib/analytics";
+import { cn } from "@/lib/utils";
 import { hasDocumentAlerts, type DocumentAlerts } from "@/server/alerts/document-alerts";
 import { followedSeries, type Follows } from "@/server/alerts/selection";
 import { AlertsSection } from "./alerts-section";
@@ -45,10 +46,12 @@ export interface RemindersCardProps {
   follows: Follows;
   leadMinutes: ReminderLeadMinutes;
   documentAlerts: DocumentAlerts;
+  /** True when the choices came from this device's storage or were changed on this visit; false for defaults. */
+  chosen: boolean;
   onLeadChange: (lead: ReminderLeadMinutes) => void;
 }
 
-export function RemindersCard({ follows, leadMinutes, documentAlerts, onLeadChange }: RemindersCardProps) {
+export function RemindersCard({ follows, leadMinutes, documentAlerts, chosen, onLeadChange }: RemindersCardProps) {
   const leadLabelId = useId();
   const detected = usePushSupport();
   const [denied, setDenied] = useState(false);
@@ -81,8 +84,9 @@ export function RemindersCard({ follows, leadMinutes, documentAlerts, onLeadChan
   }, [support]);
 
   // While on, re-save whenever the ticks or lead time change (and once per visit, which refreshes the time zone).
+  // Defaults are never saved by themselves: they wait for the viewer's first change.
   useEffect(() => {
-    if (subscribed !== true || lastSaved.current === selectionKey) return;
+    if (subscribed !== true || !chosen || lastSaved.current === selectionKey) return;
     const timer = setTimeout(async () => {
       const sub = await getExistingSubscription().catch(() => null);
       if (!sub) {
@@ -99,7 +103,7 @@ export function RemindersCard({ follows, leadMinutes, documentAlerts, onLeadChan
       }
     }, SAVE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [subscribed, selectionKey, follows, leadMinutes, documentAlerts]);
+  }, [subscribed, chosen, selectionKey, follows, leadMinutes, documentAlerts]);
 
   async function enable() {
     setBusy(true);
@@ -171,7 +175,7 @@ export function RemindersCard({ follows, leadMinutes, documentAlerts, onLeadChan
               aria-labelledby={leadLabelId}
               value={leadMinutes}
               onValueChange={(value) => onLeadChange(value as ReminderLeadMinutes)}
-              className="group/seg relative inline-flex w-fit max-w-full items-center rounded-full bg-muted p-0.5"
+              className={cn(segmentTrack, "inline-flex w-fit max-w-full")}
             >
               <SegmentPill />
               {REMINDER_LEAD_MINUTES.map((minutes) => (
@@ -179,7 +183,7 @@ export function RemindersCard({ follows, leadMinutes, documentAlerts, onLeadChan
                   key={minutes}
                   value={minutes}
                   aria-label={LEAD_LABELS[minutes]}
-                  className="relative flex h-7 cursor-pointer items-center rounded-full px-3 text-[0.8125rem] font-medium whitespace-nowrap text-muted-foreground transition-colors duration-300 ease-expo outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-checked:bg-foreground data-checked:text-background group-data-[pill=ready]/seg:data-checked:bg-transparent!"
+                  className={segmentRadioItem}
                 >
                   {LEAD_SHORT_LABELS[minutes]}
                 </RadioPrimitive.Root>
@@ -196,6 +200,7 @@ export function RemindersCard({ follows, leadMinutes, documentAlerts, onLeadChan
           subscribed={subscribed}
           busy={busy}
           nothingChosen={nothingChosen}
+          chosen={chosen}
           onEnable={enable}
           onDisable={disable}
         />
@@ -221,11 +226,12 @@ interface PushControlsProps {
   subscribed: boolean | null;
   busy: boolean;
   nothingChosen: boolean;
+  chosen: boolean;
   onEnable: () => void;
   onDisable: () => void;
 }
 
-function PushControls({ support, subscribed, busy, nothingChosen, onEnable, onDisable }: PushControlsProps) {
+function PushControls({ support, subscribed, busy, nothingChosen, chosen, onEnable, onDisable }: PushControlsProps) {
   switch (support) {
     case "checking":
       return <Note>Checking whether this browser can show reminders…</Note>;
@@ -276,7 +282,12 @@ function PushControls({ support, subscribed, busy, nothingChosen, onEnable, onDi
           </span>
           Reminders are on for this device.
         </p>
-        {nothingChosen && (
+        {!chosen ? (
+          <Note>
+            This browser no longer has your choices, so reminders keep the ones saved before. Choose your Series and
+            Session Types above to replace them.
+          </Note>
+        ) : nothingChosen && (
           <Note>
             Nothing is chosen, so no notifications will arrive. Tick some Session Types or choose FIA documents above, or
             turn reminders off.

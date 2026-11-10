@@ -7,8 +7,8 @@ import { CloudOff } from "lucide-react";
 import type { Circuit, Session } from "@/domain/types";
 import { track } from "@/lib/analytics";
 import { RadarCard, RadarMapPlaceholder } from "./radar-card";
-import { radarWindowSession } from "./radar-window";
-import { useMinuteClock } from "./use-client-state";
+import { useNow } from "@/lib/client-stores";
+import { radarWindowSession } from "@/lib/round-status";
 
 export interface RadarPanelProps {
   circuit: Circuit;
@@ -17,7 +17,7 @@ export interface RadarPanelProps {
 
 export function RadarPanel({ circuit, sessions }: RadarPanelProps) {
   // Null until hydrated: the radar never renders on the server, and re-evaluates every minute.
-  const now = useMinuteClock();
+  const now = useNow(60_000);
   const session = now === null ? null : radarWindowSession(sessions, now);
   const showMap = session !== null && circuit.hasRadarCoverage;
   const series = session?.series;

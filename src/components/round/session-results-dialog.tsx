@@ -35,11 +35,14 @@ export function SessionResultsDialog(props: SessionResultsDialogProps) {
         aria-haspopup="dialog"
         aria-expanded={open}
         data-popup-open={open ? "" : undefined}
-        onPointerEnter={load}
-        onFocus={load}
+        onPointerEnter={() => void load()}
+        onFocus={() => void load()}
         onClick={() => {
           setOpen(true);
-          load();
+          // A failed load drops the click, so a later hover that loads the modal does not open it (a spoiler).
+          void load().then((ok) => {
+            if (!ok) setOpen(false);
+          });
         }}
         className="group -my-0.5 inline-flex min-h-6 cursor-pointer items-center outline-none"
       >

@@ -2,8 +2,7 @@
 
 import { useId, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import type { LapComparison, TelemetryDriver } from "@/domain/types";
-import { SegmentPill } from "@/components/motion/segment-pill";
-import { SegmentButton, segmentTrack } from "@/components/round/display-controls";
+import { SegmentButton, SegmentPill, segmentTrack } from "@/components/motion/segment-pill";
 import { CHANNEL_LABELS, TELEMETRY_CHANNELS, type TelemetryChannel } from "@/lib/telemetry-channels";
 import { cn } from "@/lib/utils";
 import { useWidth } from "./use-width";

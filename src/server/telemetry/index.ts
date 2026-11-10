@@ -31,9 +31,10 @@ export async function getSessionTelemetry(season: number, session: Pick<Session,
 }
 
 // Errors are caught inside the cache scope: one escaping a `use cache` function fails the render even
-// when the caller catches it.
+// when the caller catches it. Remote, so every instance shares one copy: a cold instance doesn't re-read
+// OpenF1 (30 requests a minute on the free tier).
 async function cachedSessionTelemetry(season: number, type: Session["type"], startsAt: string): Promise<SessionTelemetryResult> {
-  "use cache";
+  "use cache: remote";
   // The Session lookup plus laps, drivers and the classification share one budget so a slow OpenF1
   // cannot hold this fill for the whole prerender limit.
   try {
@@ -92,8 +93,9 @@ interface LapData {
   location: OpenF1Location[];
 }
 
+// Remote for the same reason: one OpenF1 read per lap, however many instances ask.
 async function lapData(sessionKey: number, driver: number, startsAt: string, time: number): Promise<LapData | null> {
-  "use cache";
+  "use cache: remote";
   // A second either side, so the samples around the line are there to interpolate from.
   const from = encodeURIComponent(new Date(Date.parse(startsAt) - 1000).toISOString());
   const to = encodeURIComponent(new Date(Date.parse(startsAt) + (time + 1) * 1000).toISOString());

@@ -48,6 +48,9 @@ export async function GET(request: NextRequest) {
     SYNC_DEADLINE_MS,
   );
   let results: SyncResult[];
+  // Whether a check threw: it may have written its plan first (a batch that committed and then timed out),
+  // and the retry then finds nothing to publish, so the pages and the push pass are woken anyway.
+  let threw = false;
   try {
     results = await Promise.all(
       series.map((id) =>
@@ -58,6 +61,8 @@ export async function GET(request: NextRequest) {
           })
           .catch((error: unknown): SyncResult => {
             console.error(`[sync:${id}] failed`, error);
+            threw = true;
+            revalidateSeries(id);
             return { series: id, status: "failed", published: false, error: error instanceof Error ? error.message : String(error) };
           }),
       ),
@@ -67,8 +72,8 @@ export async function GET(request: NextRequest) {
   }
 
   // New Schedule Changes or FIA Documents wake the alerts cron's push pass (see server/alerts/wake.ts).
-  let unsentPushes = results.some((r) => (r.summary?.changes ?? 0) > 0);
-  if (results.some((r) => r.published)) revalidatePath("/calendar");
+  let unsentPushes = threw || results.some((r) => (r.summary?.changes ?? 0) > 0);
+  if (threw || results.some((r) => r.published)) revalidatePath("/calendar");
 
   // FIA Documents for Document Alerts, after the schedule so a just-published Round is watched. Never fails the sync.
   const now = new Date();
@@ -82,7 +87,7 @@ export async function GET(request: NextRequest) {
     revalidateTag(fiaDocumentsTag(d.series), { expire: 0 });
     revalidatePath(`/${d.series}`, "layout");
   }
-  if (results.some((r) => r.published) || documents.some((d) => d.status === "ok" && d.added > 0)) {
+  if (threw || results.some((r) => r.published) || documents.some((d) => d.status === "ok" && d.added > 0)) {
     revalidatePath("/sitemap.xml");
   }
 

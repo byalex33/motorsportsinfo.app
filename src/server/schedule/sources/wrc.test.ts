@@ -3,7 +3,8 @@
 import { describe, expect, it } from "vitest";
 import { normaliseRounds } from "../normalise";
 import { fixtureJson } from "../test-utils";
-import { itinerarySlug, parseUtcOffset, parseWrcRally, wrcRoundName, wrcServicePark, type WrcEvent } from "./wrc";
+import type { SourceContext } from "./http";
+import { fetchWrcSeason, itinerarySlug, parseUtcOffset, parseWrcRally, wrcRoundName, wrcServicePark, wrcSeasonUrl, type WrcEvent } from "./wrc";
 
 const season = fixtureJson<{ data: WrcEvent[] }>("wrc-season-2026.json").data;
 const event = (slug: string) => season.find((e) => e.reference.uriSlug === slug)!;
@@ -106,6 +107,33 @@ describe("WRC rallies", () => {
     const { problems, rounds } = normaliseRounds("wrc", season.map((e) => parseWrcRally(e, null, 2026, warnings)));
     expect(problems).toEqual([]);
     expect(rounds).toHaveLength(13);
+  });
+});
+
+describe("fetchWrcSeason", () => {
+  it("skips a rally whose itinerary request fails and marks the season incomplete", async () => {
+    const ctx: SourceContext = {
+      sleep: async () => {},
+      fetch: async (url) => {
+        if (url === wrcSeasonUrl(2026)) return Response.json({ data: season.slice(0, 2) });
+        if (url.includes("[uriSlug]=wrc-rally-sweden-2026&")) return new Response("error", { status: 503 });
+        return Response.json({ data: { tabs: [] } }); // No Itinerary tab yet: Times TBC.
+      },
+    };
+    const result = await fetchWrcSeason(ctx, 2026);
+    expect(result.rounds.map((r) => r.sourceRef)).toEqual(["wrc.com wrc-rallye-monte-carlo-2026"]);
+    expect(result.complete).toBe(false);
+    expect(result.warnings).toEqual([expect.stringContaining("wrc.com wrc-rally-sweden-2026 itinerary failed: HTTP 503")]);
+  });
+
+  it("is complete when every itinerary request answers", async () => {
+    const ctx: SourceContext = {
+      sleep: async () => {},
+      fetch: async (url) => Response.json(url === wrcSeasonUrl(2026) ? { data: season.slice(0, 2) } : { data: { tabs: [] } }),
+    };
+    const result = await fetchWrcSeason(ctx, 2026);
+    expect(result.rounds).toHaveLength(2);
+    expect(result.complete).toBe(true);
   });
 });
 

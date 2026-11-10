@@ -3,7 +3,7 @@ import type { SeriesId } from "@/domain/types";
 import { normaliseRounds } from "../normalise";
 import type { RawRound, SourceSchedule } from "../types";
 import { fetchDtmEvents, fetchDtmSeason } from "./dtm";
-import { defaultContext, errorMessage, untilAborted, type SourceContext } from "./http";
+import { defaultContext, errorMessage, HttpError, NoRoundsError, untilAborted, type SourceContext } from "./http";
 import { fetchGtwcCalendar, fetchGtwcSeason } from "./gtwc";
 import { fetchImsaSeason } from "./imsa";
 import { fetchJolpicaSeason } from "./jolpica";
@@ -34,7 +34,7 @@ interface Season {
 
 /** `year` (required: throws if nothing is listed) with `year + 1` (null when not published). */
 function combine(year: number, current: Season, next: Season | null): Loaded {
-  if (current.rounds.length === 0) throw new Error(`No Rounds for ${year}`);
+  if (current.rounds.length === 0) throw new NoRoundsError(`No Rounds for ${year}`);
   const result: Loaded = {
     rounds: [...current.rounds],
     completeSeasons: current.complete === false ? [] : [year],
@@ -48,11 +48,11 @@ function combine(year: number, current: Season, next: Season | null): Loaded {
   return result;
 }
 
-/** Loads `year` (required: throws on failure or nothing listed) and `year + 1` (best effort). */
+/** Loads `year` (required: throws on failure or nothing listed) and `year + 1` (best effort). See loadSeasons. */
 function perSeason(load: (ctx: SourceContext, year: number) => Promise<Season>) {
   return async (ctx: SourceContext, year: number): Promise<Loaded> => {
     const current = await load(ctx, year);
-    if (current.rounds.length === 0) throw new Error(`No Rounds for ${year}`);
+    if (current.rounds.length === 0) throw new NoRoundsError(`No Rounds for ${year}`);
     let next: Season | null = null;
     try {
       await ctx.sleep(400);
@@ -128,6 +128,39 @@ export const SOURCES: Record<SeriesId, { primary: SourceDef; fallback?: SourceDe
   "super-gt": { primary: { name: "supergt.net", load: perSeason(fetchSuperGtSeason) } },
 };
 
+/**
+ * Until the end of this month (1-based, UTC) a source with nothing for the new season is read for the year
+ * before instead. Sources publish a new season at their own pace, often after 1 January; later in the year
+ * a missing season is a real failure.
+ */
+export const NO_SEASON_YET_UNTIL_MONTH = 3;
+
+/** The source has nothing for the season: a calendar without it, or a season file or feed that is not there. */
+function isNoSeason(error: unknown): boolean {
+  return error instanceof NoRoundsError || (error instanceof HttpError && error.status === 404);
+}
+
+/**
+ * `def.load` for `year`. Early in the year (NO_SEASON_YET_UNTIL_MONTH), a source that has nothing for `year`
+ * yet is read for `year - 1` with a warning, so the Series shows last season as complete instead of failing.
+ */
+async function loadSeasons(def: SourceDef, ctx: SourceContext, now: Date): Promise<Loaded> {
+  const year = now.getUTCFullYear();
+  try {
+    return await def.load(ctx, year);
+  } catch (error) {
+    if (now.getUTCMonth() + 1 > NO_SEASON_YET_UNTIL_MONTH || !isNoSeason(error)) throw error;
+    ctx.signal?.throwIfAborted();
+    let previous: Loaded;
+    try {
+      previous = await def.load(ctx, year - 1);
+    } catch {
+      throw error;
+    }
+    return { ...previous, warnings: [`No ${year} data yet; reading ${year - 1}`, ...previous.warnings] };
+  }
+}
+
 export class SourceFailure extends Error {
   constructor(
     readonly series: SeriesId,
@@ -147,7 +180,6 @@ export async function fetchSeriesSchedule(
   now: Date = new Date(),
   ctx: SourceContext = defaultContext,
 ): Promise<SourceSchedule> {
-  const year = now.getUTCFullYear();
   const { primary, fallback } = SOURCES[series];
   const errors: string[] = [];
   for (const [def, isFallback] of [
@@ -157,7 +189,7 @@ export async function fetchSeriesSchedule(
     if (!def) continue;
     try {
       ctx.signal?.throwIfAborted();
-      const loaded = await untilAborted(def.load(ctx, year), ctx.signal);
+      const loaded = await untilAborted(loadSeasons(def, ctx, now), ctx.signal);
       ctx.signal?.throwIfAborted();
       const { rounds, problems } = normaliseRounds(series, loaded.rounds);
       return {

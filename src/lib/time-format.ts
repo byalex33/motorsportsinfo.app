@@ -1,13 +1,30 @@
 // Pure helpers for showing Session times in Viewer Time or Track Time.
 // Everything that depends on the viewer's zone or locale runs on the client only.
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** English short month names, for labels that must not depend on the locale (they render on the server). */
+export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+const formatters = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * A shared Intl.DateTimeFormat for `locale` and `options`. Building one is slow, and the calendar asks for
+ * thousands per render. Throws, and caches nothing, for an unknown zone, as the constructor does.
+ */
+export function getFormatter(locale: string | undefined, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = `${locale ?? ""}|${JSON.stringify(options)}`;
+  let formatter = formatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    formatters.set(key, formatter);
+  }
+  return formatter;
+}
 
 /** True when `tz` is an IANA time zone this runtime understands. */
 export function isValidTimeZone(tz: unknown): tz is string {
   if (typeof tz !== "string" || tz.length === 0 || tz.length > 64) return false;
   try {
-    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    getFormatter("en-US", { timeZone: tz });
     return true;
   } catch {
     return false;
@@ -56,7 +73,7 @@ export function zoneCity(tz: string): string {
 /** Short offset such as "GMT-8" for `tz` at instant `at`. */
 export function zoneOffsetLabel(tz: string, at: Date, locale?: string): string {
   try {
-    const parts = new Intl.DateTimeFormat(locale ?? "en-GB", { timeZone: tz, timeZoneName: "shortOffset" }).formatToParts(at);
+    const parts = getFormatter(locale ?? "en-GB", { timeZone: tz, timeZoneName: "shortOffset" }).formatToParts(at);
     return parts.find((p) => p.type === "timeZoneName")?.value ?? tz;
   } catch {
     return tz;
@@ -78,7 +95,7 @@ export function zoneOffsetLabels(tz: string, starts: readonly string[], locale?:
 
 /** Calendar date key (YYYY-MM-DD) of an instant in `tz`. */
 export function dayKey(iso: string, tz: string): string {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(iso));
+  const parts = getFormatter("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(iso));
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
@@ -96,7 +113,7 @@ export interface SessionDayParts {
 
 export function formatSessionDay(iso: string, tz: string, locale?: string): SessionDayParts {
   const d = new Date(iso);
-  const fmt = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale, { timeZone: tz, ...o }).format(d);
+  const fmt = (o: Intl.DateTimeFormatOptions) => getFormatter(locale, { timeZone: tz, ...o }).format(d);
   return {
     weekday: fmt({ weekday: "short" }),
     day: fmt({ day: "numeric" }),
@@ -107,9 +124,9 @@ export function formatSessionDay(iso: string, tz: string, locale?: string): Sess
 
 /** "00:30" / "20:30" in 24-hour locales, "8:30 PM" in 12-hour locales. */
 export function formatClock(iso: string, tz: string, locale?: string): string {
-  const probe = new Intl.DateTimeFormat(locale, { hour: "numeric" }).resolvedOptions();
+  const probe = getFormatter(locale, { hour: "numeric" }).resolvedOptions();
   const twentyFour = probe.hourCycle === "h23" || probe.hourCycle === "h24";
-  return new Intl.DateTimeFormat(locale, {
+  return getFormatter(locale, {
     timeZone: tz,
     hour: twentyFour ? "2-digit" : "numeric",
     minute: "2-digit",

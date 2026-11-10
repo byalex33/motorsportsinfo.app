@@ -37,6 +37,14 @@ describe("subscribeSchema", () => {
     expect(subscribeSchema.safeParse({ ...valid, documentAlerts: { f1: "loud" } }).success).toBe(false);
   });
 
+  it("accepts keys of the right decoded length, padded or not", () => {
+    // Buffer's base64 of these bytes has no "+" or "/", so it is also base64url, with "=" padding.
+    const padded = { p256dh: Buffer.alloc(65, 4).toString("base64"), auth: Buffer.alloc(16, 1).toString("base64") };
+    expect(padded.auth.endsWith("==")).toBe(true);
+    expect(subscribeSchema.safeParse({ ...valid, subscription: { ...subscription, keys: padded } }).success).toBe(true);
+    expect(subscribeSchema.safeParse(valid).success).toBe(true);
+  });
+
   it("accepts every allowed lead time and empty follows", () => {
     for (const leadMinutes of [15, 60, 1440]) {
       expect(subscribeSchema.safeParse({ ...valid, leadMinutes, follows: {} }).success).toBe(true);
@@ -48,6 +56,13 @@ describe("subscribeSchema", () => {
     ["non-URL endpoint", { ...valid, subscription: { ...subscription, endpoint: "not a url" } }],
     ["missing keys", { ...valid, subscription: { endpoint: subscription.endpoint } }],
     ["bad key chars", { ...valid, subscription: { ...subscription, keys: { ...subscription.keys, auth: "a b" } } }],
+    // web-push throws on these before sending, so such a row could never be reached or pruned.
+    ["a p256dh key that is not 65 bytes", { ...valid, subscription: { ...subscription, keys: { ...subscription.keys, p256dh: "p256dh" } } }],
+    ["an auth secret that is not 16 bytes", { ...valid, subscription: { ...subscription, keys: { ...subscription.keys, auth: "auth" } } }],
+    [
+      "an auth secret one byte too long",
+      { ...valid, subscription: { ...subscription, keys: { ...subscription.keys, auth: Buffer.alloc(17).toString("base64url") } } },
+    ],
     ["unknown Series", { ...valid, follows: { btcc: ["race"] } }],
     ["Session Type from another Series", { ...valid, follows: { f2: ["hyperpole"] } }],
     ["unknown Session Type", { ...valid, follows: { f1: ["warmup"] } }],

@@ -1,47 +1,45 @@
 "use client";
 
 import { GlobeIcon } from "lucide-react";
-import { SegmentPill } from "@/components/motion/segment-pill";
+import { SegmentButton, SegmentPill, segmentTrack } from "@/components/motion/segment-pill";
 import { track } from "@/lib/analytics";
 import type { DisplayZone } from "@/lib/display-zone";
 import { useTimePref, useUnitsPref, type TimeMode, type UnitsPref } from "@/lib/prefs";
 import { cn } from "@/lib/utils";
 import { TimeZonePicker } from "./time-zone-picker";
 
-const segment =
-  "relative flex h-7 items-center rounded-full px-3 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-300 ease-expo outline-none focus-visible:ring-2 focus-visible:ring-ring";
+/** The Viewer Time / Track Time / chosen-zone segmented control, shared by Round pages and the calendar. */
+export function TimeModeControl({ mode, className }: { mode: TimeMode | null | undefined; className?: string }) {
+  const time = useTimePref();
 
-/** Segmented-control track; the SegmentPill inside slides to the active item. */
-export const segmentTrack =
-  "group/seg relative flex items-center rounded-full bg-muted p-0.5";
+  function setMode(next: TimeMode, tz?: string) {
+    if (next === time.value.mode && tz === time.value.tz) return;
+    time.set(next === "custom" ? { mode: next, tz } : { mode: next });
+    track("timezone_mode_changed", { mode: next });
+  }
 
-export function SegmentButton({ active, onClick, children, label }: { active: boolean; onClick: () => void; children: React.ReactNode; label?: string }) {
   return (
-    <button
-      type="button"
-      aria-pressed={active}
-      aria-label={label}
-      onClick={onClick}
-      className={cn(
-        segment,
-        active ? "bg-foreground text-background group-data-[pill=ready]/seg:bg-transparent!" : "text-muted-foreground hover:text-foreground",
-      )}
-    >
-      {children}
-    </button>
+    <div role="group" aria-label="Show times in" className={cn(segmentTrack, className)}>
+      <SegmentPill />
+      <SegmentButton active={mode === "viewer"} onClick={() => setMode("viewer")}>
+        Your time
+      </SegmentButton>
+      <SegmentButton active={mode === "track"} onClick={() => setMode("track")}>
+        Track time
+      </SegmentButton>
+      <TimeZonePicker
+        active={mode === "custom"}
+        value={time.value.mode === "custom" ? (time.value.tz ?? null) : null}
+        onSelect={(tz) => setMode("custom", tz)}
+        className="max-w-36"
+      />
+    </div>
   );
 }
 
 /** Time zone pill (Viewer Time / Track Time / chosen zone) and unit toggles. */
 export function DisplayControls({ zone, circuitTimeZone }: { zone: DisplayZone | null; circuitTimeZone: string }) {
-  const time = useTimePref();
   const units = useUnitsPref();
-
-  function setMode(mode: TimeMode, tz?: string) {
-    if (mode === time.value.mode && tz === time.value.tz) return;
-    time.set(mode === "custom" ? { mode, tz } : { mode });
-    track("timezone_mode_changed", { mode });
-  }
 
   function setUnits(next: UnitsPref) {
     if (next.temp === units.value.temp && next.wind === units.value.wind) return;
@@ -63,21 +61,7 @@ export function DisplayControls({ zone, circuitTimeZone }: { zone: DisplayZone |
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div role="group" aria-label="Show times in" className={cn(segmentTrack, "min-w-0")}>
-          <SegmentPill />
-          <SegmentButton active={mode === "viewer"} onClick={() => setMode("viewer")}>
-            Your time
-          </SegmentButton>
-          <SegmentButton active={mode === "track"} onClick={() => setMode("track")}>
-            Track time
-          </SegmentButton>
-          <TimeZonePicker
-            active={mode === "custom"}
-            value={time.value.mode === "custom" ? (time.value.tz ?? null) : null}
-            onSelect={(tz) => setMode("custom", tz)}
-            className="max-w-36"
-          />
-        </div>
+        <TimeModeControl mode={mode} className="min-w-0" />
 
         <div className="flex items-center gap-2">
           <div role="group" aria-label="Temperature unit" className={segmentTrack}>
